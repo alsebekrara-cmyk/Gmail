@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>نظام إدارة الكاشير</title>
+    <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <header class="topbar">
+            <div class="topbar-r"><button id="sidebarToggle" class="topbar-btn"><i class="ri-menu-3-line"></i></button><span class="topbar-title" id="topbarTitle">لوحة التحكم</span></div>
+            <div class="topbar-l"><span class="topbar-date" id="topbarDate"></span></div>
+        </header>
+        <aside id="sidebar" class="sidebar">
+            <div class="sb-head"><div class="sb-logo"><i class="ri-safe-2-fill"></i> نظام الكاشير</div><button id="closeSidebar" class="sb-close"><i class="ri-close-line"></i></button></div>
+            <nav class="sb-nav">
+                <button class="sb-item active" data-page="home"><i class="ri-dashboard-3-line"></i>الرئيسية</button>
+                <button class="sb-item" data-page="closing"><i class="ri-calculator-line"></i>التقفيلة</button>
+                <button class="sb-item" data-page="safe"><i class="ri-safe-2-line"></i>الخزنة</button>
+                <button class="sb-item" data-page="debts"><i class="ri-file-list-3-line"></i>الديون</button>
+                <button class="sb-item" data-page="expenses"><i class="ri-money-dollar-box-line"></i>المصاريف</button>
+                <button class="sb-item" data-page="salaries"><i class="ri-team-line"></i>الرواتب</button>
+                <button class="sb-item" data-page="payroll"><i class="ri-hand-coin-line"></i>صرف الرواتب</button>
+                <button class="sb-item" data-page="capital"><i class="ri-funds-line"></i>رأس المال</button>
+                <button class="sb-item" data-page="purchases"><i class="ri-shopping-cart-2-line"></i>المشتريات</button>
+                <button class="sb-item" data-page="report"><i class="ri-bar-chart-box-line"></i>التقرير الشهري</button>
+                <hr class="sb-hr">
+                <button class="sb-item" data-page="settings"><i class="ri-settings-4-line"></i>الإعدادات</button>
+            </nav>
+        </aside>
+        <div id="sbOverlay" class="sb-overlay"></div>
+
+        <main class="main">
+            <!-- HOME -->
+            <section id="page-home" class="page active">
+                <div class="filter-bar" style="margin-bottom:14px">
+                    <input type="text" id="globalSearch" class="input-field" placeholder="بحث شامل في جميع البيانات...">
+                    <button class="btn btn-primary btn-sm" id="globalSearchBtn"><i class="ri-search-line"></i></button>
+                </div>
+                <div id="globalSearchResults" style="display:none" class="records-list"></div>
+                <div id="homeGrid" class="home-grid">
+                    <div class="home-tile tile-closing" data-page="closing"><div class="tile-icon"><i class="ri-calculator-fill"></i></div><div class="tile-label">التقفيلة</div><div class="tile-desc">تقفيل الكاشيرات اليومي</div></div>
+                    <div class="home-tile tile-safe" data-page="safe"><div class="tile-icon"><i class="ri-safe-2-fill"></i></div><div class="tile-label">الخزنة</div><div class="tile-desc">رصيد ومعاملات الخزنة</div></div>
+                    <div class="home-tile tile-debts" data-page="debts"><div class="tile-icon"><i class="ri-file-list-3-fill"></i></div><div class="tile-label">الديون</div><div class="tile-desc">سجل ديون الموظفين والعملاء</div></div>
+                    <div class="home-tile tile-expenses" data-page="expenses"><div class="tile-icon"><i class="ri-money-dollar-box-fill"></i></div><div class="tile-label">المصاريف</div><div class="tile-desc">جرد كامل المصاريف</div></div>
+                    <div class="home-tile tile-salaries" data-page="salaries"><div class="tile-icon"><i class="ri-team-fill"></i></div><div class="tile-label">الرواتب</div><div class="tile-desc">بيانات الموظفين</div></div>
+                    <div class="home-tile tile-payroll" data-page="payroll"><div class="tile-icon"><i class="ri-hand-coin-fill"></i></div><div class="tile-label">صرف الرواتب</div><div class="tile-desc">تسليم رواتب الموظفين</div></div>
+                    <div class="home-tile tile-capital" data-page="capital"><div class="tile-icon"><i class="ri-funds-fill"></i></div><div class="tile-label">رأس المال</div><div class="tile-desc">إدارة رأس المال</div></div>
+                    <div class="home-tile tile-purchases" data-page="purchases"><div class="tile-icon"><i class="ri-shopping-cart-2-fill"></i></div><div class="tile-label">المشتريات</div><div class="tile-desc">سجل شراء البضاعة</div></div>
+                    <div class="home-tile tile-report" data-page="report"><div class="tile-icon"><i class="ri-bar-chart-box-fill"></i></div><div class="tile-label">التقرير الشهري</div><div class="tile-desc">تقرير شامل للطباعة</div></div>
+                    <div class="home-tile tile-settings" data-page="settings"><div class="tile-icon"><i class="ri-settings-4-fill"></i></div><div class="tile-label">الإعدادات</div><div class="tile-desc">إعدادات النظام</div></div>
+                </div>
+            </section>
+
+            <!-- CLOSING (التقفيلة) -->
+            <section id="page-closing" class="page">
+                <div class="section-head"><h2><i class="ri-calculator-fill"></i> التقفيلة</h2></div>
+                <div class="date-bar"><i class="ri-calendar-line"></i><span id="closingDateDisplay"></span></div>
+                <button class="btn btn-primary btn-block" id="newClosingBtn"><i class="ri-add-circle-line"></i> تقفيلة جديدة</button>
+                <div class="filter-bar" style="margin-top:12px"><input type="text" id="closingSearch" class="input-field" placeholder="بحث في التقفيلات..."><button class="btn btn-primary btn-sm" onclick="renderClosings()"><i class="ri-search-line"></i></button></div>
+                <h3 class="sub-title">التقفيلات السابقة</h3>
+                <div id="closingsList" class="records-list"></div>
+            </section>
+
+            <!-- WIZARD -->
+            <div id="wizardOverlay" class="wizard-overlay hidden">
+                <div class="wizard-container">
+                    <div class="wizard-topbar">
+                        <button id="wizardClose" class="wiz-close"><i class="ri-close-line"></i></button>
+                        <span class="wiz-title" id="wizTitle">تقفيلة جديدة</span>
+                        <span class="wiz-progress" id="wizProgress">1/28</span>
+                    </div>
+                    <div class="wizard-progress-bar"><div class="wizard-progress-fill" id="wizProgressFill"></div></div>
+                    <div class="wizard-body" id="wizBody"></div>
+                    <div class="wizard-footer">
+                        <button class="btn btn-ghost" id="wizBack"><i class="ri-arrow-right-line"></i> السابق</button>
+                        <button class="btn btn-primary" id="wizNext">التالي <i class="ri-arrow-left-line"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SAFE -->
+            <section id="page-safe" class="page">
+                <div class="section-head"><h2><i class="ri-safe-2-fill"></i> الخزنة</h2></div>
+                <div class="balance-card" id="safeBalanceCard">
+                    <div class="bal-label">رصيد الخزنة الحالي</div>
+                    <div class="bal-amount" id="safeBalance">0</div>
+                </div>
+                <div class="action-btns">
+                    <button class="btn btn-success" id="safeDepositBtn"><i class="ri-add-line"></i> إيداع</button>
+                    <button class="btn btn-danger" id="safeWithdrawBtn"><i class="ri-subtract-line"></i> سحب</button>
+                </div>
+                <div class="action-btns" style="margin-top:8px">
+                    <button class="btn btn-warning btn-sm" id="safePrintBtn"><i class="ri-printer-line"></i> طباعة</button>
+                    <button class="btn btn-ghost btn-sm" id="safeExportBtn"><i class="ri-download-cloud-line"></i> تصدير</button>
+                </div>
+                <div class="filter-bar" style="margin-top:12px"><input type="text" id="safeSearch" class="input-field" placeholder="بحث في المعاملات..."><button class="btn btn-primary btn-sm" onclick="renderSafe()"><i class="ri-search-line"></i></button></div>
+                <h3 class="sub-title">سجل المعاملات التفصيلي</h3>
+                <div id="safeTransList" class="records-list"></div>
+            </section>
+
+            <!-- DEBTS -->
+            <section id="page-debts" class="page">
+                <div class="section-head"><h2><i class="ri-file-list-3-fill"></i> الديون</h2></div>
+                <div class="filter-bar" style="margin-bottom:10px"><input type="text" id="debtsSearch" class="input-field" placeholder="بحث في الديون..."><button class="btn btn-primary btn-sm" onclick="renderDebts()"><i class="ri-search-line"></i></button></div>
+                <div class="tabs-row">
+                    <button class="tab active" data-dtab="employees"><i class="ri-user-line"></i> الموظفين</button>
+                    <button class="tab" data-dtab="customers"><i class="ri-group-line"></i> العملاء</button>
+                </div>
+                <div id="debtsPersonsList" class="persons-grid"></div>
+                <h3 class="sub-title">جميع الديون والسحوبات</h3>
+                <div id="debtsAllList" class="records-list"></div>
+                <div class="total-bar"><span>إجمالي الديون المستحقة</span><strong id="debtsTotalDisp">0</strong></div>
+                <button class="btn btn-warning btn-block" id="printDebtsBtn" style="margin-top:12px"><i class="ri-printer-fill"></i> طباعة الديون</button>
+            </section>
+
+            <!-- EXPENSES -->
+            <section id="page-expenses" class="page">
+                <div class="section-head"><h2><i class="ri-money-dollar-box-fill"></i> المصاريف</h2></div>
+                <div class="filter-bar">
+                    <input type="month" id="expFilterMonth" class="input-field">
+                    <button class="btn btn-primary btn-sm" id="expFilterBtn"><i class="ri-search-line"></i></button>
+                </div>
+                <div class="filter-bar"><input type="text" id="expSearch" class="input-field" placeholder="بحث في المصاريف..."><button class="btn btn-primary btn-sm" onclick="renderExpenses()"><i class="ri-search-line"></i></button></div>
+                <div id="expensesList" class="records-list"></div>
+                <div class="total-bar"><span>إجمالي المصاريف</span><strong id="expTotalDisp">0</strong></div>
+                <button class="btn btn-warning btn-block" id="printExpBtn" style="margin-top:12px"><i class="ri-printer-fill"></i> طباعة المصاريف</button>
+            </section>
+
+            <!-- SALARIES -->
+            <section id="page-salaries" class="page">
+                <div class="section-head"><h2><i class="ri-team-fill"></i> الرواتب والموظفين</h2></div>
+                <div class="action-btns">
+                    <button class="btn btn-primary" id="addEmployeeBtn"><i class="ri-user-add-line"></i> إضافة موظف</button>
+                    <button class="btn btn-warning" id="printAllSalBtn"><i class="ri-printer-fill"></i> طباعة الجميع</button>
+                </div>
+                <div class="filter-bar"><input type="text" id="salSearch" class="input-field" placeholder="بحث في الموظفين..."><button class="btn btn-primary btn-sm" onclick="renderSalaries()"><i class="ri-search-line"></i></button></div>
+                <div id="employeesGrid" class="employees-grid"></div>
+            </section>
+
+            <!-- PAYROLL (صرف الرواتب) -->
+            <section id="page-payroll" class="page">
+                <div class="section-head"><h2><i class="ri-hand-coin-fill"></i> صرف الرواتب</h2></div>
+                <div class="filter-bar">
+                    <input type="month" id="payrollMonth" class="input-field">
+                    <button class="btn btn-primary btn-sm" id="payrollFilterBtn"><i class="ri-search-line"></i></button>
+                </div>
+                <div id="payrollList" class="employees-grid"></div>
+                <h3 class="sub-title">سجل الرواتب المسلّمة</h3>
+                <div id="payrollHistory" class="records-list"></div>
+                <button class="btn btn-warning btn-block" id="printPayrollBtn" style="margin-top:12px"><i class="ri-printer-fill"></i> طباعة كشف الرواتب</button>
+            </section>
+
+            <!-- CAPITAL -->
+            <section id="page-capital" class="page">
+                <div class="section-head"><h2><i class="ri-funds-fill"></i> رأس المال</h2></div>
+                <div class="balance-card capital-card">
+                    <div class="bal-label">رأس المال الحالي</div>
+                    <div class="bal-amount" id="capitalBalance">0</div>
+                </div>
+                <div class="action-btns">
+                    <button class="btn btn-success" id="capitalAddBtn"><i class="ri-add-line"></i> إضافة</button>
+                    <button class="btn btn-danger" id="capitalWithdrawBtn"><i class="ri-subtract-line"></i> سحب</button>
+                </div>
+                <div class="filter-bar" style="margin-top:12px"><input type="text" id="capitalSearch" class="input-field" placeholder="بحث في رأس المال..."><button class="btn btn-primary btn-sm" onclick="renderCapital()"><i class="ri-search-line"></i></button></div>
+                <div id="capitalList" class="records-list"></div>
+                <button class="btn btn-warning btn-block" id="printCapitalBtn" style="margin-top:12px"><i class="ri-printer-fill"></i> طباعة رأس المال</button>
+            </section>
+
+            <!-- PURCHASES -->
+            <section id="page-purchases" class="page">
+                <div class="section-head"><h2><i class="ri-shopping-cart-2-fill"></i> المشتريات</h2></div>
+                <button class="btn btn-primary btn-block" id="addPurchaseBtn"><i class="ri-add-circle-line"></i> إضافة عملية شراء</button>
+                <div class="filter-bar" style="margin-top:12px"><input type="text" id="purchSearch" class="input-field" placeholder="بحث في المشتريات..."><button class="btn btn-primary btn-sm" onclick="renderPurchases()"><i class="ri-search-line"></i></button></div>
+                <div id="purchasesList" class="records-list"></div>
+                <div class="total-bar"><span>إجمالي المشتريات</span><strong id="purchTotalDisp">0</strong></div>
+                <button class="btn btn-warning btn-block" id="printPurchBtn" style="margin-top:12px"><i class="ri-printer-fill"></i> طباعة المشتريات</button>
+            </section>
+
+            <!-- MONTHLY REPORT -->
+            <section id="page-report" class="page">
+                <div class="section-head"><h2><i class="ri-bar-chart-box-fill"></i> التقرير الشهري</h2></div>
+                <div class="filter-bar">
+                    <input type="month" id="reportMonth" class="input-field">
+                    <button class="btn btn-primary btn-sm" id="reportFilterBtn"><i class="ri-search-line"></i></button>
+                </div>
+                <div id="reportContent" class="report-content"></div>
+                <div class="action-btns" style="margin-top:12px">
+                    <button class="btn btn-warning" id="printReportBtn"><i class="ri-printer-fill"></i> طباعة التقرير</button>
+                </div>
+            </section>
+
+            <!-- SETTINGS -->
+            <section id="page-settings" class="page">
+                <div class="section-head"><h2><i class="ri-settings-4-fill"></i> الإعدادات</h2></div>
+                <div class="card">
+                    <h3 class="card-h"><i class="ri-store-2-line"></i> معلومات المحل</h3>
+                    <div class="field"><label>اسم المحل</label><input type="text" id="setStoreName" class="input-field" placeholder="اسم المحل"></div>
+                    <div class="field"><label>العملة</label>
+                        <select id="setCurrency" class="input-field">
+                            <option value="د.ع">دينار عراقي</option><option value="ر.س">ريال سعودي</option><option value="د.ك">دينار كويتي</option><option value="د.إ">درهم إماراتي</option><option value="$">دولار</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-success btn-block" id="saveSettingsBtn"><i class="ri-save-line"></i> حفظ</button>
+                </div>
+                <div class="card">
+                    <h3 class="card-h"><i class="ri-database-2-line"></i> البيانات</h3>
+                    <div class="stacked-btns">
+                        <button class="btn btn-primary" id="exportBtn"><i class="ri-download-cloud-line"></i> تصدير</button>
+                        <button class="btn btn-ghost" id="importBtn"><i class="ri-upload-cloud-line"></i> استيراد</button>
+                        <input type="file" id="importFile" accept=".json" style="display:none">
+                        <button class="btn btn-warning" id="demoBtn"><i class="ri-flask-line"></i> تحميل بيانات تجريبية</button>
+                        <button class="btn btn-danger" id="clearBtn"><i class="ri-delete-bin-line"></i> مسح الكل</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <nav class="bottomnav">
+            <button class="bn-item active" data-page="home"><i class="ri-dashboard-3-line"></i><span>الرئيسية</span></button>
+            <button class="bn-item" data-page="closing"><i class="ri-calculator-line"></i><span>التقفيلة</span></button>
+            <button class="bn-item" data-page="safe"><i class="ri-safe-2-line"></i><span>الخزنة</span></button>
+            <button class="bn-item" data-page="debts"><i class="ri-file-list-3-line"></i><span>الديون</span></button>
+            <button class="bn-item" data-page="salaries"><i class="ri-team-line"></i><span>الرواتب</span></button>
+        </nav>
+    </div>
+
+    <div id="modal" class="modal hidden">
+        <div class="modal-card"><div class="modal-head"><h3 id="modalTitle"></h3><button class="modal-x" id="modalClose"><i class="ri-close-line"></i></button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFoot"></div></div>
+    </div>
+    <div id="toast" class="toast hidden"></div>
+    <div id="printArea" class="print-area"></div>
+    <script src="app.js"></script>
+</body>
+</html>
