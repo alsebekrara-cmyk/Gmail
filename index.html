@@ -35,7 +35,22 @@
         <header class="topbar">
             <div class="topbar-r"><button id="sidebarToggle" class="topbar-btn"><i class="ri-menu-3-line"></i></button><span class="topbar-title" id="topbarTitle">لوحة التحكم</span></div>
             <div class="topbar-c"><input type="text" id="topbarSearch" class="topbar-search" placeholder="بحث شامل في جميع البيانات..."><button class="topbar-search-btn" id="topbarSearchBtn"><i class="ri-search-line"></i></button></div>
-            <div class="topbar-l"><span id="currentUserDisp" style="font-size:.75rem;margin-left:10px;opacity:.85;background:rgba(255,255,255,.15);padding:2px 8px;border-radius:8px"></span><span class="topbar-date" id="topbarDate"></span></div>
+            <div class="topbar-l">
+                <button class="topbar-btn notif-btn" id="notifToggle" title="الإشعارات">
+                    <i class="ri-notification-3-line"></i>
+                    <span class="notif-badge" id="notifBadge" style="display:none">0</span>
+                </button>
+                <div id="notifPanel" class="notif-panel">
+                    <div class="notif-header">
+                        <h3><i class="ri-notification-3-line"></i> الإشعارات</h3>
+                        <div style="display:flex;gap:4px">
+                            <button class="btn btn-ghost btn-sm" onclick="markAllNotifsRead()" title="تعيين الكل كمقروء"><i class="ri-check-double-line"></i></button>
+                            <button class="btn btn-ghost btn-sm" onclick="clearAllNotifs()" title="مسح الكل"><i class="ri-delete-bin-line"></i></button>
+                        </div>
+                    </div>
+                    <div id="notifList" class="notif-list"></div>
+                </div>
+                <span id="currentUserDisp" style="font-size:.75rem;margin-left:10px;opacity:.85;background:rgba(255,255,255,.15);padding:2px 8px;border-radius:8px"></span><span class="topbar-date" id="topbarDate"></span></div>
         </header>
         <aside id="sidebar" class="sidebar">
             <div class="sb-head"><div class="sb-logo"><i class="ri-safe-2-fill"></i> نظام الكاشير</div><button id="closeSidebar" class="sb-close"><i class="ri-close-line"></i></button></div>

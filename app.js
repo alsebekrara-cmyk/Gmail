@@ -10,7 +10,7 @@ const toK = v => (v||0)/1000;                   // real value → display in tho
 /* ========= auth store ========= */
 const AUTH_KEYS={users:'cm_users',session:'cm_session'};
 function loadUsers(){try{return JSON.parse(localStorage.getItem(AUTH_KEYS.users))||[];}catch(e){return [];}}
-function saveUsers(u){localStorage.setItem(AUTH_KEYS.users,JSON.stringify(u));}
+function saveUsers(u){localStorage.setItem(AUTH_KEYS.users,JSON.stringify(u));if(!_syncingFromFirebase)syncUsersToFirebase();}
 function getSession(){try{return JSON.parse(localStorage.getItem(AUTH_KEYS.session))||null;}catch(e){return null;}}
 function setSession(u){localStorage.setItem(AUTH_KEYS.session,JSON.stringify(u));}
 function clearSession(){localStorage.removeItem(AUTH_KEYS.session);}
@@ -95,10 +95,17 @@ const KEYS={closings:'cm_closings',safe:'cm_safe',debts:'cm_debts',employees:'cm
     capital:'cm_capital',purchases:'cm_purchases',withdrawals:'cm_withdrawals',
     settings:'cm_settings',payroll:'cm_payroll',expenseEntries:'cm_expenseEntries',
     individualClosings:'cm_individual_closings',cashierAccounts:'cm_cashier_accounts'};
+const SYNC_KEYS_MAP={
+    'cm_closings':'closings_data','cm_safe':'safe','cm_debts':'debts','cm_employees':'employees',
+    'cm_purchases':'purchases','cm_withdrawals':'withdrawals','cm_settings':'settings',
+    'cm_payroll':'payroll','cm_expenseEntries':'expenseEntries',
+    'cm_individual_closings':'individualClosings','cm_cashier_accounts':'cashierAccounts'
+};
+let _syncingFromFirebase=false;
 function loadData(k){try{return JSON.parse(localStorage.getItem(k))||[];}catch(e){return[];}}
-function saveData(k,v){localStorage.setItem(k,JSON.stringify(v));}
+function saveData(k,v){localStorage.setItem(k,JSON.stringify(v));if(!_syncingFromFirebase)syncDataToFirebase(k,v);}
 function loadSettings(){try{return JSON.parse(localStorage.getItem(KEYS.settings))||{};}catch(e){return {};}}
-function saveSettings(s){localStorage.setItem(KEYS.settings,JSON.stringify(s));}
+function saveSettings(s){localStorage.setItem(KEYS.settings,JSON.stringify(s));if(!_syncingFromFirebase)syncDataToFirebase(KEYS.settings,s);}
 
 /* ========= Firebase Integration ========= */
 const firebaseConfig = {
@@ -113,6 +120,251 @@ const firebaseConfig = {
 };
 let fbApp, fbDb;
 try { fbApp = firebase.initializeApp(firebaseConfig); fbDb = firebase.database(); } catch(e){ console.warn('Firebase init failed:', e); }
+
+/* ========= FIREBASE FULL SYNC SYSTEM ========= */
+function syncDataToFirebase(localKey, data){
+    if(!fbDb) return;
+    const fbKey = SYNC_KEYS_MAP[localKey];
+    if(!fbKey) return;
+    fbDb.ref('store_data/'+fbKey).set(data).catch(e=>console.warn('Sync failed for '+fbKey+':',e));
+}
+
+function syncUsersToFirebase(){
+    if(!fbDb) return;
+    const users=loadUsers();
+    fbDb.ref('store_data/users').set(users).catch(e=>console.warn('Sync users failed:',e));
+}
+
+async function initFirebaseSync(){
+    if(!fbDb) return;
+    try{
+        const snap=await fbDb.ref('store_data').once('value');
+        const remoteData=snap.val();
+        if(remoteData){
+            _syncingFromFirebase=true;
+            Object.entries(SYNC_KEYS_MAP).forEach(([localKey,fbKey])=>{
+                if(remoteData[fbKey]!==undefined&&remoteData[fbKey]!==null){
+                    localStorage.setItem(localKey,JSON.stringify(remoteData[fbKey]));
+                }
+            });
+            if(remoteData.users){
+                localStorage.setItem(AUTH_KEYS.users,JSON.stringify(remoteData.users));
+            }
+            _syncingFromFirebase=false;
+        } else {
+            uploadAllToFirebase();
+        }
+    }catch(e){console.warn('Firebase sync init failed:',e);}
+    startSyncListeners();
+    startNotificationListener();
+    refreshActivePage();
+}
+
+function uploadAllToFirebase(){
+    if(!fbDb) return;
+    const data={};
+    Object.entries(SYNC_KEYS_MAP).forEach(([localKey,fbKey])=>{
+        data[fbKey]=localKey===KEYS.settings?loadSettings():loadData(localKey);
+    });
+    data.users=loadUsers();
+    fbDb.ref('store_data').set(data).catch(e=>console.warn('Upload failed:',e));
+}
+
+function startSyncListeners(){
+    if(!fbDb) return;
+    Object.entries(SYNC_KEYS_MAP).forEach(([localKey,fbKey])=>{
+        fbDb.ref('store_data/'+fbKey).on('value',snap=>{
+            const data=snap.val();
+            if(data!==undefined&&data!==null){
+                _syncingFromFirebase=true;
+                localStorage.setItem(localKey,JSON.stringify(data));
+                _syncingFromFirebase=false;
+                refreshActivePage();
+            }
+        });
+    });
+    fbDb.ref('store_data/users').on('value',snap=>{
+        const users=snap.val();
+        if(users){
+            _syncingFromFirebase=true;
+            localStorage.setItem(AUTH_KEYS.users,JSON.stringify(users));
+            _syncingFromFirebase=false;
+        }
+    });
+}
+
+function refreshActivePage(){
+    const activePage=document.querySelector('.page.active');
+    if(!activePage) return;
+    const pid=activePage.id.replace('page-','');
+    const r={closing:renderClosings,safe:renderSafe,debts:renderDebts,expenses:renderExpenses,
+        salaries:renderSalaries,payroll:renderPayroll,capital:renderCapital,purchases:renderPurchases,
+        report:renderReport,settings:renderSettings,security:renderSecurity,individual:renderIndividual};
+    if(r[pid])try{r[pid]();}catch(e){}
+    if(pid==='home'){
+        const secTile=$('#securityTile');if(secTile)secTile.style.display=isAdmin()?'':'none';
+    }
+}
+
+/* ========= NOTIFICATION SYSTEM ========= */
+const NOTIF_KEY='cm_notifications';
+
+function loadNotifications(){try{return JSON.parse(localStorage.getItem(NOTIF_KEY))||[];}catch(e){return[];}}
+function saveNotificationsLocal(notifs){localStorage.setItem(NOTIF_KEY,JSON.stringify(notifs));}
+
+function startNotificationListener(){
+    if(!fbDb) return;
+    fbDb.ref('notifications').orderByChild('targetApp').equalTo('main').on('child_added',snap=>{
+        const notif=snap.val();
+        if(!notif) return;
+        const notifs=loadNotifications();
+        if(notifs.find(n=>n.id===notif.id)) return;
+        notifs.unshift(notif);
+        saveNotificationsLocal(notifs);
+        updateNotifBadge();
+        if(notif.type==='new_closing') toast('📥 تقفيلة جديدة من '+notif.cashierLabel);
+        else if(notif.type==='alert_response') toast('📩 رد على التنبيه من '+notif.senderUser);
+    });
+}
+
+function updateNotifBadge(){
+    const notifs=loadNotifications();
+    const unread=notifs.filter(n=>!n.read).length;
+    const badge=$('#notifBadge');
+    if(badge){badge.textContent=unread;badge.style.display=unread>0?'':'none';}
+}
+
+function toggleNotifPanel(){
+    const panel=$('#notifPanel');
+    if(!panel) return;
+    if(!panel.classList.contains('open')){
+        renderNotifPanel();
+        panel.classList.add('open');
+    } else {
+        panel.classList.remove('open');
+    }
+}
+
+function renderNotifPanel(){
+    const notifs=loadNotifications();
+    const unread=notifs.filter(n=>!n.read);
+    const list=$('#notifList');
+    if(!list) return;
+    if(!unread.length){
+        list.innerHTML='<div class="empty-state" style="padding:20px"><i class="ri-notification-off-line"></i><p>لا توجد إشعارات جديدة</p></div>';
+        return;
+    }
+    list.innerHTML=unread.slice(0,50).map(n=>{
+        const timeAgo=getTimeAgo(n.timestamp);
+        const icon=n.type==='new_closing'?'ri-calculator-line':n.type==='alert_response'?'ri-chat-check-line':'ri-notification-3-line';
+        const statusHtml=n.type==='alert_response'?`<span class="notif-status resolved"><i class="ri-check-line"></i> تم الرد</span>`:'';
+        return `<div class="notif-item notif-unread" onclick="handleNotifClick('${n.id}')">
+            <div class="notif-icon"><i class="${icon}"></i></div>
+            <div class="notif-content">
+                <div class="notif-title">${escapeHtml(n.title||'')}</div>
+                <div class="notif-msg">${escapeHtml(n.message||'')}</div>
+                ${statusHtml}
+                <div class="notif-time">${timeAgo}</div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function escapeHtml(str){return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function handleNotifClick(id){
+    const notifs=loadNotifications();
+    const notif=notifs.find(n=>n.id===id);
+    if(!notif) return;
+    notif.read=true;
+    saveNotificationsLocal(notifs);
+    updateNotifBadge();
+    renderNotifPanel();
+    const panel=$('#notifPanel');if(panel)panel.classList.remove('open');
+    if(notif.type==='new_closing') navigate('individual');
+    else if(notif.type==='alert_response') navigate('individual');
+}
+
+function markAllNotifsRead(){
+    const notifs=loadNotifications();
+    notifs.forEach(n=>n.read=true);
+    saveNotificationsLocal(notifs);
+    updateNotifBadge();
+    renderNotifPanel();
+}
+
+function clearAllNotifs(){
+    saveNotificationsLocal([]);
+    updateNotifBadge();
+    renderNotifPanel();
+}
+
+function getTimeAgo(ts){
+    if(!ts) return '';
+    const diff=Date.now()-ts;
+    const mins=Math.floor(diff/60000);
+    if(mins<1) return 'الآن';
+    if(mins<60) return mins+' دقيقة';
+    const hrs=Math.floor(mins/60);
+    if(hrs<24) return hrs+' ساعة';
+    const days=Math.floor(hrs/24);
+    if(days<30) return days+' يوم';
+    return Math.floor(days/30)+' شهر';
+}
+
+/* ========= ALERT SYSTEM (Main → Cashier) ========= */
+function openSendAlert(closingId){
+    const cl=loadData(KEYS.individualClosings).find(c=>c.id===closingId);
+    if(!cl) return;
+    const html=`
+        <div style="text-align:center;margin-bottom:12px">
+            <div style="font-weight:700;color:var(--primary);margin-bottom:4px"><i class="ri-send-plane-fill"></i> إرسال تنبيه للكاشير</div>
+            <div style="font-size:.82rem;color:var(--text2)">${cl.cashierLabel} - ${cl.date}</div>
+        </div>
+        <div class="field"><label>نوع التنبيه</label>
+            <select id="alertType" class="input-field">
+                <option value="shortage">نقص في التقفيلة</option>
+                <option value="error">خطأ في البيانات</option>
+                <option value="note">ملاحظة عامة</option>
+            </select>
+        </div>
+        <div class="field"><label>الملاحظة</label>
+            <textarea id="alertMessage" class="input-field" rows="3" placeholder="اكتب ملاحظتك هنا..."></textarea>
+        </div>`;
+    openModal('إرسال تنبيه',html,`<button class="btn btn-primary" onclick="confirmSendAlert('${closingId}')"><i class="ri-send-plane-line"></i> إرسال</button><button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>`);
+}
+
+function confirmSendAlert(closingId){
+    if(!fbDb) return toast('لا يوجد اتصال بقاعدة البيانات');
+    const cl=loadData(KEYS.individualClosings).find(c=>c.id===closingId);
+    if(!cl) return;
+    const alertType=$('#alertType')?.value||'note';
+    const message=$('#alertMessage')?.value?.trim();
+    if(!message) return toast('اكتب الملاحظة');
+    const typeLabels={shortage:'نقص في التقفيلة',error:'خطأ في البيانات',note:'ملاحظة'};
+    const alertId=uid();
+    const alertData={
+        id:alertId,
+        type:'alert_shortage',
+        alertType:alertType,
+        title:typeLabels[alertType]||'تنبيه',
+        message:message,
+        closingId:closingId,
+        closingDate:cl.date,
+        cashierKey:cl.cashierKey,
+        cashierLabel:cl.cashierLabel,
+        timestamp:Date.now(),
+        targetApp:'cashier',
+        targetCashierType:cl.cashierKey,
+        read:false,
+        status:'pending',
+        senderUser:getByTag()
+    };
+    fbDb.ref('notifications/'+alertId).set(alertData).then(()=>{
+        toast('تم إرسال التنبيه بنجاح');
+        closeModal();
+    }).catch(e=>{toast('فشل إرسال التنبيه');console.warn(e);});
+}
 
 function startFirebaseListener(){
     if(!fbDb) return;
@@ -186,6 +438,19 @@ function importRemoteClosing(remote){
     mergeIndividualClosings(date);
 
     toast('تقفيلة جديدة من '+remote.cashierLabel);
+
+    /* create notification */
+    if(fbDb){
+        const notifId=uid();
+        fbDb.ref('notifications/'+notifId).set({
+            id:notifId,type:'new_closing',title:'تقفيلة جديدة',
+            message:remote.cashierLabel+' - '+remote.date+(remote.manager?' ('+remote.manager+')':''),
+            closingId:remote.id,closingDate:remote.date,
+            cashierLabel:remote.cashierLabel,cashierKey:remote.cashierKey,
+            timestamp:Date.now(),targetApp:'main',read:false,
+            senderUser:remote.manager||''
+        }).catch(e=>console.warn('Notif create failed:',e));
+    }
 
     /* refresh current page */
     const activePage = document.querySelector('.page.active');
@@ -939,7 +1204,8 @@ function viewIndividualDetails(id){
         html+=`<div style="font-size:.78rem;margin-top:4px;color:#f59e0b;font-weight:600">المصاريف:</div>`;
         cl.expensesList.forEach(ex=>html+=`<div style="font-size:.78rem;padding:2px 8px">${ex.desc||'مصروف'}: ${fmtNum(ex.amount)} ${cur}</div>`);
     }
-    openModal('تفاصيل تقفيلة '+cl.cashierLabel+' - '+cl.date,html);
+    openModal('تفاصيل تقفيلة '+cl.cashierLabel+' - '+cl.date,html,
+        cl.source==='cashier-app'?`<button class="btn btn-warning" onclick="closeModal();openSendAlert('${cl.id}')"><i class="ri-send-plane-line"></i> إرسال تنبيه</button>`:'');
 }
 function printIndividualClosing(id){
     if(!hasAction('print'))return toast('غير مصرح');
@@ -2454,11 +2720,17 @@ function initApp(){
     const settings=loadSettings();
     applyTheme(settings.theme);
 
-    /* start Firebase real-time listener */
+    /* start Firebase real-time listener for cashier closings */
     startFirebaseListener();
+
+    /* start full Firebase sync */
+    initFirebaseSync();
 
     /* sync cashier accounts to Firebase */
     syncCashierAccounts();
+
+    /* update notification badge */
+    updateNotifBadge();
 
     /* user display */
     const user=getCurrentUser();
@@ -2533,6 +2805,10 @@ function initApp(){
 
     /* security */
     const addUserBtn=$('#addUserBtn');if(addUserBtn)addUserBtn.addEventListener('click',addUser);
+
+    /* notifications */
+    const notifToggle=$('#notifToggle');if(notifToggle)notifToggle.addEventListener('click',toggleNotifPanel);
+    document.addEventListener('click',e=>{const panel=$('#notifPanel');const toggle=$('#notifToggle');if(panel&&panel.classList.contains('open')&&!panel.contains(e.target)&&toggle&&!toggle.contains(e.target))panel.classList.remove('open');});
 
     /* modal */
     $('#modalClose').addEventListener('click',closeModal);
