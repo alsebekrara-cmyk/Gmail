@@ -1401,6 +1401,132 @@ function renderDebts(){
     const total=filtered.reduce((s,d)=>s+d.amount,0);
     $('#debtsTotalDisp').textContent=fmtNum(total)+' '+cur;
 }
+/* ======== ADD DEBT MANUALLY ======== */
+function openAddDebtModal(){
+    if(!hasAction('edit'))return toast('غير مصرح');
+    const emps=loadData(KEYS.employees).map(e=>e.name);
+    const debts=loadData(KEYS.debts);
+    const allNames=[...new Set([...emps,...debts.map(d=>d.person)])].filter(Boolean);
+    const opts=allNames.map(n=>`<option value="${n}">${n}</option>`).join('');
+    const cashierOpts=`<option value="">-- عام --</option>`+[...CASHIERS.map(c=>c.label)].map(c=>`<option value="${c}">${c}</option>`).join('');
+    openModal('إضافة دين جديد',`
+        <div class="field"><label>الشخص</label>
+            <select id="addDebtPerson" class="input-field">
+                <option value="">-- اختر شخص --</option>${opts}
+                <option value="__new__">+ اسم جديد</option>
+            </select>
+            <input type="text" id="addDebtPersonNew" class="input-field" placeholder="اسم الشخص الجديد" style="display:none;margin-top:6px">
+        </div>
+        <div class="field"><label>المبلغ (بالآلاف)</label><input type="number" id="addDebtAmount" class="input-field" inputmode="decimal" placeholder="مثال: 50 = 50,000"></div>
+        <div class="field"><label>ملاحظة / السبب</label><input type="text" id="addDebtNote" class="input-field" placeholder="مثال: ملابس، عطر..."></div>
+        <div class="field"><label>الكاشير المرتبط</label><select id="addDebtCashier" class="input-field">${cashierOpts}</select></div>
+        <div class="field"><label>التاريخ</label><input type="date" id="addDebtDate" class="input-field" value="${today()}"></div>`,
+    `<button class="btn btn-danger" onclick="confirmAddDebt()"><i class="ri-add-circle-line"></i> إضافة الدين</button>
+     <button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>`);
+    setTimeout(()=>{
+        const sel=document.getElementById('addDebtPerson');
+        if(sel)sel.addEventListener('change',()=>{
+            const ni=document.getElementById('addDebtPersonNew');
+            if(ni)ni.style.display=sel.value==='__new__'?'':'none';
+        });
+    },100);
+}
+function confirmAddDebt(){
+    const sel=document.getElementById('addDebtPerson');
+    let person=sel?sel.value:'';
+    if(person==='__new__'){const ni=document.getElementById('addDebtPersonNew');person=ni?ni.value.trim():'';}
+    person=(person||'').trim();
+    if(!person)return toast('أدخل اسم الشخص');
+    const amount=parseK(document.getElementById('addDebtAmount')?.value);
+    if(!amount||amount<=0)return toast('أدخل مبلغاً صحيحاً');
+    const note=(document.getElementById('addDebtNote')?.value||'').trim();
+    const cashier=document.getElementById('addDebtCashier')?.value||'';
+    const date=document.getElementById('addDebtDate')?.value||today();
+    const by=getByTag();
+    const debts=loadData(KEYS.debts);
+    debts.push({id:uid(),person,amount,note,type:'debt',cashier,date,by});
+    saveData(KEYS.debts,debts);
+    closeModal();toast('تم إضافة دين '+fmtNum(amount)+' على '+person);renderDebts();
+}
+
+/* ======== ADD WITHDRAWAL DEBT MANUALLY ======== */
+function openAddWithdrawDebtModal(){
+    if(!hasAction('edit'))return toast('غير مصرح');
+    const emps=loadData(KEYS.employees).map(e=>e.name);
+    const debts=loadData(KEYS.debts);
+    const allNames=[...new Set([...emps,...debts.map(d=>d.person)])].filter(Boolean);
+    const opts=allNames.map(n=>`<option value="${n}">${n}</option>`).join('');
+    openModal('إضافة سحب',`
+        <div class="field"><label>الشخص</label>
+            <select id="addWdPerson" class="input-field">
+                <option value="">-- اختر شخص --</option>${opts}
+                <option value="__new__">+ اسم جديد</option>
+            </select>
+            <input type="text" id="addWdPersonNew" class="input-field" placeholder="اسم جديد" style="display:none;margin-top:6px">
+        </div>
+        <div class="field"><label>المبلغ (بالآلاف)</label><input type="number" id="addWdAmount" class="input-field" inputmode="decimal"></div>
+        <div class="field"><label>ملاحظة</label><input type="text" id="addWdNote" class="input-field" placeholder="مثال: سلفة، بضاعة..."></div>
+        <div class="field"><label>التاريخ</label><input type="date" id="addWdDate" class="input-field" value="${today()}"></div>`,
+    `<button class="btn btn-warning" onclick="confirmAddWithdrawDebt()"><i class="ri-hand-coin-line"></i> إضافة السحب</button>
+     <button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>`);
+    setTimeout(()=>{
+        const sel=document.getElementById('addWdPerson');
+        if(sel)sel.addEventListener('change',()=>{
+            const ni=document.getElementById('addWdPersonNew');
+            if(ni)ni.style.display=sel.value==='__new__'?'':'none';
+        });
+    },100);
+}
+function confirmAddWithdrawDebt(){
+    const sel=document.getElementById('addWdPerson');
+    let person=sel?sel.value:'';
+    if(person==='__new__'){const ni=document.getElementById('addWdPersonNew');person=ni?ni.value.trim():'';}
+    person=(person||'').trim();
+    if(!person)return toast('أدخل اسم الشخص');
+    const amount=parseK(document.getElementById('addWdAmount')?.value);
+    if(!amount||amount<=0)return toast('أدخل مبلغاً صحيحاً');
+    const note=(document.getElementById('addWdNote')?.value||'').trim()||'سحب';
+    const date=document.getElementById('addWdDate')?.value||today();
+    const by=getByTag();
+    const debts=loadData(KEYS.debts);
+    debts.push({id:uid(),person,amount,note:'سحب: '+note,type:'withdraw',cashier:'',date,by});
+    saveData(KEYS.debts,debts);
+    const wds=loadData(KEYS.withdrawals);
+    wds.push({id:uid(),person,amount,note,cashier:'',date,by});
+    saveData(KEYS.withdrawals,wds);
+    closeModal();toast('تم إضافة سحب '+fmtNum(amount)+' لـ '+person);renderDebts();
+}
+
+/* ======== ADD EXPENSE MANUALLY ======== */
+function openAddExpenseModal(){
+    if(!hasAction('edit'))return toast('غير مصرح');
+    const cashierOpts=CASHIERS.map(c=>`<option value="${c.label}">${c.label}</option>`).join('');
+    openModal('إضافة مصروف',`
+        <div class="field"><label>الوصف</label><input type="text" id="addExpDesc" class="input-field" placeholder="مثال: مواد تنظيف، غداء موظفين..."></div>
+        <div class="field"><label>المبلغ (بالآلاف)</label><input type="number" id="addExpAmount" class="input-field" inputmode="decimal" placeholder="مثال: 15 = 15,000"></div>
+        <div class="field"><label>الكاشير المرتبط</label>
+            <select id="addExpCashier" class="input-field">
+                <option value="">-- عام --</option>${cashierOpts}
+            </select>
+        </div>
+        <div class="field"><label>التاريخ</label><input type="date" id="addExpDate" class="input-field" value="${today()}"></div>`,
+    `<button class="btn btn-primary" onclick="confirmAddExpense()"><i class="ri-add-circle-line"></i> إضافة المصروف</button>
+     <button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>`);
+}
+function confirmAddExpense(){
+    const desc=(document.getElementById('addExpDesc')?.value||'').trim();
+    if(!desc)return toast('أدخل وصف المصروف');
+    const amount=parseK(document.getElementById('addExpAmount')?.value);
+    if(!amount||amount<=0)return toast('أدخل مبلغاً صحيحاً');
+    const cashier=document.getElementById('addExpCashier')?.value||'';
+    const date=document.getElementById('addExpDate')?.value||today();
+    const by=getByTag();
+    const entries=loadData(KEYS.expenseEntries);
+    entries.push({id:uid(),amount,desc,cashier,date,by});
+    saveData(KEYS.expenseEntries,entries);
+    closeModal();toast('تم إضافة مصروف '+fmtNum(amount));renderExpenses();
+}
+
 function deleteDebt(id){
     if(!hasAction('delete'))return toast('غير مصرح');
     if(!confirm('حذف؟'))return;
@@ -2057,20 +2183,68 @@ function saveEditPurchase(id){
     closeModal();toast('تم التحديث');renderPurchases();
 }
 
-/* ========= MONTHLY REPORT ========= */
+/* ========= REPORT (DAILY + MONTHLY + SECTION FILTER) ========= */
+let reportPeriodMode = 'monthly'; // 'daily' | 'monthly'
+let reportSection = 'all';       // 'all' | 'closing' | 'safe' | 'debts' | 'expenses' | 'payroll' | 'purchases'
+
+function switchReportPeriod(mode){
+    reportPeriodMode = mode;
+    const dateEl = document.getElementById('reportDate');
+    const monthEl = document.getElementById('reportMonth');
+    const tabD = document.getElementById('rptTabDaily');
+    const tabM = document.getElementById('rptTabMonthly');
+    if(!dateEl||!monthEl) return;
+    if(mode === 'daily'){
+        dateEl.style.display = '';
+        monthEl.style.display = 'none';
+        if(!dateEl.value) dateEl.value = today();
+        tabD && tabD.classList.add('active');
+        tabM && tabM.classList.remove('active');
+    } else {
+        dateEl.style.display = 'none';
+        monthEl.style.display = '';
+        tabD && tabD.classList.remove('active');
+        tabM && tabM.classList.add('active');
+    }
+    renderReport();
+}
+
+function setReportSection(sec){
+    reportSection = sec;
+    document.querySelectorAll('.rs-tab').forEach(b=>{
+        b.classList.toggle('active', b.dataset.rsec === sec);
+    });
+    renderReport();
+}
+
 function renderReport(){
+
     const s=loadSettings();const cur=s.currency||'د.ع';
-    const monthInput=$('#reportMonth');
-    if(!monthInput.value)monthInput.value=today().slice(0,7);
-    const ym=monthInput.value;
-    const closings=loadData(KEYS.closings).filter(c=>c.date&&c.date.startsWith(ym));
-    const purchases=loadData(KEYS.purchases).filter(p=>p.date&&p.date.startsWith(ym));
-    const payrollData=loadData(KEYS.payroll).filter(p=>p.month===ym);
-    const safeTrans=loadData(KEYS.safe).filter(t=>t.date&&t.date.startsWith(ym));
-    const debts=loadData(KEYS.debts).filter(d=>d.date&&d.date.startsWith(ym));
-    const expEntries=loadData(KEYS.expenseEntries).filter(e=>e.date&&e.date.startsWith(ym));
-    const capitalTrans=loadData(KEYS.safe); /* full safe for balance */
     const content=$('#reportContent');
+
+    /* determine filter prefix (date string) */
+    let filterPrefix, filterLabel;
+    if(reportPeriodMode === 'daily'){
+        const dateEl=$('#reportDate');
+        if(!dateEl.value) dateEl.value=today();
+        filterPrefix = dateEl.value; // YYYY-MM-DD exact
+        filterLabel = 'يوم ' + filterPrefix;
+    } else {
+        const monthInput=$('#reportMonth');
+        if(!monthInput.value) monthInput.value=today().slice(0,7);
+        filterPrefix = monthInput.value; // YYYY-MM prefix
+        filterLabel = 'شهر ' + filterPrefix;
+    }
+
+    const closings=loadData(KEYS.closings).filter(c=>c.date&&c.date.startsWith(filterPrefix));
+    const purchases=loadData(KEYS.purchases).filter(p=>p.date&&p.date.startsWith(filterPrefix));
+    const payrollData=reportPeriodMode==='daily'
+        ? loadData(KEYS.payroll).filter(p=>p.date===filterPrefix)
+        : loadData(KEYS.payroll).filter(p=>p.month===filterPrefix);
+    const safeTrans=loadData(KEYS.safe).filter(t=>t.date&&t.date.startsWith(filterPrefix));
+    const debts=loadData(KEYS.debts).filter(d=>d.date&&d.date.startsWith(filterPrefix));
+    const expEntries=loadData(KEYS.expenseEntries).filter(e=>e.date&&e.date.startsWith(filterPrefix));
+    const sec = reportSection; /* active section filter */
 
     /* gather all closing details per cashier */
     let totalSales=0,totalNetwork=0,totalReturns=0,totalExpFromClosings=0,totalLunch=0,totalDebtsFromClosings=0,totalWithdrawals=0,totalNet=0;
@@ -2114,7 +2288,7 @@ function renderReport(){
     let html='';
 
     /* ===== SUMMARY SECTION ===== */
-    html+=`<div class="report-summary"><h3><i class="ri-bar-chart-box-fill"></i> ملخص شهر ${ym}</h3><div class="summary-grid">
+    html+=`<div class="report-summary"><h3><i class="ri-bar-chart-box-fill"></i> ملخص ${filterLabel}</h3><div class="summary-grid">
     <div class="summary-item"><div class="s-label">إجمالي المبيعات</div><div class="s-val">${fmtNum(totalSales)}</div></div>
     <div class="summary-item"><div class="s-label">صافي التقفيلات</div><div class="s-val">${fmtNum(totalNet)}</div></div>
     <div class="summary-item"><div class="s-label">المصاريف الكلية</div><div class="s-val">${fmtNum(totalAllExpenses)}</div></div>
@@ -2155,7 +2329,7 @@ function renderReport(){
     }
 
     /* ===== PAYROLL SECTION ===== */
-    if(payrollData.length){
+    if((sec==='all'||sec==='payroll')&&payrollData.length){
         html+=`<div class="report-section"><h3><i class="ri-hand-coin-fill"></i> صرف الرواتب (${payrollData.length})</h3><table class="report-table"><thead><tr><th>التاريخ</th><th>الموظف</th><th>المبلغ</th><th>الاستقطاعات</th><th>الصافي</th><th>ملاحظة</th></tr></thead><tbody>`;
         payrollData.forEach(p=>{
             const ded=p.deductions;
@@ -2167,21 +2341,21 @@ function renderReport(){
     }
 
     /* ===== EXPENSES SECTION ===== */
-    if(expEntries.length){
+    if((sec==='all'||sec==='expenses')&&expEntries.length){
         html+=`<div class="report-section"><h3><i class="ri-money-dollar-box-fill"></i> المصاريف المسجلة (${expEntries.length})</h3><table class="report-table"><thead><tr><th>التاريخ</th><th>الكاشير</th><th>الوصف</th><th>المبلغ</th></tr></thead><tbody>`;
         expEntries.forEach(e=>html+=`<tr><td>${e.date}</td><td>${e.cashier||''}</td><td>${e.desc||''}</td><td style="color:var(--clr-expense);font-weight:700">${fmtNum(e.amount)} ${cur}</td></tr>`);
         html+=`<tr class="total-row"><td colspan="3">الإجمالي</td><td>${fmtNum(totalExpEntries)} ${cur}</td></tr></tbody></table></div>`;
     }
 
     /* ===== PURCHASES SECTION ===== */
-    if(purchases.length){
+    if((sec==='all'||sec==='purchases')&&purchases.length){
         html+=`<div class="report-section"><h3><i class="ri-shopping-cart-2-fill"></i> المشتريات (${purchases.length})</h3><table class="report-table"><thead><tr><th>التاريخ</th><th>الوصف</th><th>المبلغ</th></tr></thead><tbody>`;
         purchases.forEach(p=>html+=`<tr><td>${p.date}</td><td>${p.desc||''}</td><td style="color:var(--clr-expense);font-weight:700">${fmtNum(p.amount)} ${cur}</td></tr>`);
         html+=`<tr class="total-row"><td colspan="2">الإجمالي</td><td>${fmtNum(totalPurchases)} ${cur}</td></tr></tbody></table></div>`;
     }
 
     /* ===== DEBTS SECTION ===== */
-    if(debts.length){
+    if((sec==='all'||sec==='debts')&&debts.length){
         html+=`<div class="report-section"><h3><i class="ri-file-list-3-fill"></i> حركات الديون (${debts.length})</h3><table class="report-table"><thead><tr><th>التاريخ</th><th>الشخص</th><th>النوع</th><th>المبلغ</th><th>ملاحظة</th></tr></thead><tbody>`;
         debts.forEach(d=>{
             const lbl=d.type==='repayment'?'تسديد':d.type==='withdraw'?'سحب':'دين';
@@ -2192,7 +2366,7 @@ function renderReport(){
     }
 
     /* ===== SAFE TRANSACTIONS SECTION ===== */
-    if(safeTrans.length){
+    if((sec==='all'||sec==='safe')&&safeTrans.length){
         html+=`<div class="report-section"><h3><i class="ri-safe-2-fill"></i> حركات الخزنة (${safeTrans.length})</h3><table class="report-table"><thead><tr><th>التاريخ</th><th>النوع</th><th>المبلغ</th><th>ملاحظة</th></tr></thead><tbody>`;
         safeTrans.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).forEach(t=>{
             const isDeposit=t.type==='deposit';
@@ -2349,67 +2523,6 @@ function saveSettingsForm(){
     saveSettings(s);
     toast('تم حفظ الإعدادات');
 }
-/* ========= PER-PAGE IMPORT / EXPORT ========= */
-
-/** تصدير بيانات صفحة واحدة كـ JSON */
-function exportPage(dataKey, filename, label){
-    if(!hasAction('print'))return toast('غير مصرح');
-    const key = KEYS[dataKey];
-    if(!key) return toast('مفتاح بيانات غير معروف');
-    const data = loadData(key);
-    const out = {[dataKey]: data, _exported: today(), _count: data.length};
-    const blob = new Blob([JSON.stringify(out,null,2)], {type:'application/json'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = filename+'_'+today()+'.json';
-    a.click();
-    toast('تم تصدير '+data.length+' سجل من '+label);
-}
-
-/** استيراد بيانات صفحة واحدة — يدمج السجلات الجديدة فقط (بدون تكرار) */
-function importPage(dataKey, label, refreshFn){
-    if(!hasAction('edit'))return toast('غير مصرح');
-    const key = KEYS[dataKey];
-    if(!key) return toast('مفتاح بيانات غير معروف');
-
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = e => {
-        const file = e.target.files[0];
-        if(!file) return;
-        const reader = new FileReader();
-        reader.onload = ev => {
-            try{
-                const parsed = JSON.parse(ev.target.result);
-                // دعم صيغتين: {dataKey:[...]} أو مصفوفة مباشرة أو {debts:[...]} بأي مفتاح
-                let incoming = parsed[dataKey]
-                    || parsed['data']
-                    || (Array.isArray(parsed) ? parsed : null);
-                // بحث تلقائي عن أول مصفوفة في الملف
-                if(!incoming){
-                    const firstArr = Object.values(parsed).find(v => Array.isArray(v));
-                    incoming = firstArr || null;
-                }
-                if(!incoming || !Array.isArray(incoming)) return toast('ملف غير صالح - لم يتم العثور على البيانات');
-
-                // دمج: تجاهل السجلات ذات نفس الـ id
-                const existing = loadData(key);
-                const existingIds = new Set(existing.map(r=>r.id).filter(Boolean));
-                // إضافة id لأي سجل ليس لديه
-                const prepared = incoming.map(r => r.id ? r : {...r, id:uid()});
-                const newRecs = prepared.filter(r => !existingIds.has(r.id));
-                const merged = [...existing, ...newRecs];
-                saveData(key, merged);
-                toast('✅ تم استيراد '+newRecs.length+' سجل جديد | الإجمالي: '+merged.length+' من '+label);
-                if(refreshFn) refreshFn();
-            }catch(err){ console.error(err); toast('ملف غير صالح: '+err.message); }
-        };
-        reader.readAsText(file);
-    };
-    input.click();
-}
-
 function exportData(){
     const data={};
     Object.entries(KEYS).forEach(([k,v])=>{data[k]=JSON.parse(localStorage.getItem(v)||'[]');});
@@ -2853,6 +2966,13 @@ function initApp(){
 
     /* report */
     $('#reportFilterBtn').addEventListener('click',renderReport);
+    /* report section tabs */
+    document.querySelectorAll('.rs-tab').forEach(b=>{
+        b.addEventListener('click',()=>setReportSection(b.dataset.rsec));
+    });
+    /* report date input */
+    const reportDateEl=document.getElementById('reportDate');
+    if(reportDateEl)reportDateEl.addEventListener('change',renderReport);
     $('#printReportBtn').addEventListener('click',printReport);
 
     /* settings */
