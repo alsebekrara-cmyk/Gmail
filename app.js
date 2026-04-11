@@ -280,6 +280,8 @@ function navigate(page){
     if(page==='home'){
         const secTile=$('#securityTile');if(secTile)secTile.style.display=isAdmin()?'':'none';
     }
+    /* push history state for back-button support */
+    history.pushState({page}, '', '');
 }
 function closeSidebar(){if(window.innerWidth>=1024)return;$('#sidebar').classList.remove('open');$('#sbOverlay').classList.remove('show');}
 
@@ -356,6 +358,7 @@ function startWizard(){
     renderWizStep();
     $('#wizardOverlay').classList.remove('hidden');
     document.body.classList.add('wizard-open');
+    history.pushState({page:'wizard',step:0},'','');
 }
 function closeWizard(){
     showCustomDialog({
@@ -2374,6 +2377,63 @@ function doPrint(html){
     setTimeout(()=>window.print(),200);
 }
 
+/* ========= BACK BUTTON NAVIGATION ========= */
+function getCurrentPage(){
+    const active=document.querySelector('.page.active');
+    return active?active.id.replace('page-',''):'home';
+}
+
+function isOverlayOpen(){
+    if(!$('#modal').classList.contains('hidden')) return 'modal';
+    if(!$('#customDialog').classList.contains('hidden')) return 'dialog';
+    if($('#sidebar').classList.contains('open')) return 'sidebar';
+    if(!$('#wizardOverlay').classList.contains('hidden')) return 'wizard';
+    return null;
+}
+
+window.addEventListener('popstate', e => {
+    const state = e.state;
+
+    /* 1. أغلق أي overlay مفتوح أولاً */
+    const overlay = isOverlayOpen();
+    if(overlay === 'sidebar'){ closeSidebar(); history.pushState(state||{page:getCurrentPage()},'',''); return; }
+    if(overlay === 'modal')  { closeModal();   history.pushState(state||{page:getCurrentPage()},'',''); return; }
+    if(overlay === 'dialog') { hideDialog();   history.pushState(state||{page:getCurrentPage()},'',''); return; }
+
+    /* 2. الويزارد مفتوح */
+    if(overlay === 'wizard'){
+        if(wizStep > 0){
+            saveCurrentStep();
+            wizStep--;
+            renderWizStep();
+            history.pushState({page:'wizard',step:wizStep},'','');
+        } else {
+            /* الخطوة الأولى → اعرض حوار الخروج */
+            closeWizard();
+            history.pushState({page:'wizard',step:0},'','');
+        }
+        return;
+    }
+
+    /* 3. صفحة داخلية → ارجع للرئيسية */
+    const page = getCurrentPage();
+    if(page && page !== 'home'){
+        /* navigate بدون pushState هنا لأن popstate أزال آخر state */
+        $$('.page').forEach(p=>p.classList.remove('active'));
+        const el=$('#page-home');if(el)el.classList.add('active');
+        $$('.sb-item').forEach(b=>b.classList.toggle('active',b.dataset.page==='home'));
+        $$('.bn-item').forEach(b=>b.classList.toggle('active',b.dataset.page==='home'));
+        $('#topbarTitle').textContent='لوحة التحكم';
+        const secTile=$('#securityTile');if(secTile)secTile.style.display=isAdmin()?'':'none';
+        history.pushState({page:'home'},'','');
+        return;
+    }
+
+    /* 4. الصفحة الرئيسية → اعرض تأكيد تسجيل الخروج */
+    history.pushState({page:'home'},'','');
+    logout();
+});
+
 /* ========= INIT ========= */
 document.addEventListener('DOMContentLoaded',()=>{
     /* login events (always available) */
@@ -2392,6 +2452,8 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 function initApp(){
     showDate();
+    /* set initial history state */
+    history.replaceState({page:'home'},'','');
 
     /* apply theme */
     const settings=loadSettings();
@@ -2431,8 +2493,9 @@ function initApp(){
         saveCurrentStep();
         if(wizStep===TOTAL_STEPS-1){saveClosing();return;}
         wizStep++;renderWizStep();
+        history.pushState({page:'wizard',step:wizStep},'','');
     });
-    $('#wizBack').addEventListener('click',()=>{saveCurrentStep();if(wizStep>0){wizStep--;renderWizStep();}});
+    $('#wizBack').addEventListener('click',()=>{saveCurrentStep();if(wizStep>0){wizStep--;renderWizStep();history.pushState({page:'wizard',step:wizStep},'','');}});
 
     /* safe */
     $('#safeDepositBtn').addEventListener('click',()=>safeTransaction('deposit'));
