@@ -1,0 +1,372 @@
+{
+  "closings": [
+    {
+      "id": "mnu239fmks2q",
+      "date": "2026-04-11",
+      "manager": "حسين رحيم",
+      "cashiers": {
+        "men": {
+          "sales": 658000,
+          "network": 626000,
+          "returns": 22000,
+          "expenses": 0,
+          "lunch": 10000,
+          "debts": 0,
+          "withdrawals": 0,
+          "debtsList": [],
+          "withdrawList": [],
+          "expensesList": [],
+          "net": 626000,
+          "manager": "حسين رحيم"
+        },
+        "women": {
+          "sales": 381000,
+          "network": 354000,
+          "returns": 18000,
+          "expenses": 9000,
+          "lunch": 0,
+          "debts": 0,
+          "withdrawals": 0,
+          "debtsList": [],
+          "withdrawList": [],
+          "expensesList": [
+            {
+              "amount": 1000,
+              "desc": "شراء سجل حركه"
+            },
+            {
+              "amount": 8000,
+              "desc": "مصاريف مواد تنظيف زائد عشاء جود"
+            }
+          ],
+          "net": 354000,
+          "manager": "كرار يوسف"
+        },
+        "cosmetics": {
+          "sales": 210000,
+          "network": 179000,
+          "returns": 15000,
+          "expenses": 0,
+          "lunch": 0,
+          "debts": 16000,
+          "withdrawals": 0,
+          "debtsList": [
+            {
+              "amount": 16000,
+              "note": "عطر نسائي",
+              "person": "زهراء حمزه"
+            }
+          ],
+          "withdrawList": [],
+          "expensesList": [],
+          "net": 179000,
+          "manager": "امنه محمد"
+        }
+      },
+      "totalNet": 1159000,
+      "by": "تقفيلة مدمجة",
+      "source": "cashier-app"
+    }
+  ],
+  "safe": [
+    {
+      "id": "mnu1xo2atgni",
+      "date": "2026-04-11",
+      "type": "deposit",
+      "amount": 5387000,
+      "note": "تغفيله القاسم  تم استلامها من امير محمد ملاحظه يوجد مبلغ ناقص في التغفيره وهو مبلغ 376,000 اي الموجود الحالي خمس ملايين11,000",
+      "by": "كرار"
+    },
+    {
+      "id": "mnu2ealxjjph",
+      "date": "2026-04-11",
+      "type": "deposit",
+      "amount": 1159000,
+      "note": "تقفيلة مدمجة 2026-04-11 - المدير: حسين رحيم",
+      "by": "تقفيلة مدمجة",
+      "mergedClosing": true
+    },
+    {
+      "id": "mnu43zj51f79",
+      "date": "2026-04-11",
+      "type": "withdraw",
+      "amount": 300100,
+      "note": "راتب: كرار يوسف يحيى - إكرامية: 41,000 | استقطاع قرض/سلفة: 100,000",
+      "by": "كرار"
+    },
+    {
+      "id": "mnu4bh5tlxay",
+      "date": "2026-04-11",
+      "type": "withdraw",
+      "amount": 289850,
+      "note": "راتب: محمد فرج - استقطاع قرض/سلفة: 78,000",
+      "by": "كرار"
+    }
+  ],
+  "debts": [
+    {
+      "id": "mnu29995jd6p",
+      "person": "زهراء حمزه",
+      "amount": 16000,
+      "note": "عطر نسائي",
+      "type": "debt",
+      "cashier": "كاشير التجميل",
+      "date": "2026-04-11",
+      "by": "كاشير التجميل"
+    }
+  ],
+  "employees": [
+    {
+      "id": "mnu2uvsntwch",
+      "name": "كرار يوسف يحيى",
+      "role": "كاشير نسائي",
+      "salary": 250000,
+      "salaryType": "commission",
+      "commRate": 5
+    },
+    {
+      "id": "mnu2w3hmk07t",
+      "name": "حسين رحيم",
+      "role": "كاشير رجالي",
+      "salary": 350000,
+      "salaryType": "commission",
+      "commRate": 5
+    },
+    {
+      "id": "mnu2wqke5fkv",
+      "name": "محمد فرج",
+      "role": "موظف مبيعات",
+      "salary": 200000,
+      "salaryType": "commission",
+      "commRate": 5
+    },
+    {
+      "id": "mnu2x4d79385",
+      "name": "زيدون زاهر",
+      "role": "موظف مبيعات",
+      "salary": 350000,
+      "salaryType": "fixed",
+      "commRate": 0
+    },
+    {
+      "id": "mnu2xkoy99np",
+      "name": "سيف حسين",
+      "role": "سائق",
+      "salary": 200000,
+      "salaryType": "fixed",
+      "commRate": 0
+    },
+    {
+      "id": "mnu2yd82ulvx",
+      "name": "امنه محمد",
+      "role": "كاشير نسائي",
+      "salary": 200000,
+      "salaryType": "commission",
+      "commRate": 5
+    },
+    {
+      "id": "mnu2zog37sxn",
+      "name": "دعاء هاشم",
+      "role": "موظفه مبيعات نسائي",
+      "salary": 200000,
+      "salaryType": "commission",
+      "commRate": 4
+    },
+    {
+      "id": "mnu30o9o8wwg",
+      "name": "بنين احمد",
+      "role": "كاشير نسائي صباحي",
+      "salary": 150000,
+      "salaryType": "commission",
+      "commRate": 5
+    },
+    {
+      "id": "mnu316otxk41",
+      "name": "زينب رعد",
+      "role": "موظفه مبيعات",
+      "salary": 150000,
+      "salaryType": "commission",
+      "commRate": 4
+    },
+    {
+      "id": "mnu31r38ecd5",
+      "name": "زهراء حمزه",
+      "role": "موظفه مبيعات احذيه",
+      "salary": 150000,
+      "salaryType": "commission",
+      "commRate": 4
+    },
+    {
+      "id": "mnu32pkppfh1",
+      "name": "تبارك محسن",
+      "role": "موظفه مبيعات نسائي صباح",
+      "salary": 150000,
+      "salaryType": "commission",
+      "commRate": 4.25
+    },
+    {
+      "id": "mnu33ta9byvw",
+      "name": "سما",
+      "role": "موظفه مبيعات نساء صباحي",
+      "salary": 150000,
+      "salaryType": "commission",
+      "commRate": 4.25
+    },
+    {
+      "id": "mnu34u4zqeqe",
+      "name": "زينب سلمان",
+      "role": "موظفه كوزمتك مسائي",
+      "salary": 150000,
+      "salaryType": "commission",
+      "commRate": 5
+    }
+  ],
+  "capital": [],
+  "purchases": [],
+  "withdrawals": [],
+  "settings": [],
+  "payroll": [
+    {
+      "id": "mnu43zj58q6f",
+      "empId": "mnu2uvsntwch",
+      "empName": "كرار يوسف يحيى",
+      "amount": 359100,
+      "tip": 41000,
+      "deductions": {
+        "debt": 0,
+        "attendance": 0,
+        "loan": 100000
+      },
+      "netPay": 300100,
+      "note": "إكرامية: 41,000 | استقطاع قرض/سلفة: 100,000",
+      "date": "2026-04-11",
+      "month": "2026-04",
+      "by": "كرار"
+    },
+    {
+      "id": "mnu4bh5td1av",
+      "empId": "mnu2wqke5fkv",
+      "empName": "محمد فرج",
+      "amount": 367850,
+      "tip": 0,
+      "deductions": {
+        "debt": 0,
+        "attendance": 0,
+        "loan": 78000
+      },
+      "netPay": 289850,
+      "note": "استقطاع قرض/سلفة: 78,000",
+      "date": "2026-04-11",
+      "month": "2026-04",
+      "by": "كرار"
+    }
+  ],
+  "expenseEntries": [
+    {
+      "id": "mnu2ealwpzj6",
+      "amount": 1000,
+      "desc": "شراء سجل حركه",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-11",
+      "by": "كاشير النساء"
+    },
+    {
+      "id": "mnu2ealwuy9p",
+      "amount": 8000,
+      "desc": "مصاريف مواد تنظيف زائد عشاء جود",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-11",
+      "by": "كاشير النساء"
+    }
+  ],
+  "individualClosings": [
+    {
+      "id": "mnu239fk8omi",
+      "firebaseId": "mnu233y2h36n",
+      "cashierKey": "men",
+      "cashierLabel": "كاشير الرجال",
+      "date": "2026-04-11",
+      "manager": "حسين رحيم",
+      "data": {
+        "debts": 0,
+        "expenses": 0,
+        "lunch": 10000,
+        "network": 626000,
+        "returns": 22000,
+        "sales": 658000,
+        "withdrawals": 0
+      },
+      "debtsList": [],
+      "withdrawList": [],
+      "expensesList": [],
+      "net": 626000,
+      "by": "كاشير الرجال",
+      "timestamp": 1775895093434,
+      "source": "cashier-app"
+    },
+    {
+      "id": "mnu29994fifl",
+      "firebaseId": "mnu295i9j0ti",
+      "cashierKey": "cosmetics",
+      "cashierLabel": "كاشير التجميل",
+      "date": "2026-04-11",
+      "manager": "امنه محمد",
+      "data": {
+        "debts": 16000,
+        "expenses": 0,
+        "lunch": 0,
+        "network": 179000,
+        "returns": 15000,
+        "sales": 210000,
+        "withdrawals": 0
+      },
+      "debtsList": [
+        {
+          "amount": 16000,
+          "note": "عطر نسائي",
+          "person": "زهراء حمزه"
+        }
+      ],
+      "withdrawList": [],
+      "expensesList": [],
+      "net": 179000,
+      "by": "كاشير التجميل",
+      "timestamp": 1775895375393,
+      "source": "cashier-app"
+    },
+    {
+      "id": "mnu2ealustit",
+      "firebaseId": "mnu2e6pb3ws4",
+      "cashierKey": "women",
+      "cashierLabel": "كاشير النساء",
+      "date": "2026-04-11",
+      "manager": "كرار يوسف",
+      "data": {
+        "debts": 0,
+        "expenses": 9000,
+        "lunch": 0,
+        "network": 354000,
+        "returns": 18000,
+        "sales": 381000,
+        "withdrawals": 0
+      },
+      "debtsList": [],
+      "withdrawList": [],
+      "expensesList": [
+        {
+          "amount": 1000,
+          "desc": "شراء سجل حركه"
+        },
+        {
+          "amount": 8000,
+          "desc": "مصاريف مواد تنظيف زائد عشاء جود"
+        }
+      ],
+      "net": 354000,
+      "by": "كاشير النساء",
+      "timestamp": 1775895610223,
+      "source": "cashier-app"
+    }
+  ],
+  "cashierAccounts": []
+}
