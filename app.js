@@ -261,6 +261,13 @@ function navigate(page){
         if(page==='security'){if(!isAdmin()){toast('غير مصرح');return;}}
         else if(user.role!=='admin'&&user.permissions&&!user.permissions.includes(page)){toast('غير مصرح لك بالدخول');return;}
     }
+    /* reset search state when navigating */
+    const gs=$('#globalSearch');const gsr=$('#globalSearchResults');const hg=$('#homeGrid');
+    if(gs)gs.value='';
+    if(gsr)gsr.style.display='none';
+    if(hg)hg.style.display='';
+    const tbs=$('#topbarSearch');if(tbs)tbs.value='';
+
     $$('.page').forEach(p=>p.classList.remove('active'));
     const el=$('#page-'+page);if(el)el.classList.add('active');
     $$('.sb-item').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
