@@ -280,8 +280,6 @@ function navigate(page){
     if(page==='home'){
         const secTile=$('#securityTile');if(secTile)secTile.style.display=isAdmin()?'':'none';
     }
-    /* push history state for back-button support */
-    history.pushState({page}, '', '');
 }
 function closeSidebar(){if(window.innerWidth>=1024)return;$('#sidebar').classList.remove('open');$('#sbOverlay').classList.remove('show');}
 
@@ -358,7 +356,6 @@ function startWizard(){
     renderWizStep();
     $('#wizardOverlay').classList.remove('hidden');
     document.body.classList.add('wizard-open');
-    history.pushState({page:'wizard',step:0},'','');
 }
 function closeWizard(){
     showCustomDialog({
@@ -1452,8 +1449,21 @@ function renderPayroll(){
     if(!history.length){hList.innerHTML='<div class="empty-state"><i class="ri-inbox-line"></i><p>لا توجد سجلات</p></div>';return;}
     hList.innerHTML=history.map(p=>{
         const delBtn=hasAction('delete')?`<button onclick="deletePayrollEntry('${p.id}')"><i class="ri-delete-bin-line"></i></button>`:'';
-        return `<div class="record-card"><div class="rec-info"><div class="rec-title">${p.empName}</div><div class="rec-sub">${p.date} - ${p.note||''}${p.by?' | <span class="by-tag">'+p.by+'</span>':''}</div></div><div class="rec-amount expense">${fmtNum(p.amount)} ${cur}</div>
-    <div class="rec-actions">${delBtn}</div></div>`;}).join('');
+        const tipBadge=p.tip>0?`<span class="tip-badge"><i class="ri-gift-line"></i> إكرامية: ${fmtNum(p.tip)} ${cur}</span>`:'';
+        const netLine=p.tip>0||((p.deductions)&&((p.deductions.debt||0)+(p.deductions.attendance||0)+(p.deductions.loan||0))>0)
+            ?`<div class="rec-net-line">الصافي: <strong style="color:var(--clr-income)">${fmtNum(p.netPay||p.amount)} ${cur}</strong></div>`:'';;
+        return `<div class="record-card payroll-rec">
+            <div class="rec-info">
+                <div class="rec-title">${p.empName}${tipBadge}</div>
+                <div class="rec-sub">${p.date} - ${p.note||''}${p.by?' | <span class="by-tag">'+p.by+'</span>':''}</div>
+                ${netLine}
+            </div>
+            <div style="text-align:left">
+                <div class="rec-amount expense">${fmtNum(p.amount)} ${cur}</div>
+                ${p.tip>0?`<div style="font-size:.75rem;color:var(--clr-income);font-weight:700;text-align:left">+${fmtNum(p.tip)}</div>`:''}
+            </div>
+            <div class="rec-actions">${delBtn}</div>
+        </div>`;}).join('');
 }
 function disbursePayroll(empId){
     const emps=loadData(KEYS.employees);
@@ -1487,7 +1497,13 @@ function disbursePayroll(empId){
         <div id="payCommResult" style="background:var(--surface2);padding:8px;border-radius:8px;margin-bottom:10px;font-size:.85rem;display:none"></div>`;
     }
 
-    html+=`<div class="field"><label>المبلغ المراد صرفه (بالآلاف)</label><input type="number" id="payAmountInput" class="input-field" value="${toK(remaining>0?remaining:0)}" inputmode="decimal"></div>`;
+    html+=`<div class="field"><label>المبلغ المراد صرفه (بالآلاف)</label><input type="number" id="payAmountInput" class="input-field" value="${toK(remaining>0?remaining:0)}" inputmode="decimal" oninput="updatePayNet()"></div>`;
+
+    /* tip section */
+    html+=`<div class="tip-field-wrap">
+        <div class="tip-field-header"><i class="ri-gift-line"></i> إكرامية (اختياري)</div>
+        <input type="number" id="payTipInput" class="input-field" placeholder="مبلغ الإكرامية بالآلاف (اختياري)" inputmode="decimal" oninput="updatePayNet()" style="margin-top:6px">
+    </div>`;
 
     /* deductions section */
     html+=`<div style="background:var(--surface2);padding:12px;border-radius:8px;margin-bottom:10px">
@@ -1527,6 +1543,7 @@ function calcPayrollComm(empId){
 function updatePayNet(){
     const s=loadSettings();const cur=s.currency||'د.ع';
     const baseAmount=parseK($('#payAmountInput').value)||0;
+    const tipAmount=parseK($('#payTipInput')?.value)||0;
     let totalDeduct=0;
     const debtEl=$('#payDeductDebt');const debtAmtEl=$('#payDeductDebtAmount');
     const attendEl=$('#payDeductAttend');const attendAmtEl=$('#payDeductAttendAmount');
@@ -1534,15 +1551,21 @@ function updatePayNet(){
     if(debtEl&&debtEl.checked&&debtAmtEl)totalDeduct+=parseK(debtAmtEl.value)||0;
     if(attendEl&&attendEl.checked&&attendAmtEl)totalDeduct+=parseK(attendAmtEl.value)||0;
     if(loanEl&&loanEl.checked&&loanAmtEl)totalDeduct+=parseK(loanAmtEl.value)||0;
-    const net=baseAmount-totalDeduct;
+    const net=baseAmount+tipAmount-totalDeduct;
     const el=$('#payNetResult');
-    if(totalDeduct>0){
+    if(totalDeduct>0||tipAmount>0){
         el.style.display='';
-        el.innerHTML=`المبلغ: ${fmtNum(baseAmount)} - الاستقطاعات: ${fmtNum(totalDeduct)} = <span style="color:${net>=0?'var(--success)':'var(--danger)'}">الصافي: ${fmtNum(net)} ${cur}</span>`;
+        let parts=[];
+        parts.push(`الراتب: ${fmtNum(baseAmount)}`);
+        if(tipAmount>0)parts.push(`<span style="color:var(--clr-income)">+ إكرامية: ${fmtNum(tipAmount)}</span>`);
+        if(totalDeduct>0)parts.push(`<span style="color:var(--danger)">- استقطاعات: ${fmtNum(totalDeduct)}</span>`);
+        parts.push(`= <span style="color:${net>=0?'var(--success)':'var(--danger)'}">الصافي: ${fmtNum(net)} ${cur}</span>`);
+        el.innerHTML=parts.join(' ');
     }else{el.style.display='none';}
 }
 function confirmDisburse(empId,empName){
     const amount=parseK($('#payAmountInput').value);
+    const tipAmount=parseK($('#payTipInput')?.value)||0;
     const note=$('#payNoteInput').value||'';
     if(!amount)return toast('أدخل المبلغ');
     const ym=$('#payrollMonth').value||today().slice(0,7);
@@ -1557,23 +1580,24 @@ function confirmDisburse(empId,empName){
     const loanEl=$('#payDeductLoan');const loanAmtEl=$('#payDeductLoanAmount');
     if(loanEl&&loanEl.checked&&loanAmtEl)deductLoan=parseK(loanAmtEl.value)||0;
     const totalDeduct=deductDebt+deductAttend+deductLoan;
-    const netPay=amount-totalDeduct;
+    const netPay=amount+tipAmount-totalDeduct;
     if(netPay<0)return toast('مبلغ الاستقطاع أكبر من الراتب');
 
-    /* build note with deductions */
+    /* build note with tip and deductions */
     let fullNote=note;
     const parts=[];
+    if(tipAmount>0)parts.push('إكرامية: '+fmtNum(tipAmount));
     if(deductDebt>0)parts.push('استقطاع دين: '+fmtNum(deductDebt));
     if(deductAttend>0)parts.push('استقطاع بصمة/تأخير: '+fmtNum(deductAttend));
     if(deductLoan>0)parts.push('استقطاع قرض/سلفة: '+fmtNum(deductLoan));
     if(parts.length)fullNote=(fullNote?fullNote+' | ':'')+parts.join(' | ');
 
-    /* save payroll entry */
+    /* save payroll entry — amount = base salary only, tip stored separately */
     const payroll=loadData(KEYS.payroll);
-    payroll.push({id:uid(),empId,empName,amount,deductions:{debt:deductDebt,attendance:deductAttend,loan:deductLoan},netPay,note:fullNote,date:today(),month:ym,by});
+    payroll.push({id:uid(),empId,empName,amount,tip:tipAmount,deductions:{debt:deductDebt,attendance:deductAttend,loan:deductLoan},netPay,note:fullNote,date:today(),month:ym,by});
     saveData(KEYS.payroll,payroll);
 
-    /* deduct from safe: only net pay goes out */
+    /* deduct from safe: net pay (including tip) goes out */
     const safe=loadData(KEYS.safe);
     safe.push({id:uid(),date:today(),type:'withdraw',amount:netPay,note:'راتب: '+empName+(fullNote?' - '+fullNote:''),by});
     saveData(KEYS.safe,safe);
@@ -1594,7 +1618,12 @@ function confirmDisburse(empId,empName){
         saveData(KEYS.debts,debts.filter(d=>d.amount!==0));
     }
 
-    closeModal();toast('تم صرف الراتب'+(totalDeduct>0?' مع الاستقطاعات':''));renderPayroll();
+    closeModal();
+    let toastMsg='تم صرف الراتب';
+    if(tipAmount>0)toastMsg+=' + إكرامية '+fmtNum(tipAmount);
+    if(totalDeduct>0)toastMsg+=' مع الاستقطاعات';
+    toast(toastMsg);
+    renderPayroll();
 }
 function deletePayrollEntry(id){
     if(!hasAction('delete'))return toast('غير مصرح');
@@ -1623,8 +1652,33 @@ function printPayroll(){
     html+=`</tbody></table>`;
     /* receipts detail */
     if(payroll.length){
-        html+=`<h3 style="margin-top:8px">تفاصيل الصرف</h3><table><thead><tr><th>التاريخ</th><th>الموظف</th><th>المبلغ</th><th>ملاحظة</th></tr></thead><tbody>`;
-        payroll.forEach(p=>html+=`<tr><td>${p.date}</td><td>${p.empName}</td><td class="p-expense">${fmtNum(p.amount)} ${cur}</td><td>${p.note||''}</td></tr>`);
+        html+=`<h3 style="margin-top:8px">تفاصيل الصرف</h3><table><thead><tr><th>التاريخ</th><th>الموظف</th><th>الراتب</th><th>إكرامية</th><th>الاستقطاعات</th><th>الصافي</th><th>ملاحظة</th></tr></thead><tbody>`;
+        payroll.forEach(p=>{
+            const tip=p.tip||0;
+            const ded=p.deductions?((p.deductions.debt||0)+(p.deductions.attendance||0)+(p.deductions.loan||0)):0;
+            const net=p.netPay||p.amount;
+            html+=`<tr>
+                <td>${p.date}</td>
+                <td>${p.empName}</td>
+                <td class="p-expense">${fmtNum(p.amount)} ${cur}</td>
+                <td style="color:#16a34a;font-weight:700">${tip>0?fmtNum(tip)+' '+cur:'-'}</td>
+                <td style="color:#dc2626">${ded>0?fmtNum(ded)+' '+cur:'-'}</td>
+                <td style="font-weight:700">${fmtNum(net)} ${cur}</td>
+                <td>${p.note||''}</td>
+            </tr>`;
+        });
+        const totalTips=payroll.reduce((s,p)=>s+(p.tip||0),0);
+        const totalNet=payroll.reduce((s,p)=>s+(p.netPay||p.amount),0);
+        const totalBase=payroll.reduce((s,p)=>s+p.amount,0);
+        const totalDed=payroll.reduce((s,p)=>{const d=p.deductions;return s+(d?(d.debt||0)+(d.attendance||0)+(d.loan||0):0);},0);
+        html+=`<tr style="font-weight:700;background:#f1f5f9">
+            <td colspan="2">الإجمالي</td>
+            <td>${fmtNum(totalBase)} ${cur}</td>
+            <td style="color:#16a34a">${totalTips>0?fmtNum(totalTips)+' '+cur:'-'}</td>
+            <td style="color:#dc2626">${totalDed>0?fmtNum(totalDed)+' '+cur:'-'}</td>
+            <td style="font-weight:700">${fmtNum(totalNet)} ${cur}</td>
+            <td></td>
+        </tr>`;
         html+=`</tbody></table>`;
     }
     html+=`</div>`;
@@ -2377,63 +2431,6 @@ function doPrint(html){
     setTimeout(()=>window.print(),200);
 }
 
-/* ========= BACK BUTTON NAVIGATION ========= */
-function getCurrentPage(){
-    const active=document.querySelector('.page.active');
-    return active?active.id.replace('page-',''):'home';
-}
-
-function isOverlayOpen(){
-    if(!$('#modal').classList.contains('hidden')) return 'modal';
-    if(!$('#customDialog').classList.contains('hidden')) return 'dialog';
-    if($('#sidebar').classList.contains('open')) return 'sidebar';
-    if(!$('#wizardOverlay').classList.contains('hidden')) return 'wizard';
-    return null;
-}
-
-window.addEventListener('popstate', e => {
-    const state = e.state;
-
-    /* 1. أغلق أي overlay مفتوح أولاً */
-    const overlay = isOverlayOpen();
-    if(overlay === 'sidebar'){ closeSidebar(); history.pushState(state||{page:getCurrentPage()},'',''); return; }
-    if(overlay === 'modal')  { closeModal();   history.pushState(state||{page:getCurrentPage()},'',''); return; }
-    if(overlay === 'dialog') { hideDialog();   history.pushState(state||{page:getCurrentPage()},'',''); return; }
-
-    /* 2. الويزارد مفتوح */
-    if(overlay === 'wizard'){
-        if(wizStep > 0){
-            saveCurrentStep();
-            wizStep--;
-            renderWizStep();
-            history.pushState({page:'wizard',step:wizStep},'','');
-        } else {
-            /* الخطوة الأولى → اعرض حوار الخروج */
-            closeWizard();
-            history.pushState({page:'wizard',step:0},'','');
-        }
-        return;
-    }
-
-    /* 3. صفحة داخلية → ارجع للرئيسية */
-    const page = getCurrentPage();
-    if(page && page !== 'home'){
-        /* navigate بدون pushState هنا لأن popstate أزال آخر state */
-        $$('.page').forEach(p=>p.classList.remove('active'));
-        const el=$('#page-home');if(el)el.classList.add('active');
-        $$('.sb-item').forEach(b=>b.classList.toggle('active',b.dataset.page==='home'));
-        $$('.bn-item').forEach(b=>b.classList.toggle('active',b.dataset.page==='home'));
-        $('#topbarTitle').textContent='لوحة التحكم';
-        const secTile=$('#securityTile');if(secTile)secTile.style.display=isAdmin()?'':'none';
-        history.pushState({page:'home'},'','');
-        return;
-    }
-
-    /* 4. الصفحة الرئيسية → اعرض تأكيد تسجيل الخروج */
-    history.pushState({page:'home'},'','');
-    logout();
-});
-
 /* ========= INIT ========= */
 document.addEventListener('DOMContentLoaded',()=>{
     /* login events (always available) */
@@ -2452,8 +2449,6 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 function initApp(){
     showDate();
-    /* set initial history state */
-    history.replaceState({page:'home'},'','');
 
     /* apply theme */
     const settings=loadSettings();
@@ -2493,9 +2488,8 @@ function initApp(){
         saveCurrentStep();
         if(wizStep===TOTAL_STEPS-1){saveClosing();return;}
         wizStep++;renderWizStep();
-        history.pushState({page:'wizard',step:wizStep},'','');
     });
-    $('#wizBack').addEventListener('click',()=>{saveCurrentStep();if(wizStep>0){wizStep--;renderWizStep();history.pushState({page:'wizard',step:wizStep},'','');}});
+    $('#wizBack').addEventListener('click',()=>{saveCurrentStep();if(wizStep>0){wizStep--;renderWizStep();}});
 
     /* safe */
     $('#safeDepositBtn').addEventListener('click',()=>safeTransaction('deposit'));
