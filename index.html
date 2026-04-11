@@ -112,9 +112,18 @@
 
             <!-- INDIVIDUAL CLOSINGS (التقفيلات المنفصلة) -->
             <section id="page-individual" class="page">
-                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-git-branch-fill"></i> التقفيلات المنفصلة</h2></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-git-branch-fill"></i> التقفيلات المنفصلة</h2><div class="page-io-btns"><button class="btn btn-ghost btn-sm" onclick="exportPage('individualClosings','تقفيلات-منفصلة','التقفيلات المنفصلة')"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('individualClosings','التقفيلات المنفصلة',renderIndividual)"><i class="ri-upload-2-line"></i></button></div></div>
                 <div class="date-bar"><i class="ri-calendar-line"></i><span id="individualDateDisplay"></span></div>
-                <div class="filter-bar" style="margin-top:12px"><input type="text" id="individualSearch" class="input-field" placeholder="بحث في التقفيلات المنفصلة..."><button class="btn btn-primary btn-sm" onclick="renderIndividual()"><i class="ri-search-line"></i></button></div>
+                <!-- أزرار تقفيلة منفصلة جديدة -->
+                <div class="ind-cashier-btns">
+                    <div class="ind-btns-label"><i class="ri-add-circle-line"></i> تقفيلة منفصلة جديدة</div>
+                    <div class="ind-btns-row">
+                        <button class="btn ind-cashier-btn men-btn" onclick="startIndividualWizard('men')"><i class="ri-men-line"></i> الرجال</button>
+                        <button class="btn ind-cashier-btn women-btn" onclick="startIndividualWizard('women')"><i class="ri-women-line"></i> النساء</button>
+                        <button class="btn ind-cashier-btn cosmetics-btn" onclick="startIndividualWizard('cosmetics')"><i class="ri-sparkling-line"></i> التجميل</button>
+                    </div>
+                </div>
+                <div class="filter-bar" style="margin-top:8px"><input type="text" id="individualSearch" class="input-field" placeholder="بحث في التقفيلات المنفصلة..."><button class="btn btn-primary btn-sm" onclick="renderIndividual()"><i class="ri-search-line"></i></button></div>
                 <h3 class="sub-title">تقفيلات الكاشيرات</h3>
                 <div id="individualList" class="records-list"></div>
             </section>
@@ -245,8 +254,8 @@
 
                 <!-- نوع الفترة: يومي / شهري -->
                 <div class="report-period-tabs">
-                    <button class="rpt-tab active" id="rptTabDaily" onclick="switchReportPeriod('daily')"><i class="ri-calendar-event-line"></i> يومي</button>
-                    <button class="rpt-tab" id="rptTabMonthly" onclick="switchReportPeriod('monthly')"><i class="ri-calendar-2-line"></i> شهري</button>
+                    <button class="rpt-tab" id="rptTabDaily" onclick="switchReportPeriod('daily')"><i class="ri-calendar-event-line"></i> يومي</button>
+                    <button class="rpt-tab active" id="rptTabMonthly" onclick="switchReportPeriod('monthly')"><i class="ri-calendar-2-line"></i> شهري</button>
                 </div>
 
                 <!-- منتقي التاريخ / الشهر -->
@@ -311,13 +320,18 @@
                     </div>
                 </div>
                 <div class="card">
+                    <h3 class="card-h"><i class="ri-cloud-line"></i> مزامنة قاعدة البيانات</h3>
+                    <p style="font-size:.82rem;color:var(--text2);margin-bottom:10px;line-height:1.6">رفع جميع البيانات المحلية إلى Firebase يدوياً. استخدم هذا الزر إذا لاحظت فقدان بيانات أو عدم تطابق.</p>
+                    <button class="btn btn-primary btn-block" id="manualUploadBtn"><i class="ri-upload-cloud-2-line"></i> رفع جميع البيانات الآن</button>
+                    <div id="firebaseStatus" style="margin-top:10px;font-size:.78rem;display:flex;align-items:center;gap:6px"></div>
+                </div>
+                <div class="card">
                     <h3 class="card-h"><i class="ri-smartphone-line"></i> تطبيق الكاشير الفرعي</h3>
                     <p style="font-size:.82rem;color:var(--text2);margin-bottom:10px;line-height:1.6">شارك رابط التطبيق الفرعي مع الكاشيرات لتقديم تقفيلاتهم مباشرة. التقفيلات تصل بشكل لحظي عبر Firebase.</p>
                     <div class="stacked-btns">
                         <a href="./cashier/index.html" target="_blank" class="btn btn-primary" style="text-decoration:none;text-align:center"><i class="ri-external-link-line"></i> فتح تطبيق الكاشير</a>
                         <button class="btn btn-ghost" onclick="copyCashierLink()"><i class="ri-file-copy-line"></i> نسخ الرابط</button>
                     </div>
-                    <div id="firebaseStatus" style="margin-top:10px;font-size:.78rem;display:flex;align-items:center;gap:6px"></div>
                 </div>
             </section>
         </main>

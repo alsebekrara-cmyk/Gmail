@@ -102,10 +102,11 @@ const SYNC_KEYS_MAP={
     'cm_individual_closings':'individualClosings','cm_cashier_accounts':'cashierAccounts'
 };
 let _syncingFromFirebase=false;
+const _recentSaves={};
 function loadData(k){try{return JSON.parse(localStorage.getItem(k))||[];}catch(e){return[];}}
-function saveData(k,v){localStorage.setItem(k,JSON.stringify(v));if(!_syncingFromFirebase)syncDataToFirebase(k,v);}
+function saveData(k,v){localStorage.setItem(k,JSON.stringify(v));_recentSaves[k]=Date.now();if(!_syncingFromFirebase)syncDataToFirebase(k,v);}
 function loadSettings(){try{return JSON.parse(localStorage.getItem(KEYS.settings))||{};}catch(e){return {};}}
-function saveSettings(s){localStorage.setItem(KEYS.settings,JSON.stringify(s));if(!_syncingFromFirebase)syncDataToFirebase(KEYS.settings,s);}
+function saveSettings(s){localStorage.setItem(KEYS.settings,JSON.stringify(s));_recentSaves[KEYS.settings]=Date.now();if(!_syncingFromFirebase)syncDataToFirebase(KEYS.settings,s);}
 
 /* ========= Firebase Integration ========= */
 const firebaseConfig = {
@@ -142,15 +143,44 @@ async function initFirebaseSync(){
         const remoteData=snap.val();
         if(remoteData){
             _syncingFromFirebase=true;
+            let needsUpload=false;
             Object.entries(SYNC_KEYS_MAP).forEach(([localKey,fbKey])=>{
-                if(remoteData[fbKey]!==undefined&&remoteData[fbKey]!==null){
-                    localStorage.setItem(localKey,JSON.stringify(remoteData[fbKey]));
+                if(remoteData[fbKey]===undefined||remoteData[fbKey]===null) return;
+                if(localKey===KEYS.settings){
+                    const local=loadSettings();
+                    const remote=typeof remoteData[fbKey]==='object'?remoteData[fbKey]:{};
+                    localStorage.setItem(localKey,JSON.stringify(Object.assign({},remote,local)));
+                } else {
+                    const localItems=loadData(localKey);
+                    const remoteItems=Array.isArray(remoteData[fbKey])?remoteData[fbKey]:Object.values(remoteData[fbKey]||{});
+                    if(!localItems.length){
+                        localStorage.setItem(localKey,JSON.stringify(remoteItems));
+                    } else if(remoteItems.length){
+                        const merged={};
+                        localItems.forEach(item=>{if(item&&item.id)merged[item.id]=item;});
+                        remoteItems.forEach(item=>{if(item&&item.id&&!merged[item.id])merged[item.id]=item;});
+                        const mergedArr=Object.values(merged);
+                        if(mergedArr.length>localItems.length||mergedArr.length>remoteItems.length) needsUpload=true;
+                        localStorage.setItem(localKey,JSON.stringify(mergedArr));
+                    }
                 }
             });
             if(remoteData.users){
-                localStorage.setItem(AUTH_KEYS.users,JSON.stringify(remoteData.users));
+                const localUsers=loadUsers();
+                const remoteUsers=Array.isArray(remoteData.users)?remoteData.users:Object.values(remoteData.users||{});
+                if(!localUsers.length){
+                    localStorage.setItem(AUTH_KEYS.users,JSON.stringify(remoteUsers));
+                } else if(remoteUsers.length){
+                    const merged={};
+                    localUsers.forEach(u=>{if(u&&u.id)merged[u.id]=u;});
+                    remoteUsers.forEach(u=>{if(u&&u.id&&!merged[u.id])merged[u.id]=u;});
+                    const mergedUsers=Object.values(merged);
+                    if(mergedUsers.length>0) localStorage.setItem(AUTH_KEYS.users,JSON.stringify(mergedUsers));
+                    if(mergedUsers.length>localUsers.length||mergedUsers.length>remoteUsers.length) needsUpload=true;
+                }
             }
             _syncingFromFirebase=false;
+            if(needsUpload) uploadAllToFirebase();
         } else {
             uploadAllToFirebase();
         }
@@ -170,10 +200,32 @@ function uploadAllToFirebase(){
     fbDb.ref('store_data').set(data).catch(e=>console.warn('Upload failed:',e));
 }
 
+function manualUploadAll(){
+    if(!fbDb) return toast('لا يوجد اتصال بقاعدة البيانات');
+    showCustomDialog({
+        icon:'ri-upload-cloud-2-fill',
+        iconClass:'',
+        title:'رفع البيانات',
+        msg:'سيتم رفع جميع البيانات المحلية إلى قاعدة البيانات وستحل محل البيانات الموجودة. هل تريد المتابعة؟',
+        buttons:[
+            {label:'<i class="ri-upload-cloud-2-line"></i> رفع الآن',cls:'btn-primary',action:'confirmManualUpload()'},
+            {label:'إلغاء',cls:'btn-ghost',action:'hideDialog()'}
+        ]
+    });
+}
+function confirmManualUpload(){
+    hideDialog();
+    uploadAllToFirebase();
+    syncUsersToFirebase();
+    syncCashierAccounts();
+    toast('تم رفع جميع البيانات بنجاح');
+}
+
 function startSyncListeners(){
     if(!fbDb) return;
     Object.entries(SYNC_KEYS_MAP).forEach(([localKey,fbKey])=>{
         fbDb.ref('store_data/'+fbKey).on('value',snap=>{
+            if(_recentSaves[localKey]&&(Date.now()-_recentSaves[localKey])<5000) return;
             const data=snap.val();
             if(data!==undefined&&data!==null){
                 _syncingFromFirebase=true;
@@ -184,6 +236,7 @@ function startSyncListeners(){
         });
     });
     fbDb.ref('store_data/users').on('value',snap=>{
+        if(_recentSaves[AUTH_KEYS.users]&&(Date.now()-_recentSaves[AUTH_KEYS.users])<5000) return;
         const users=snap.val();
         if(users){
             _syncingFromFirebase=true;
@@ -497,24 +550,29 @@ function mergeIndividualClosings(date){
         }
     });
 
-    /* remove existing merged closing for this date from cashier-app */
+    /* remove existing merged closing ONLY for this exact date from cashier-app source */
     let closings = loadData(KEYS.closings);
-    const oldMerged = closings.find(c => c.date === date && c.source === 'cashier-app');
-    closings = closings.filter(c => !(c.date === date && c.source === 'cashier-app'));
+    if(!Array.isArray(closings)) closings = [];
+    // Extra safety: only remove if date is exact string match AND source is cashier-app
+    const normalizedDate = String(date).slice(0,10); // ensure YYYY-MM-DD format
+    const oldMerged = closings.find(c => String(c.date).slice(0,10) === normalizedDate && c.source === 'cashier-app');
+    closings = closings.filter(c => !(String(c.date).slice(0,10) === normalizedDate && c.source === 'cashier-app'));
     const mergedId = oldMerged ? oldMerged.id : uid();
     closings.push({
-        id: mergedId, date: date, manager: manager,
+        id: mergedId, date: normalizedDate, manager: manager,
         cashiers: cashiersData, totalNet: totalNet,
-        by: 'تقفيلة مدمجة', source: 'cashier-app'
+        by: 'تقفيلة مدمجة', source: 'cashier-app',
+        updatedAt: Date.now()
     });
     saveData(KEYS.closings, closings);
 
-    /* update safe: remove old merged safe entry for this date, add new */
+    /* update safe: remove old merged safe entry ONLY for this exact date */
     let safe = loadData(KEYS.safe);
-    safe = safe.filter(t => !(t.date === date && t.mergedClosing === true));
+    if(!Array.isArray(safe)) safe = [];
+    safe = safe.filter(t => !(String(t.date).slice(0,10) === normalizedDate && t.mergedClosing === true));
     if(totalNet !== 0){
-        safe.push({id:uid(),date:date,type:totalNet>0?'deposit':'withdraw',amount:Math.abs(totalNet),
-            note:'تقفيلة مدمجة '+date+(manager?' - المدير: '+manager:''),by:'تقفيلة مدمجة',mergedClosing:true});
+        safe.push({id:uid(),date:normalizedDate,type:totalNet>0?'deposit':'withdraw',amount:Math.abs(totalNet),
+            note:'تقفيلة مدمجة '+normalizedDate+(manager?' - المدير: '+manager:''),by:'تقفيلة مدمجة',mergedClosing:true});
     }
     saveData(KEYS.safe, safe);
 }
@@ -1136,6 +1194,253 @@ function viewClosingDetails(id){
 }
 
 /* ========= INDIVIDUAL CLOSINGS PAGE ========= */
+/* ========= INDIVIDUAL CLOSING WIZARD (manual entry from main app) ========= */
+let indWizData = {}; // {cashierKey, manager, fields, debtsList, withdrawList, expensesList}
+let indWizStep = 0;
+const IND_TOTAL_STEPS = CASHIER_FIELDS.length + 2; // manager + fields + summary
+
+function startIndividualWizard(cashierKey){
+    if(!hasAction('closing'))return toast('غير مصرح');
+    const cashier = CASHIERS.find(c=>c.key===cashierKey);
+    if(!cashier) return;
+    indWizData = {
+        cashierKey: cashierKey,
+        cashierLabel: cashier.label,
+        manager: getCurrentUser()?.username||'',
+        fields: {},
+        debtsList: [],
+        withdrawList: [],
+        expensesList: []
+    };
+    CASHIER_FIELDS.forEach(f=>indWizData.fields[f.key]=0);
+    indWizStep = 0;
+
+    // Build overlay
+    let overlay = document.getElementById('indWizOverlay');
+    if(!overlay){
+        overlay = document.createElement('div');
+        overlay.id = 'indWizOverlay';
+        overlay.className = 'wizard-overlay';
+        overlay.innerHTML = `
+            <div class="wizard-container">
+                <div class="wizard-topbar" style="background:${cashier.color||'var(--primary)'}">
+                    <button class="wiz-close" onclick="closeIndWizard()"><i class="ri-close-line"></i></button>
+                    <span class="wiz-title" id="indWizTitle">تقفيلة ${cashier.label}</span>
+                    <span class="wiz-progress" id="indWizProgress">1/${IND_TOTAL_STEPS}</span>
+                </div>
+                <div class="wizard-progress-bar"><div class="wizard-progress-fill" id="indWizProgressFill"></div></div>
+                <div class="wizard-body" id="indWizBody"></div>
+                <div class="wizard-footer">
+                    <button class="btn btn-ghost" id="indWizBack" onclick="indWizPrev()"><i class="ri-arrow-right-line"></i> السابق</button>
+                    <button class="btn btn-primary" id="indWizNext" onclick="indWizNext()">التالي <i class="ri-arrow-left-line"></i></button>
+                </div>
+            </div>`;
+        document.body.appendChild(overlay);
+    }
+    overlay.classList.remove('hidden');
+    document.body.classList.add('wizard-open');
+    history.pushState({page:'indWizard'},'','');
+    renderIndWizStep();
+}
+
+function closeIndWizard(){
+    if(!confirm('هل تريد الخروج من التقفيلة؟')) return;
+    const overlay = document.getElementById('indWizOverlay');
+    if(overlay) overlay.classList.add('hidden');
+    document.body.classList.remove('wizard-open');
+}
+
+function indWizNext(){
+    saveIndWizStep();
+    if(indWizStep === IND_TOTAL_STEPS-1){ saveIndividualClosing(); return; }
+    indWizStep++;
+    renderIndWizStep();
+    history.pushState({page:'indWizard',step:indWizStep},'','');
+}
+
+function indWizPrev(){
+    saveIndWizStep();
+    if(indWizStep > 0){ indWizStep--; renderIndWizStep(); }
+}
+
+function getIndStepInfo(step){
+    if(step===0) return {type:'manager'};
+    const fi = step-1;
+    if(fi>=CASHIER_FIELDS.length) return {type:'summary'};
+    return {type:'field', field:CASHIER_FIELDS[fi]};
+}
+
+function saveIndWizStep(){
+    const info = getIndStepInfo(indWizStep);
+    if(info.type==='manager'){const inp=document.getElementById('indWizInput');if(inp)indWizData.manager=inp.value.trim();return;}
+    if(info.type==='summary') return;
+    const inp = document.getElementById('indWizInput');
+    if(inp) indWizData.fields[info.field.key] = parseK(inp.value);
+}
+
+function renderIndWizStep(){
+    const s=loadSettings();const cur=s.currency||'د.ع';
+    const info = getIndStepInfo(indWizStep);
+    const body = document.getElementById('indWizBody');
+    const cashier = CASHIERS.find(c=>c.key===indWizData.cashierKey)||{};
+
+    document.getElementById('indWizProgress').textContent = (indWizStep+1)+'/'+IND_TOTAL_STEPS;
+    document.getElementById('indWizProgressFill').style.width = ((indWizStep+1)/IND_TOTAL_STEPS*100)+'%';
+    document.getElementById('indWizBack').style.visibility = indWizStep===0?'hidden':'visible';
+    const isLast = indWizStep===IND_TOTAL_STEPS-1;
+    document.getElementById('indWizNext').innerHTML = isLast?'<i class="ri-save-line"></i> حفظ وإرسال':'التالي <i class="ri-arrow-left-line"></i>';
+
+    if(info.type==='manager'){
+        const settings=loadSettings();
+        const managers=(settings.managers||[]);
+        const opts=managers.map(m=>`<option value="${m}">${m}</option>`).join('');
+        body.innerHTML=`<div class="wiz-cashier-label" style="color:${cashier.color||'var(--primary)'}"><i class="${cashier.icon||'ri-store-line'}"></i> ${cashier.label}</div>
+        <div class="wiz-label">المدير المسؤول</div>
+        <input type="text" class="wiz-input" id="indWizInput" value="${indWizData.manager||''}" placeholder="اسم المدير">
+        ${opts?`<select class="input-field" style="margin-top:8px" onchange="document.getElementById('indWizInput').value=this.value"><option value="">-- اختر مديراً --</option>${opts}</select>`:''}`;
+        return;
+    }
+
+    if(info.type==='summary'){
+        renderIndWizSummary(body, s, cur);
+        return;
+    }
+
+    const {field} = info;
+    const currentVal = toK(indWizData.fields[field.key]||0);
+    const typeColor = getTypeColor(field.type);
+
+    let extra='';
+    if(field.key==='debts'){
+        const list=indWizData.debtsList.map((d,i)=>`<div class="debt-item"><span>${d.person}: ${fmtNum(d.amount)}</span><button onclick="indRemoveDebt(${i})"><i class="ri-close-circle-line"></i></button></div>`).join('');
+        const allDebts=loadData(KEYS.debts);
+        const names=[...new Set(allDebts.map(d=>d.person))];
+        const opts2=names.map(n=>`<option value="${n}">${n}</option>`).join('');
+        extra=`<div class="wiz-debt-entry"><h4><i class="ri-file-list-3-line"></i> تفاصيل الديون</h4>
+            <select id="indDebtPerson" class="input-field"><option value="">-- اختر --</option>${opts2}<option value="__new__">+ جديد</option></select>
+            <input type="number" id="indDebtAmount" class="input-field" placeholder="المبلغ (بالآلاف)" inputmode="decimal" style="margin-top:6px">
+            <input type="text" id="indDebtNote" class="input-field" placeholder="ملاحظة" style="margin-top:6px">
+            <button class="btn btn-primary btn-sm btn-block" onclick="indAddDebt()" style="margin-top:8px"><i class="ri-add-line"></i> إضافة</button>
+            <div class="debt-list">${list}</div></div>`;
+    }
+    if(field.key==='expenses'){
+        const list=indWizData.expensesList.map((e,i)=>`<div class="debt-item"><span>${e.desc||'مصروف'}: ${fmtNum(e.amount)}</span><button onclick="indRemoveExp(${i})"><i class="ri-close-circle-line"></i></button></div>`).join('');
+        extra=`<div class="wiz-debt-entry"><h4><i class="ri-money-dollar-box-line"></i> تفاصيل المصاريف</h4>
+            <input type="number" id="indExpAmount" class="input-field" placeholder="المبلغ (بالآلاف)" inputmode="decimal">
+            <input type="text" id="indExpDesc" class="input-field" placeholder="الوصف" style="margin-top:6px">
+            <button class="btn btn-primary btn-sm btn-block" onclick="indAddExp()" style="margin-top:8px"><i class="ri-add-line"></i> إضافة</button>
+            <div class="debt-list">${list}</div></div>`;
+    }
+
+    body.innerHTML=`<div class="wiz-cashier-label" style="color:${cashier.color||'var(--primary)'}"><i class="${cashier.icon||'ri-store-line'}"></i> ${cashier.label}</div>
+    <div class="wiz-label"><i class="${field.icon}" style="color:${typeColor}"></i> ${field.label}</div>
+    <input type="number" class="wiz-input" id="indWizInput" value="${currentVal||''}" placeholder="0" inputmode="decimal" style="border-color:${typeColor}">
+    <p style="font-size:.78rem;color:var(--text3);text-align:center;margin-top:6px">أدخل المبلغ بالآلاف (مثال: 50 = 50,000)</p>
+    ${extra}`;
+    document.getElementById('indWizInput')?.focus();
+}
+
+function renderIndWizSummary(body, s, cur){
+    const cashier = CASHIERS.find(c=>c.key===indWizData.cashierKey)||{};
+    const d = indWizData.fields;
+    const deductions=(d.returns||0)+(d.expenses||0)+(d.lunch||0)+(d.debts||0)+(d.withdrawals||0);
+    const expected=(d.sales||0)-deductions;
+    const net=d.network||0;
+    const diff=net-expected;
+    let html=`<div class="wiz-summary">`;
+    if(indWizData.manager) html+=`<div style="text-align:center;font-weight:700;color:var(--primary);margin-bottom:10px"><i class="ri-user-star-line"></i> المدير: ${indWizData.manager}</div>`;
+    html+=`<h4 style="color:${cashier.color||'var(--primary)'};margin:6px 0;font-size:.9rem;text-align:center"><i class="${cashier.icon||''}"></i> ${cashier.label}</h4>`;
+    html+=`<table><thead><tr><th>البيان</th><th>المبلغ</th></tr></thead><tbody>`;
+    CASHIER_FIELDS.forEach(f=>{
+        const v=d[f.key]||0;
+        const clr=getTypeColor(f.type);
+        html+=`<tr><td>${f.label}</td><td style="color:${clr};font-weight:700">${fmtNum(v)} ${cur}</td></tr>`;
+    });
+    html+=`<tr style="background:var(--surface2)"><td>إجمالي الخصومات</td><td style="color:var(--clr-expense);font-weight:700">${fmtNum(deductions)} ${cur}</td></tr>`;
+    html+=`<tr style="background:var(--surface2)"><td>المتوقع</td><td style="font-weight:700">${fmtNum(expected)} ${cur}</td></tr>`;
+    if(diff!==0)html+=`<tr style="background:#fef3c7"><td>الفرق</td><td style="color:${diff>0?'var(--clr-income)':'var(--clr-expense)'};font-weight:700">${fmtNum(diff)} ${cur}</td></tr>`;
+    html+=`<tr class="total-row"><td>الصافي (المبلغ المستلم)</td><td style="color:${net>=0?'var(--clr-income)':'var(--clr-expense)'}">${fmtNum(net)} ${cur}</td></tr>`;
+    html+=`</tbody></table></div>`;
+    body.innerHTML=html;
+}
+
+function indAddDebt(){
+    const sel=document.getElementById('indDebtPerson');
+    let person=sel?sel.value:'';
+    if(person==='__new__'){const ni=prompt('اسم الشخص:','');if(!ni)return;person=ni.trim();}
+    const amount=parseK(document.getElementById('indDebtAmount')?.value);
+    const note=document.getElementById('indDebtNote')?.value.trim()||'';
+    if(!person)return toast('اختر الشخص');
+    if(!amount)return toast('أدخل المبلغ');
+    indWizData.debtsList.push({person,amount,note});
+    indWizData.fields.debts=(indWizData.debtsList.reduce((s,d)=>s+d.amount,0));
+    renderIndWizStep();
+}
+function indRemoveDebt(i){indWizData.debtsList.splice(i,1);indWizData.fields.debts=indWizData.debtsList.reduce((s,d)=>s+d.amount,0);renderIndWizStep();}
+function indAddExp(){
+    const amount=parseK(document.getElementById('indExpAmount')?.value);
+    const desc=document.getElementById('indExpDesc')?.value.trim()||'مصروف';
+    if(!amount)return toast('أدخل المبلغ');
+    indWizData.expensesList.push({amount,desc});
+    indWizData.fields.expenses=indWizData.expensesList.reduce((s,e)=>s+e.amount,0);
+    renderIndWizStep();
+}
+function indRemoveExp(i){indWizData.expensesList.splice(i,1);indWizData.fields.expenses=indWizData.expensesList.reduce((s,e)=>s+e.amount,0);renderIndWizStep();}
+
+function saveIndividualClosing(){
+    const cashier = CASHIERS.find(c=>c.key===indWizData.cashierKey)||{};
+    const d = indWizData.fields;
+    const net = d.network||0;
+    const date = today();
+    const by = getByTag();
+
+    // Save to individualClosings
+    const individuals = loadData(KEYS.individualClosings)||[];
+    const newRec = {
+        id: uid(),
+        firebaseId: null,
+        cashierKey: cashier.key,
+        cashierLabel: cashier.label,
+        date: date,
+        manager: indWizData.manager||'',
+        data: {...d},
+        debtsList: indWizData.debtsList||[],
+        withdrawList: indWizData.withdrawList||[],
+        expensesList: indWizData.expensesList||[],
+        net: net,
+        by: by,
+        timestamp: Date.now(),
+        source: 'manual'
+    };
+    individuals.push(newRec);
+    saveData(KEYS.individualClosings, individuals);
+
+    // Save debts
+    const debts=loadData(KEYS.debts)||[];
+    (indWizData.debtsList||[]).forEach(debt=>{
+        debts.push({id:uid(),person:debt.person,amount:debt.amount,note:debt.note||'',type:'debt',cashier:cashier.label,date,by});
+    });
+    saveData(KEYS.debts,debts);
+
+    // Save expenses
+    const expEntries=loadData(KEYS.expenseEntries)||[];
+    (indWizData.expensesList||[]).forEach(exp=>{
+        expEntries.push({id:uid(),amount:exp.amount,desc:exp.desc||'',cashier:cashier.label,date,by});
+    });
+    saveData(KEYS.expenseEntries,expEntries);
+
+    // Merge into combined closing
+    mergeIndividualClosings(date);
+
+    // Close overlay
+    const overlay = document.getElementById('indWizOverlay');
+    if(overlay) overlay.classList.add('hidden');
+    document.body.classList.remove('wizard-open');
+
+    toast('✅ تم حفظ تقفيلة '+cashier.label);
+    renderIndividual();
+}
+
 function renderIndividual(){
     showDate();
     const searchVal=($('#individualSearch')?.value||'').trim().toLowerCase();
@@ -1843,7 +2148,7 @@ function renderPayroll(){
         const delBtn=hasAction('delete')?`<button onclick="deletePayrollEntry('${p.id}')"><i class="ri-delete-bin-line"></i></button>`:'';
         const tipBadge=p.tip>0?`<span class="tip-badge"><i class="ri-gift-line"></i> إكرامية: ${fmtNum(p.tip)} ${cur}</span>`:'';
         const netLine=p.tip>0||((p.deductions)&&((p.deductions.debt||0)+(p.deductions.attendance||0)+(p.deductions.loan||0))>0)
-            ?`<div class="rec-net-line">الصافي: <strong style="color:var(--clr-income)">${fmtNum(p.netPay||p.amount)} ${cur}</strong></div>`:'';;
+            ?`<div class="rec-net-line">الصافي: <strong style="color:var(--clr-income)">${fmtNum(p.netPay||p.amount)} ${cur}</strong></div>`:'';
         return `<div class="record-card payroll-rec">
             <div class="rec-info">
                 <div class="rec-title">${p.empName}${tipBadge}</div>
@@ -2300,7 +2605,7 @@ function renderReport(){
     </div></div>`;
 
     /* ===== CLOSINGS DETAIL ===== */
-    if(closings.length){
+    if((sec==='all'||sec==='closing')&&closings.length){
         html+=`<div class="report-section"><h3><i class="ri-calculator-fill"></i> التقفيلات (${closings.length})</h3>`;
         html+=`<table class="report-table"><thead><tr><th>التاريخ</th><th>المدير</th>`;
         CASHIERS.forEach(cs=>html+=`<th>${cs.label}</th>`);
@@ -2390,10 +2695,20 @@ function renderReport(){
 function printReport(){
     if(!hasAction('print'))return toast('غير مصرح');
     const s=loadSettings();const cur=s.currency||'د.ع';const store=s.storeName||'';
-    const ym=$('#reportMonth').value||today().slice(0,7);
+    let filterPrefix,filterLabel;
+    if(reportPeriodMode==='daily'){
+        filterPrefix=$('#reportDate').value||today();
+        filterLabel='يوم '+filterPrefix;
+    } else {
+        filterPrefix=$('#reportMonth').value||today().slice(0,7);
+        filterLabel='شهر '+filterPrefix;
+    }
+    const ym=filterPrefix;
     const closings=loadData(KEYS.closings).filter(c=>c.date&&c.date.startsWith(ym));
     const purchases=loadData(KEYS.purchases).filter(p=>p.date&&p.date.startsWith(ym));
-    const payrollData=loadData(KEYS.payroll).filter(p=>p.month===ym);
+    const payrollData=reportPeriodMode==='daily'
+        ?loadData(KEYS.payroll).filter(p=>p.date===ym)
+        :loadData(KEYS.payroll).filter(p=>p.month===ym);
     const safeTrans=loadData(KEYS.safe).filter(t=>t.date&&t.date.startsWith(ym));
     const debts=loadData(KEYS.debts).filter(d=>d.date&&d.date.startsWith(ym));
     const expEntries=loadData(KEYS.expenseEntries).filter(e=>e.date&&e.date.startsWith(ym));
@@ -2416,7 +2731,7 @@ function printReport(){
     const printDate=new Date().toLocaleDateString('ar-IQ',{year:'numeric',month:'long',day:'numeric'});
 
     let html=`<div class="print-page-border">`;
-    html+=`<div class="print-header"><h2>التقرير الشهري الشامل - ${ym}</h2>`;
+    html+=`<div class="print-header"><h2>التقرير الشامل - ${filterLabel}</h2>`;
     if(store)html+=`<p>${store}</p>`;
     html+=`<p class="print-date">تاريخ الطباعة: ${printDate}</p></div>`;
 
@@ -2535,10 +2850,44 @@ function importData(file){
     reader.onload=e=>{
         try{
             const data=JSON.parse(e.target.result);
-            Object.entries(KEYS).forEach(([k,v])=>{if(data[k])localStorage.setItem(v,JSON.stringify(data[k]));});
-            toast('تم الاستيراد بنجاح');
+            let totalAdded=0;
+            let totalSkipped=0;
+
+            Object.entries(KEYS).forEach(([k,v])=>{
+                if(!data[k]||!Array.isArray(data[k])) return;
+                const incoming=data[k];
+
+                // For settings (object), merge keys
+                if(k==='settings'){
+                    const existing=loadSettings();
+                    const merged=Object.assign({},incoming,existing); // existing takes priority
+                    saveSettings(merged);
+                    return;
+                }
+
+                // For array data: merge by id, keep existing + add new
+                const existing=loadData(v)||[];
+                const existingIds=new Set(existing.map(r=>r.id).filter(Boolean));
+                const toAdd=incoming.filter(r=>{
+                    // give id if missing
+                    if(!r.id) r.id=uid();
+                    return !existingIds.has(r.id);
+                });
+                totalAdded+=toAdd.length;
+                totalSkipped+=(incoming.length-toAdd.length);
+                if(toAdd.length>0){
+                    const merged=[...existing,...toAdd];
+                    localStorage.setItem(v,JSON.stringify(merged));
+                }
+            });
+
+            const msg='✅ تم الاستيراد: '+totalAdded+' سجل جديد'+(totalSkipped>0?' ('+totalSkipped+' موجود مسبقاً)':'');
+            toast(msg);
             navigate('home');
-        }catch(err){toast('ملف غير صالح');}
+        }catch(err){
+            console.error('importData error:',err);
+            toast('ملف غير صالح: '+err.message);
+        }
     };
     reader.readAsText(file);
 }
@@ -2864,6 +3213,47 @@ function syncCashierAccounts(){
     }).catch(e=>console.warn('Failed to sync cashier accounts:',e));
 }
 
+/* ========= PAGE EXPORT / IMPORT ========= */
+function exportPage(dataKey, filename, label){
+    const keyMap={individualClosings:KEYS.individualClosings};
+    const key=keyMap[dataKey];
+    if(!key) return toast('خطأ في التصدير');
+    const data=loadData(key);
+    if(!data.length) return toast('لا توجد بيانات');
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename+'_'+today()+'.json';a.click();
+    toast('تم تصدير '+label);
+}
+function importPage(dataKey, label, renderFn){
+    const keyMap={individualClosings:KEYS.individualClosings};
+    const key=keyMap[dataKey];
+    if(!key) return toast('خطأ في الاستيراد');
+    const input=document.createElement('input');
+    input.type='file';input.accept='.json';
+    input.onchange=e=>{
+        const file=e.target.files[0];if(!file) return;
+        const reader=new FileReader();
+        reader.onload=ev=>{
+            try{
+                const incoming=JSON.parse(ev.target.result);
+                if(!Array.isArray(incoming)) return toast('ملف غير صالح');
+                const existing=loadData(key);
+                const existingIds=new Set(existing.map(r=>r.id).filter(Boolean));
+                let added=0;
+                incoming.forEach(r=>{
+                    if(!r.id) r.id=uid();
+                    if(!existingIds.has(r.id)){existing.push(r);added++;}
+                });
+                saveData(key,existing);
+                toast('تم استيراد '+added+' سجل إلى '+label);
+                if(renderFn) renderFn();
+            }catch(err){toast('ملف غير صالح');}
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+}
+
 /* ========= PRINT HELPER ========= */
 function doPrint(html){
     const area=$('#printArea');
@@ -2983,6 +3373,7 @@ function initApp(){
     $('#importFile').addEventListener('change',e=>{if(e.target.files[0])importData(e.target.files[0]);});
     $('#demoBtn').addEventListener('click',loadDemo);
     $('#clearBtn').addEventListener('click',clearAll);
+    const manualUploadBtn=$('#manualUploadBtn');if(manualUploadBtn)manualUploadBtn.addEventListener('click',manualUploadAll);
 
     /* security */
     const addUserBtn=$('#addUserBtn');if(addUserBtn)addUserBtn.addEventListener('click',addUser);
