@@ -1,4 +1,4 @@
-/* ========= helpers ========= */
+﻿/* ========= helpers ========= */
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 const fmtNum = n => Number(n||0).toLocaleString('en-US');
@@ -1142,11 +1142,42 @@ function printClosing(id){
     });
     html+=`<div class="print-total" style="color:${cl.totalNet>=0?'#16a34a':'#dc2626'}">الإجمالي الكلي: ${fmtNum(cl.totalNet)} ${cur}</div>`;
     html+=`</div>`;
-    doPrint(html);
+    showPrintDialog(html);
 }
 function getPrintColorClass(type){
     const m={income:'p-income',expense:'p-expense',debt:'p-debt',withdraw:'p-withdraw',deduct:'p-deduct'};
     return m[type]||'';
+}
+
+/* ========= PRINT ALL CLOSINGS SUMMARY ========= */
+function printAllClosings(){
+    if(!hasAction('print'))return toast('غير مصرح');
+    const closings=loadData(KEYS.closings).sort((a,b)=>b.date.localeCompare(a.date));
+    if(!closings.length)return toast('لا توجد تقفيلات');
+    const s=loadSettings();const cur=s.currency||'د.ع';const store=s.storeName||'';
+    const printDate=new Date().toLocaleDateString('ar-IQ',{year:'numeric',month:'long',day:'numeric'});
+    let html=`<div class="print-page-border">`;
+    html+=`<div class="print-header"><h2>ملخص جميع التقفيلات</h2>`;
+    if(store)html+=`<p>${store}</p>`;
+    html+=`<p class="print-date">تاريخ الطباعة: ${printDate}</p></div>`;
+    html+=`<table><thead><tr><th>#</th><th>التاريخ</th><th>المدير</th>`;
+    CASHIERS.forEach(cs=>html+=`<th>${cs.label}</th>`);
+    html+=`<th>الصافي</th></tr></thead><tbody>`;
+    let grandTotal=0;
+    closings.forEach((c,i)=>{
+        grandTotal+=c.totalNet||0;
+        html+=`<tr><td>${i+1}</td><td>${c.date}</td><td>${c.manager||'-'}</td>`;
+        CASHIERS.forEach(cs=>{const d=c.cashiers[cs.key];html+=`<td>${d?fmtNum(d.net||0):'-'}</td>`;});
+        html+=`<td style="color:${c.totalNet>=0?'#16a34a':'#dc2626'};font-weight:700">${fmtNum(c.totalNet)} ${cur}</td></tr>`;
+    });
+    html+=`<tr style="font-weight:700;background:#f1f5f9"><td colspan="3">الإجمالي (${closings.length} تقفيلة)</td>`;
+    CASHIERS.forEach(cs=>{
+        const total=closings.reduce((s,c)=>{const d=c.cashiers[cs.key];return s+(d?d.net||0:0);},0);
+        html+=`<td>${fmtNum(total)}</td>`;
+    });
+    html+=`<td style="color:${grandTotal>=0?'#16a34a':'#dc2626'}">${fmtNum(grandTotal)} ${cur}</td></tr>`;
+    html+=`</tbody></table></div>`;
+    showPrintDialog(html);
 }
 
 /* ========= VIEW CLOSING DETAILS ========= */
@@ -1555,7 +1586,7 @@ function printIndividualClosing(id){
     html+=`</div>`;
     if(cl.by)html+=`<div style="text-align:center;font-size:11pt;font-weight:600;margin-top:10px;color:#555">بواسطة: ${cl.by}</div>`;
     html+=`</div>`;
-    doPrint(html);
+    showPrintDialog(html);
 }
 function getSafeBalance(){
     return loadData(KEYS.safe).reduce((s,t)=>s+(t.type==='deposit'?t.amount:-t.amount),0);
@@ -1652,7 +1683,7 @@ function safePrint(){
     html+=`</tbody></table>`;
     html+=`<div class="print-total" style="color:${getSafeBalance()>=0?'#16a34a':'#dc2626'}">الرصيد: ${fmtNum(getSafeBalance())} ${cur}</div>`;
     html+=`</div>`;
-    doPrint(html);
+    showPrintDialog(html);
 }
 
 /* safe export CSV */
@@ -1935,7 +1966,7 @@ function printPersonDebts(person){
     html+=`</tbody></table>`;
     html+=`<div class="print-total" style="color:#dc2626">الإجمالي: ${fmtNum(total)} ${cur}</div>`;
     html+=`</div>`;
-    closeModal();doPrint(html);
+    closeModal();showPrintDialog(html);
 }
 
 /* ========= EXPENSES ========= */
@@ -2097,18 +2128,18 @@ function printAllSalaries(){
     html+=`<div class="print-header"><h2>كشف الرواتب</h2>`;
     if(store)html+=`<p>${store}</p>`;
     html+=`<p class="print-date">تاريخ الطباعة: ${printDate}</p></div>`;
-    html+=`<table><thead><tr><th>الموظف</th><th>الوظيفة</th><th>الراتب</th><th>النوع</th></tr></thead><tbody>`;
+    html+=`<table><thead><tr><th>#</th><th>الموظف</th><th>الوظيفة</th><th>الراتب</th><th>النوع</th></tr></thead><tbody>`;
     let totalOwed=0;
-    emps.forEach(e=>{
+    emps.forEach((e,i)=>{
         const owed=e.salary||0;
         totalOwed+=owed;
         const typeLabel=e.salaryType==='commission'?'عمولة '+e.commRate+'%':'ثابت';
-        html+=`<tr><td>${e.name}</td><td>${e.role||''}</td><td style="font-weight:700">${fmtNum(owed)} ${cur}</td><td>${typeLabel}</td></tr>`;
+        html+=`<tr><td>${i+1}</td><td>${e.name}</td><td>${e.role||''}</td><td style="font-weight:700">${fmtNum(owed)} ${cur}</td><td>${typeLabel}</td></tr>`;
     });
     html+=`</tbody></table>`;
     html+=`<div class="print-total">إجمالي الرواتب: ${fmtNum(totalOwed)} ${cur}</div>`;
     html+=`</div>`;
-    doPrint(html);
+    showPrintDialog(html);
 }
 
 /* ========= PAYROLL ========= */
@@ -2339,23 +2370,23 @@ function printPayroll(){
     html+=`<div class="print-header"><h2>كشف صرف الرواتب - ${ym}</h2>`;
     if(store)html+=`<p>${store}</p>`;
     html+=`<p class="print-date">تاريخ الطباعة: ${printDate}</p></div>`;
-    html+=`<table><thead><tr><th>الموظف</th><th>المستحق</th><th>المسلّم</th><th>المتبقي</th></tr></thead><tbody>`;
-    emps.forEach(e=>{
+    html+=`<table><thead><tr><th>#</th><th>الموظف</th><th>المستحق</th><th>المسلّم</th><th>المتبقي</th></tr></thead><tbody>`;
+    emps.forEach((e,i)=>{
         const owed=e.salary||0;
         const paid=payroll.filter(p=>p.empId===e.id).reduce((s,p)=>s+p.amount,0);
         const rem=owed-paid;
-        html+=`<tr><td>${e.name}</td><td>${fmtNum(owed)}</td><td class="p-income">${fmtNum(paid)}</td><td class="${rem>0?'p-expense':''}" style="font-weight:700">${fmtNum(rem)} ${cur}</td></tr>`;
+        html+=`<tr><td>${i+1}</td><td>${e.name}</td><td>${fmtNum(owed)}</td><td class="p-income">${fmtNum(paid)}</td><td class="${rem>0?'p-expense':''}" style="font-weight:700">${fmtNum(rem)} ${cur}</td></tr>`;
     });
     html+=`</tbody></table>`;
     /* receipts detail */
     if(payroll.length){
-        html+=`<h3 style="margin-top:8px">تفاصيل الصرف</h3><table><thead><tr><th>التاريخ</th><th>الموظف</th><th>الراتب</th><th>إكرامية</th><th>الاستقطاعات</th><th>الصافي</th><th>ملاحظة</th></tr></thead><tbody>`;
-        payroll.forEach(p=>{
+        html+=`<h3 style="margin-top:4px">تفاصيل الصرف</h3><table><thead><tr><th>#</th><th>الموظف</th><th>الراتب</th><th>إكرامية</th><th>الاستقطاعات</th><th>الصافي</th><th>ملاحظة</th></tr></thead><tbody>`;
+        payroll.forEach((p,i)=>{
             const tip=p.tip||0;
             const ded=p.deductions?((p.deductions.debt||0)+(p.deductions.attendance||0)+(p.deductions.loan||0)):0;
             const net=p.netPay||p.amount;
             html+=`<tr>
-                <td>${p.date}</td>
+                <td>${i+1}</td>
                 <td>${p.empName}</td>
                 <td class="p-expense">${fmtNum(p.amount)} ${cur}</td>
                 <td style="color:#16a34a;font-weight:700">${tip>0?fmtNum(tip)+' '+cur:'-'}</td>
@@ -2379,7 +2410,7 @@ function printPayroll(){
         html+=`</tbody></table>`;
     }
     html+=`</div>`;
-    doPrint(html);
+    showPrintDialog(html);
 }
 
 /* ========= CAPITAL (= SAFE) ========= */
@@ -2741,7 +2772,7 @@ function printReport(){
 
     /* closings */
     if(closings.length){
-        html+=`<h3 style="margin-top:8px">التقفيلات (${closings.length})</h3><table><thead><tr><th>التاريخ</th><th>المدير</th>`;
+        html+=`<h3 style="margin-top:4px">التقفيلات (${closings.length})</h3><table><thead><tr><th>التاريخ</th><th>المدير</th>`;
         CASHIERS.forEach(cs=>html+=`<th>${cs.label}</th>`);
         html+=`<th>الصافي</th></tr></thead><tbody>`;
         closings.forEach(c=>{
@@ -2754,47 +2785,47 @@ function printReport(){
 
     /* payroll */
     if(payrollData.length){
-        html+=`<h3 style="margin-top:8px">صرف الرواتب (${payrollData.length})</h3><table><thead><tr><th>التاريخ</th><th>الموظف</th><th>المبلغ</th><th>الاستقطاعات</th><th>الصافي</th></tr></thead><tbody>`;
-        payrollData.forEach(p=>{
+        html+=`<h3 style="margin-top:4px">صرف الرواتب (${payrollData.length})</h3><table><thead><tr><th>#</th><th>الموظف</th><th>المبلغ</th><th>الاستقطاعات</th><th>الصافي</th><th>ملاحظة</th></tr></thead><tbody>`;
+        payrollData.forEach((p,i)=>{
             const ded=p.deductions;const dedTotal=ded?(ded.debt||0)+(ded.attendance||0)+(ded.loan||0):0;const net=p.netPay||p.amount;
-            html+=`<tr><td>${p.date}</td><td>${p.empName}</td><td>${fmtNum(p.amount)}</td><td>${dedTotal>0?fmtNum(dedTotal):'-'}</td><td style="font-weight:700">${fmtNum(net)} ${cur}</td></tr>`;
+            html+=`<tr><td>${i+1}</td><td>${p.empName}</td><td>${fmtNum(p.amount)}</td><td>${dedTotal>0?fmtNum(dedTotal):'-'}</td><td style="font-weight:700">${fmtNum(net)} ${cur}</td><td>${p.note||''}</td></tr>`;
         });
-        html+=`<tr style="font-weight:700;background:#f1f5f9"><td colspan="2">الإجمالي</td><td>${fmtNum(totalPayrollGross)}</td><td>${totalDeductions>0?fmtNum(totalDeductions):'-'}</td><td>${fmtNum(totalPayroll)} ${cur}</td></tr></tbody></table>`;
+        html+=`<tr style="font-weight:700;background:#f1f5f9"><td colspan="2">الإجمالي</td><td>${fmtNum(totalPayrollGross)}</td><td>${totalDeductions>0?fmtNum(totalDeductions):'-'}</td><td>${fmtNum(totalPayroll)} ${cur}</td><td></td></tr></tbody></table>`;
     }
 
     /* expenses */
     if(expEntries.length){
-        html+=`<h3 style="margin-top:8px">المصاريف (${expEntries.length})</h3><table><thead><tr><th>التاريخ</th><th>الوصف</th><th>المبلغ</th></tr></thead><tbody>`;
-        expEntries.forEach(e=>html+=`<tr><td>${e.date}</td><td>${e.desc||''}</td><td style="color:#dc2626;font-weight:700">${fmtNum(e.amount)} ${cur}</td></tr>`);
+        html+=`<h3 style="margin-top:4px">المصاريف (${expEntries.length})</h3><table><thead><tr><th>التاريخ</th><th>الوصف</th><th>المبلغ</th><th>ملاحظة</th></tr></thead><tbody>`;
+        expEntries.forEach(e=>html+=`<tr><td>${e.date}</td><td>${e.desc||''}</td><td style="color:#dc2626;font-weight:700">${fmtNum(e.amount)} ${cur}</td><td>${e.note||''}</td></tr>`);
         html+=`</tbody></table>`;
     }
 
     /* purchases */
     if(purchases.length){
-        html+=`<h3 style="margin-top:8px">المشتريات (${purchases.length})</h3><table><thead><tr><th>التاريخ</th><th>الوصف</th><th>المبلغ</th></tr></thead><tbody>`;
-        purchases.forEach(p=>html+=`<tr><td>${p.date}</td><td>${p.desc||''}</td><td style="color:#dc2626;font-weight:700">${fmtNum(p.amount)} ${cur}</td></tr>`);
+        html+=`<h3 style="margin-top:4px">المشتريات (${purchases.length})</h3><table><thead><tr><th>التاريخ</th><th>الوصف</th><th>المبلغ</th><th>ملاحظة</th></tr></thead><tbody>`;
+        purchases.forEach(p=>html+=`<tr><td>${p.date}</td><td>${p.desc||''}</td><td style="color:#dc2626;font-weight:700">${fmtNum(p.amount)} ${cur}</td><td>${p.note||''}</td></tr>`);
         html+=`</tbody></table>`;
     }
 
     /* debts */
     if(debts.length){
-        html+=`<h3 style="margin-top:8px">حركات الديون (${debts.length})</h3><table><thead><tr><th>التاريخ</th><th>الشخص</th><th>النوع</th><th>المبلغ</th></tr></thead><tbody>`;
+        html+=`<h3 style="margin-top:4px">حركات الديون (${debts.length})</h3><table><thead><tr><th>التاريخ</th><th>الشخص</th><th>النوع</th><th>المبلغ</th><th>ملاحظة</th></tr></thead><tbody>`;
         debts.forEach(d=>{
             const lbl=d.type==='repayment'?'تسديد':d.type==='withdraw'?'سحب':'دين';
-            html+=`<tr><td>${d.date}</td><td>${d.person}</td><td>${lbl}</td><td style="color:${d.amount<0?'#16a34a':'#dc2626'};font-weight:700">${fmtNum(d.amount)} ${cur}</td></tr>`;
+            html+=`<tr><td>${d.date}</td><td>${d.person}</td><td>${lbl}</td><td style="color:${d.amount<0?'#16a34a':'#dc2626'};font-weight:700">${fmtNum(d.amount)} ${cur}</td><td>${d.note||''}</td></tr>`;
         });
         html+=`</tbody></table>`;
     }
 
     /* final summary */
-    html+=`<div style="margin-top:12px;border:2.5px solid #333;border-radius:8px;padding:12px">`;
-    html+=`<div style="text-align:center;font-weight:800;font-size:13pt;margin-bottom:8px">الإجمالي النهائي</div>`;
+    html+=`<div style="margin-top:5px;border:2px solid #333;border-radius:4px;padding:5px">`;
+    html+=`<div style="text-align:center;font-weight:800;font-size:11pt;margin-bottom:4px">الإجمالي النهائي</div>`;
     html+=`<div class="print-summary-box"><span>إيداعات الخزنة: ${fmtNum(safeDeposits)}</span><span>سحوبات الخزنة: ${fmtNum(safeWithdrawals2)}</span></div>`;
     html+=`<div class="print-summary-box"><span>ديون مسددة: ${fmtNum(debtRepaid)}</span><span>رصيد الديون: ${fmtNum(totalDebtBalance)}</span></div>`;
-    html+=`<div style="text-align:center;font-size:14pt;font-weight:900;margin-top:8px;padding:10px;background:#f1f5f9;border-radius:6px">رصيد الخزنة الحالي: ${fmtNum(safeBalance)} ${cur}</div>`;
+    html+=`<div style="text-align:center;font-size:12pt;font-weight:900;margin-top:4px;padding:5px;background:#f1f5f9;border-radius:4px">رصيد الخزنة الحالي: ${fmtNum(safeBalance)} ${cur}</div>`;
     html+=`</div>`;
     html+=`</div>`;
-    doPrint(html);
+    showPrintDialog(html);
 }
 
 /* ========= SETTINGS ========= */
@@ -3003,7 +3034,7 @@ function printDebts(){
     html+=`</tbody></table>`;
     html+=`<div class="print-total">الإجمالي: ${fmtNum(total)} ${cur}</div>`;
     html+=`</div>`;
-    doPrint(html);
+    showPrintDialog(html);
 }
 
 /* ========= PRINT EXPENSES ========= */
@@ -3017,22 +3048,26 @@ function printExpenses(){
     closings.forEach(c=>{
         CASHIERS.forEach(cs=>{
             const d=c.cashiers[cs.key];if(!d)return;
-            if(d.expenses)expenses.push({date:c.date,cashier:cs.label,type:'مصاريف',amount:d.expenses});
-            if(d.lunch)expenses.push({date:c.date,cashier:cs.label,type:'غداء',amount:d.lunch});
+            if(d.expenses)expenses.push({date:c.date,cashier:cs.label,type:'مصاريف',amount:d.expenses,note:''});
+            if(d.lunch)expenses.push({date:c.date,cashier:cs.label,type:'غداء',amount:d.lunch,note:''});
         });
     });
+    /* add individual expense entries */
+    let expEntries=loadData(KEYS.expenseEntries);
+    if(ym)expEntries=expEntries.filter(e=>e.date&&e.date.startsWith(ym));
+    expEntries.forEach(e=>expenses.push({date:e.date,cashier:e.cashier||'',type:e.desc||'مصروف',amount:e.amount,note:e.note||''}));
     const printDate=new Date().toLocaleDateString('ar-IQ',{year:'numeric',month:'long',day:'numeric'});
     let html=`<div class="print-page-border">`;
     html+=`<div class="print-header"><h2>سجل المصاريف${ym?' - '+ym:''}</h2>`;
     if(store)html+=`<p>${store}</p>`;
     html+=`<p class="print-date">تاريخ الطباعة: ${printDate}</p></div>`;
-    html+=`<table><thead><tr><th>التاريخ</th><th>الكاشير</th><th>النوع</th><th>المبلغ</th></tr></thead><tbody>`;
+    html+=`<table><thead><tr><th>التاريخ</th><th>الكاشير</th><th>النوع</th><th>المبلغ</th><th>ملاحظة</th></tr></thead><tbody>`;
     let total=0;
-    expenses.forEach(e=>{total+=e.amount;html+=`<tr><td>${e.date}</td><td>${e.cashier}</td><td>${e.type}</td><td>${fmtNum(e.amount)} ${cur}</td></tr>`;});
+    expenses.forEach(e=>{total+=e.amount;html+=`<tr><td>${e.date}</td><td>${e.cashier}</td><td>${e.type}</td><td>${fmtNum(e.amount)} ${cur}</td><td>${e.note||''}</td></tr>`;});
     html+=`</tbody></table>`;
     html+=`<div class="print-total">الإجمالي: ${fmtNum(total)} ${cur}</div>`;
     html+=`</div>`;
-    doPrint(html);
+    showPrintDialog(html);
 }
 
 /* ========= PRINT PURCHASES ========= */
@@ -3045,13 +3080,13 @@ function printPurchases(){
     html+=`<div class="print-header"><h2>سجل المشتريات</h2>`;
     if(store)html+=`<p>${store}</p>`;
     html+=`<p class="print-date">تاريخ الطباعة: ${printDate}</p></div>`;
-    html+=`<table><thead><tr><th>التاريخ</th><th>الوصف</th><th>المبلغ</th></tr></thead><tbody>`;
+    html+=`<table><thead><tr><th>التاريخ</th><th>الوصف</th><th>المبلغ</th><th>ملاحظة</th></tr></thead><tbody>`;
     let total=0;
-    purchases.forEach(p=>{total+=p.amount;html+=`<tr><td>${p.date}</td><td>${p.desc||''}</td><td>${fmtNum(p.amount)} ${cur}</td></tr>`;});
+    purchases.forEach(p=>{total+=p.amount;html+=`<tr><td>${p.date}</td><td>${p.desc||''}</td><td>${fmtNum(p.amount)} ${cur}</td><td>${p.note||''}</td></tr>`;});
     html+=`</tbody></table>`;
     html+=`<div class="print-total">الإجمالي: ${fmtNum(total)} ${cur}</div>`;
     html+=`</div>`;
-    doPrint(html);
+    showPrintDialog(html);
 }
 
 /* ========= PRINT CAPITAL ========= */
@@ -3073,7 +3108,7 @@ function printCapital(){
     });
     html+=`</tbody></table>`;
     html+=`</div>`;
-    doPrint(html);
+    showPrintDialog(html);
 }
 
 /* ========= SECURITY PAGE ========= */
@@ -3215,7 +3250,7 @@ function syncCashierAccounts(){
 
 /* ========= PAGE EXPORT / IMPORT ========= */
 function exportPage(dataKey, filename, label){
-    const keyMap={individualClosings:KEYS.individualClosings};
+    const keyMap={individualClosings:KEYS.individualClosings,closings:KEYS.closings,debts:KEYS.debts,expenseEntries:KEYS.expenseEntries,employees:KEYS.employees,payroll:KEYS.payroll,safe:KEYS.safe,purchases:KEYS.purchases};
     const key=keyMap[dataKey];
     if(!key) return toast('خطأ في التصدير');
     const data=loadData(key);
@@ -3225,7 +3260,7 @@ function exportPage(dataKey, filename, label){
     toast('تم تصدير '+label);
 }
 function importPage(dataKey, label, renderFn){
-    const keyMap={individualClosings:KEYS.individualClosings};
+    const keyMap={individualClosings:KEYS.individualClosings,closings:KEYS.closings,debts:KEYS.debts,expenseEntries:KEYS.expenseEntries,employees:KEYS.employees,payroll:KEYS.payroll,safe:KEYS.safe,purchases:KEYS.purchases};
     const key=keyMap[dataKey];
     if(!key) return toast('خطأ في الاستيراد');
     const input=document.createElement('input');
@@ -3255,10 +3290,28 @@ function importPage(dataKey, label, renderFn){
 }
 
 /* ========= PRINT HELPER ========= */
-function doPrint(html){
+let _pendingPrintHtml='';
+function doPrint(html,landscape){
     const area=$('#printArea');
     area.innerHTML=html;
+    let styleEl=document.getElementById('printOrientStyle');
+    if(!styleEl){styleEl=document.createElement('style');styleEl.id='printOrientStyle';document.head.appendChild(styleEl);}
+    styleEl.textContent=landscape?'@media print{@page{size:A4 landscape;margin:4mm 2mm}}':'@media print{@page{size:A4;margin:4mm 2mm}}';
     setTimeout(()=>window.print(),200);
+}
+function showPrintDialog(html){
+    _pendingPrintHtml=html;
+    showCustomDialog({
+        icon:'ri-printer-line',
+        iconClass:'',
+        title:'خيارات الطباعة',
+        msg:'اختر اتجاه الورقة',
+        buttons:[
+            {label:'<i class="ri-layout-top-line"></i> عمودي',cls:'btn-primary',action:'hideDialog();doPrint(_pendingPrintHtml,false)'},
+            {label:'<i class="ri-layout-left-line"></i> أفقي',cls:'btn-warning',action:'hideDialog();doPrint(_pendingPrintHtml,true)'},
+            {label:'إلغاء',cls:'btn-ghost',action:'hideDialog()'}
+        ]
+    });
 }
 
 /* ========= INIT ========= */

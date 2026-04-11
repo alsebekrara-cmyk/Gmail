@@ -71,8 +71,9 @@ body.wizard-open{overflow:hidden;position:fixed;width:100%;height:100%}
 .tile-closing .tile-icon{color:#6366f1}.tile-individual .tile-icon{color:#06b6d4}.tile-safe .tile-icon{color:#22c55e}.tile-debts .tile-icon{color:#ef4444}.tile-expenses .tile-icon{color:#f59e0b}.tile-salaries .tile-icon{color:#8b5cf6}.tile-payroll .tile-icon{color:#0ea5e9}.tile-capital .tile-icon{color:#14b8a6}.tile-purchases .tile-icon{color:#f97316}.tile-report .tile-icon{color:#ec4899}.tile-settings .tile-icon{color:#64748b}
 
 /* ===== SHARED COMPONENTS ===== */
-.section-head{margin-bottom:14px}
+.section-head{margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
 .section-head h2{font-size:1.15rem;display:flex;align-items:center;gap:6px}
+.page-io-btns{display:flex;gap:2px}
 .sub-title{font-size:.9rem;color:var(--text2);margin:16px 0 8px;display:flex;align-items:center;gap:4px}
 .date-bar{display:flex;align-items:center;gap:6px;background:var(--surface);padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:12px;font-size:.9rem;color:var(--text2)}
 .btn{display:inline-flex;align-items:center;gap:6px;border:none;border-radius:var(--radius-sm);padding:10px 18px;font:inherit;font-size:.9rem;font-weight:600;cursor:pointer;transition:background .2s,transform .15s}
@@ -210,33 +211,33 @@ select.input-field{appearance:auto}
 /* ===== PRINT ===== */
 .print-area{display:none}
 @media print{
-    @page{size:A4;margin:10mm 12mm}
+    @page{size:A4;margin:4mm 2mm}
     *{margin:0;padding:0}
     body *{visibility:hidden!important}
     .print-area,.print-area *{visibility:visible!important}
-    .print-area{display:block!important;position:absolute;top:0;left:0;right:0;width:100%;max-width:100%;padding:0;margin:0;font-size:12pt;direction:rtl;font-family:'Tajawal',sans-serif;background:#fff;line-height:1.6;overflow:visible;box-sizing:border-box}
-    .print-area .print-page-border{border:2.5px solid #333;border-radius:6px;padding:14px 18px;min-height:calc(100vh - 24mm);background:repeating-linear-gradient(to bottom,transparent,transparent 27px,#e0e0e0 27px,#e0e0e0 28px)}
-    .print-area h2{font-size:18pt;text-align:center;margin-bottom:6px;border-bottom:3px solid #333;padding-bottom:5px;font-weight:900}
-    .print-area h3{font-size:14pt;margin:10px 0 5px;color:#111;border-bottom:2px solid #999;padding-bottom:4px;font-weight:800}
-    .print-area .print-cashier-mgr{font-size:11pt;font-weight:700;color:#555}
-    .print-area table{width:100%;border-collapse:collapse;margin:6px 0;table-layout:fixed;word-wrap:break-word;background:#fff}
-    .print-area th,.print-area td{border:1px solid #999;padding:6px 10px;text-align:right;font-size:11.5pt;font-weight:600;overflow:hidden;text-overflow:ellipsis}
-    .print-area th{background:#eee;font-weight:800;font-size:11.5pt}
-    .print-area .print-total{font-size:14pt;font-weight:900;text-align:center;margin-top:10px;padding:10px;border:3px solid #333;border-radius:8px;background:#fff}
-    .print-area .print-amount{font-weight:800;font-size:12pt}
-    .print-area .print-date{text-align:center;font-size:11pt;color:#444;margin-bottom:3px;font-weight:600}
-    .print-area .print-section{margin-bottom:10px;page-break-inside:avoid}
-    .print-area .print-header{text-align:center;margin-bottom:10px;background:#fff;padding:4px 0}
-    .print-area .print-header h2{font-size:19pt;margin-bottom:4px}
-    .print-area .print-header p{font-size:11pt;color:#444;font-weight:600}
-    .print-area .print-manager{text-align:center;font-size:12pt;font-weight:800;margin-bottom:8px;color:#222;background:#fff;padding:2px 0}
+    .print-area{display:block!important;position:absolute;top:0;left:0;right:0;width:100%;max-width:100%;padding:0;margin:0;font-size:10pt;direction:rtl;font-family:'Tajawal',sans-serif;background:#fff;line-height:1.25;overflow:visible;box-sizing:border-box}
+    .print-area .print-page-border{border:2px solid #333;padding:6px 8px;background:#fff}
+    .print-area h2{font-size:15pt;text-align:center;margin-bottom:3px;border-bottom:2.5px solid #333;padding-bottom:3px;font-weight:900}
+    .print-area h3{font-size:11.5pt;margin:5px 0 2px;color:#111;border-bottom:1.5px solid #999;padding-bottom:2px;font-weight:800}
+    .print-area .print-cashier-mgr{font-size:9.5pt;font-weight:700;color:#555}
+    .print-area table{width:100%;border-collapse:collapse;margin:3px 0;table-layout:fixed;word-wrap:break-word;background:#fff}
+    .print-area th,.print-area td{border:1px solid #999;padding:2px 6px;text-align:right;font-size:9.5pt;font-weight:600;overflow:hidden;text-overflow:ellipsis}
+    .print-area th{background:#eee;font-weight:800;font-size:9.5pt}
+    .print-area .print-total{font-size:12pt;font-weight:900;text-align:center;margin-top:5px;padding:5px;border:2.5px solid #333;border-radius:4px;background:#fff}
+    .print-area .print-amount{font-weight:800;font-size:10pt}
+    .print-area .print-date{text-align:center;font-size:9.5pt;color:#444;margin-bottom:1px;font-weight:600}
+    .print-area .print-section{margin-bottom:4px;page-break-inside:avoid}
+    .print-area .print-header{text-align:center;margin-bottom:4px;background:#fff;padding:2px 0}
+    .print-area .print-header h2{font-size:16pt;margin-bottom:2px}
+    .print-area .print-header p{font-size:9.5pt;color:#444;font-weight:600}
+    .print-area .print-manager{text-align:center;font-size:10pt;font-weight:800;margin-bottom:4px;color:#222;background:#fff;padding:1px 0}
     .print-area .p-income{color:#16a34a}.print-area .p-expense{color:#dc2626}.print-area .p-debt{color:#ef4444}.print-area .p-withdraw{color:#d97706}.print-area .p-deduct{color:#7c3aed}
-    .print-area .print-summary-box{display:flex;justify-content:space-around;border:2.5px solid #333;padding:10px;border-radius:8px;margin:10px 0;font-weight:800;font-size:12pt;background:#fff}
-    .print-area .print-compact-table td,.print-area .print-compact-table th{padding:5px 8px;font-size:11pt;font-weight:600}
-    .print-area .print-detail-header{font-size:11pt;font-weight:800;padding:4px 0;margin-top:6px;text-decoration:underline;background:#fff}
-    .print-area .print-detail-row{font-size:11pt;font-weight:600;padding:3px 10px;background:#fff}
-    .print-area .print-2col{display:flex;gap:8px}.print-area .print-2col>div{flex:1}
-    .print-area .print-footer{text-align:center;font-size:9pt;color:#888;margin-top:12px;padding-top:6px;border-top:1px solid #ccc;background:#fff}
+    .print-area .print-summary-box{display:flex;justify-content:space-around;border:2px solid #333;padding:4px;border-radius:4px;margin:4px 0;font-weight:800;font-size:10pt;background:#fff}
+    .print-area .print-compact-table td,.print-area .print-compact-table th{padding:2px 5px;font-size:9pt;font-weight:600}
+    .print-area .print-detail-header{font-size:9.5pt;font-weight:800;padding:2px 0;margin-top:3px;text-decoration:underline;background:#fff}
+    .print-area .print-detail-row{font-size:9.5pt;font-weight:600;padding:1px 6px;background:#fff}
+    .print-area .print-2col{display:flex;gap:4px}.print-area .print-2col>div{flex:1}
+    .print-area .print-footer{text-align:center;font-size:8pt;color:#888;margin-top:6px;padding-top:3px;border-top:1px solid #ccc;background:#fff}
 }
 
 /* ===== EMPTY STATE ===== */
