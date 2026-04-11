@@ -102,7 +102,7 @@
 
             <!-- CLOSING (التقفيلة) -->
             <section id="page-closing" class="page">
-                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-calculator-fill"></i> التقفيلة</h2></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-calculator-fill"></i> التقفيلة</h2><div class="page-io-btns"><button class="btn btn-ghost btn-sm" onclick="exportPage('closings','تقفيلات','التقفيلة')"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('closings','التقفيلة',renderClosings)"><i class="ri-upload-2-line"></i></button></div></div>
                 <div class="date-bar"><i class="ri-calendar-line"></i><span id="closingDateDisplay"></span></div>
                 <button class="btn btn-primary btn-block" id="newClosingBtn"><i class="ri-add-circle-line"></i> تقفيلة جديدة</button>
                 <div class="filter-bar" style="margin-top:12px"><input type="text" id="closingSearch" class="input-field" placeholder="بحث في التقفيلات..."><button class="btn btn-primary btn-sm" onclick="renderClosings()"><i class="ri-search-line"></i></button></div>
@@ -112,7 +112,7 @@
 
             <!-- INDIVIDUAL CLOSINGS (التقفيلات المنفصلة) -->
             <section id="page-individual" class="page">
-                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-git-branch-fill"></i> التقفيلات المنفصلة</h2></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-git-branch-fill"></i> التقفيلات المنفصلة</h2><div class="page-io-btns"><button class="btn btn-ghost btn-sm" onclick="exportPage('individualClosings','تقفيلات-منفصلة','التقفيلات المنفصلة')"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('individualClosings','التقفيلات المنفصلة',renderIndividual)"><i class="ri-upload-2-line"></i></button></div></div>
                 <div class="date-bar"><i class="ri-calendar-line"></i><span id="individualDateDisplay"></span></div>
                 <div class="filter-bar" style="margin-top:12px"><input type="text" id="individualSearch" class="input-field" placeholder="بحث في التقفيلات المنفصلة..."><button class="btn btn-primary btn-sm" onclick="renderIndividual()"><i class="ri-search-line"></i></button></div>
                 <h3 class="sub-title">تقفيلات الكاشيرات</h3>
@@ -138,7 +138,7 @@
 
             <!-- SAFE -->
             <section id="page-safe" class="page">
-                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-safe-2-fill"></i> الخزنة</h2></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-safe-2-fill"></i> الخزنة</h2><div class="page-io-btns"><button class="btn btn-ghost btn-sm" onclick="exportPage('safe','خزنة','الخزنة')"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('safe','الخزنة',renderSafe)"><i class="ri-upload-2-line"></i></button></div></div>
                 <div class="balance-card" id="safeBalanceCard">
                     <div class="bal-label">رصيد الخزنة الحالي</div>
                     <div class="bal-amount" id="safeBalance">0</div>
@@ -147,7 +147,7 @@
                     <button class="btn btn-success btn-sm" id="safeDepositBtn"><i class="ri-add-line"></i> إيداع</button>
                     <button class="btn btn-danger btn-sm" id="safeWithdrawBtn"><i class="ri-subtract-line"></i> سحب</button>
                     <button class="btn btn-warning btn-sm" id="safePrintBtn"><i class="ri-printer-line"></i> طباعة</button>
-                    <button class="btn btn-ghost btn-sm" id="safeExportBtn"><i class="ri-download-cloud-line"></i> تصدير</button>
+                    <button class="btn btn-ghost btn-sm" id="safeExportBtn"><i class="ri-download-cloud-line"></i> تصدير CSV</button>
                 </div>
                 <div class="filter-bar" style="margin-top:12px"><input type="text" id="safeSearch" class="input-field" placeholder="بحث في المعاملات..."><button class="btn btn-primary btn-sm" onclick="renderSafe()"><i class="ri-search-line"></i></button></div>
                 <h3 class="sub-title">سجل المعاملات التفصيلي</h3>
@@ -156,7 +156,7 @@
 
             <!-- DEBTS -->
             <section id="page-debts" class="page">
-                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-file-list-3-fill"></i> الديون</h2></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-file-list-3-fill"></i> الديون</h2><div class="page-io-btns"><button class="btn btn-ghost btn-sm" onclick="exportPage('debts','ديون','الديون')"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('debts','الديون',renderDebts)"><i class="ri-upload-2-line"></i></button></div></div>
                 <div class="filter-bar" style="margin-bottom:10px"><input type="text" id="debtsSearch" class="input-field" placeholder="بحث في الديون..."><button class="btn btn-primary btn-sm" onclick="renderDebts()"><i class="ri-search-line"></i></button></div>
                 <div class="tabs-row">
                     <button class="tab active" data-dtab="employees"><i class="ri-user-line"></i> الموظفين</button>
@@ -171,7 +171,7 @@
 
             <!-- EXPENSES -->
             <section id="page-expenses" class="page">
-                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-money-dollar-box-fill"></i> المصاريف</h2></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-money-dollar-box-fill"></i> المصاريف</h2><div class="page-io-btns"><button class="btn btn-ghost btn-sm" onclick="exportPage('expenseEntries','مصاريف','المصاريف')"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('expenseEntries','المصاريف',renderExpenses)"><i class="ri-upload-2-line"></i></button></div></div>
                 <div class="filter-bar">
                     <input type="month" id="expFilterMonth" class="input-field">
                     <button class="btn btn-primary btn-sm" id="expFilterBtn"><i class="ri-search-line"></i></button>
@@ -184,7 +184,7 @@
 
             <!-- SALARIES -->
             <section id="page-salaries" class="page">
-                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-team-fill"></i> الرواتب والموظفين</h2></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-team-fill"></i> الرواتب والموظفين</h2><div class="page-io-btns"><button class="btn btn-ghost btn-sm" onclick="exportPage('employees','موظفين','الموظفين')"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('employees','الموظفين',renderSalaries)"><i class="ri-upload-2-line"></i></button></div></div>
                 <div class="action-btns">
                     <button class="btn btn-primary" id="addEmployeeBtn"><i class="ri-user-add-line"></i> إضافة موظف</button>
                     <button class="btn btn-warning" id="printAllSalBtn"><i class="ri-printer-fill"></i> طباعة الجميع</button>
@@ -195,7 +195,7 @@
 
             <!-- PAYROLL (صرف الرواتب) -->
             <section id="page-payroll" class="page">
-                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-hand-coin-fill"></i> صرف الرواتب</h2></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-hand-coin-fill"></i> صرف الرواتب</h2><div class="page-io-btns"><button class="btn btn-ghost btn-sm" onclick="exportPage('payroll','سجل-رواتب','صرف الرواتب')"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('payroll','صرف الرواتب',renderPayroll)"><i class="ri-upload-2-line"></i></button></div></div>
                 <div class="filter-bar">
                     <input type="month" id="payrollMonth" class="input-field">
                     <button class="btn btn-primary btn-sm" id="payrollFilterBtn"><i class="ri-search-line"></i></button>
@@ -224,7 +224,7 @@
 
             <!-- PURCHASES -->
             <section id="page-purchases" class="page">
-                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-shopping-cart-2-fill"></i> المشتريات</h2></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-shopping-cart-2-fill"></i> المشتريات</h2><div class="page-io-btns"><button class="btn btn-ghost btn-sm" onclick="exportPage('purchases','مشتريات','المشتريات')"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('purchases','المشتريات',renderPurchases)"><i class="ri-upload-2-line"></i></button></div></div>
                 <button class="btn btn-primary btn-block" id="addPurchaseBtn"><i class="ri-add-circle-line"></i> إضافة عملية شراء</button>
                 <div class="filter-bar" style="margin-top:12px"><input type="text" id="purchSearch" class="input-field" placeholder="بحث في المشتريات..."><button class="btn btn-primary btn-sm" onclick="renderPurchases()"><i class="ri-search-line"></i></button></div>
                 <div id="purchasesList" class="records-list"></div>

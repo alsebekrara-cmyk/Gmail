@@ -2349,6 +2349,67 @@ function saveSettingsForm(){
     saveSettings(s);
     toast('تم حفظ الإعدادات');
 }
+/* ========= PER-PAGE IMPORT / EXPORT ========= */
+
+/** تصدير بيانات صفحة واحدة كـ JSON */
+function exportPage(dataKey, filename, label){
+    if(!hasAction('print'))return toast('غير مصرح');
+    const key = KEYS[dataKey];
+    if(!key) return toast('مفتاح بيانات غير معروف');
+    const data = loadData(key);
+    const out = {[dataKey]: data, _exported: today(), _count: data.length};
+    const blob = new Blob([JSON.stringify(out,null,2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename+'_'+today()+'.json';
+    a.click();
+    toast('تم تصدير '+data.length+' سجل من '+label);
+}
+
+/** استيراد بيانات صفحة واحدة — يدمج السجلات الجديدة فقط (بدون تكرار) */
+function importPage(dataKey, label, refreshFn){
+    if(!hasAction('edit'))return toast('غير مصرح');
+    const key = KEYS[dataKey];
+    if(!key) return toast('مفتاح بيانات غير معروف');
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = e => {
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            try{
+                const parsed = JSON.parse(ev.target.result);
+                // دعم صيغتين: {dataKey:[...]} أو مصفوفة مباشرة أو {debts:[...]} بأي مفتاح
+                let incoming = parsed[dataKey]
+                    || parsed['data']
+                    || (Array.isArray(parsed) ? parsed : null);
+                // بحث تلقائي عن أول مصفوفة في الملف
+                if(!incoming){
+                    const firstArr = Object.values(parsed).find(v => Array.isArray(v));
+                    incoming = firstArr || null;
+                }
+                if(!incoming || !Array.isArray(incoming)) return toast('ملف غير صالح - لم يتم العثور على البيانات');
+
+                // دمج: تجاهل السجلات ذات نفس الـ id
+                const existing = loadData(key);
+                const existingIds = new Set(existing.map(r=>r.id).filter(Boolean));
+                // إضافة id لأي سجل ليس لديه
+                const prepared = incoming.map(r => r.id ? r : {...r, id:uid()});
+                const newRecs = prepared.filter(r => !existingIds.has(r.id));
+                const merged = [...existing, ...newRecs];
+                saveData(key, merged);
+                toast('✅ تم استيراد '+newRecs.length+' سجل جديد | الإجمالي: '+merged.length+' من '+label);
+                if(refreshFn) refreshFn();
+            }catch(err){ console.error(err); toast('ملف غير صالح: '+err.message); }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+}
+
 function exportData(){
     const data={};
     Object.entries(KEYS).forEach(([k,v])=>{data[k]=JSON.parse(localStorage.getItem(v)||'[]');});
