@@ -8,21 +8,42 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>نظام إدارة الكاشير</title>
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="icon-96x96.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="icon-512x512.png">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- LOGIN OVERLAY -->
+    <div id="loginOverlay" class="login-overlay hidden">
+        <div class="login-container">
+            <div class="login-icon"><i class="ri-shield-keyhole-fill"></i></div>
+            <h2 class="login-title">تسجيل الدخول</h2>
+            <p class="login-subtitle">أدخل بيانات الدخول</p>
+            <div class="field"><label>اسم المستخدم</label><input type="text" id="loginUser" class="input-field" autocomplete="username"></div>
+            <div class="field"><label>كلمة المرور</label><input type="password" id="loginPass" class="input-field" autocomplete="current-password"></div>
+            <div class="field" id="loginConfirmRow" style="display:none"><label>تأكيد كلمة المرور</label><input type="password" id="loginConfirm" class="input-field" autocomplete="new-password"></div>
+            <button class="btn btn-primary btn-block" id="loginBtn" style="margin-top:8px"><i class="ri-login-box-line"></i> دخول</button>
+        </div>
+    </div>
+
     <div id="app">
         <header class="topbar">
             <div class="topbar-r"><button id="sidebarToggle" class="topbar-btn"><i class="ri-menu-3-line"></i></button><span class="topbar-title" id="topbarTitle">لوحة التحكم</span></div>
-            <div class="topbar-l"><span class="topbar-date" id="topbarDate"></span></div>
+            <div class="topbar-c"><input type="text" id="topbarSearch" class="topbar-search" placeholder="بحث شامل في جميع البيانات..."><button class="topbar-search-btn" id="topbarSearchBtn"><i class="ri-search-line"></i></button></div>
+            <div class="topbar-l"><span id="currentUserDisp" style="font-size:.75rem;margin-left:10px;opacity:.85;background:rgba(255,255,255,.15);padding:2px 8px;border-radius:8px"></span><span class="topbar-date" id="topbarDate"></span></div>
         </header>
         <aside id="sidebar" class="sidebar">
             <div class="sb-head"><div class="sb-logo"><i class="ri-safe-2-fill"></i> نظام الكاشير</div><button id="closeSidebar" class="sb-close"><i class="ri-close-line"></i></button></div>
+            <div class="sb-desktop-head"><i class="ri-dashboard-3-line"></i> لوحة التحكم</div>
             <nav class="sb-nav">
                 <button class="sb-item active" data-page="home"><i class="ri-dashboard-3-line"></i>الرئيسية</button>
                 <button class="sb-item" data-page="closing"><i class="ri-calculator-line"></i>التقفيلة</button>
+                <button class="sb-item" data-page="individual"><i class="ri-git-branch-line"></i>التقفيلات المنفصلة</button>
                 <button class="sb-item" data-page="safe"><i class="ri-safe-2-line"></i>الخزنة</button>
                 <button class="sb-item" data-page="debts"><i class="ri-file-list-3-line"></i>الديون</button>
                 <button class="sb-item" data-page="expenses"><i class="ri-money-dollar-box-line"></i>المصاريف</button>
@@ -32,7 +53,10 @@
                 <button class="sb-item" data-page="purchases"><i class="ri-shopping-cart-2-line"></i>المشتريات</button>
                 <button class="sb-item" data-page="report"><i class="ri-bar-chart-box-line"></i>التقرير الشهري</button>
                 <hr class="sb-hr">
+                <button class="sb-item sb-security" data-page="security"><i class="ri-shield-keyhole-line"></i>الحماية</button>
                 <button class="sb-item" data-page="settings"><i class="ri-settings-4-line"></i>الإعدادات</button>
+                <hr class="sb-hr">
+                <button class="sb-item" id="logoutBtn" style="color:var(--danger)"><i class="ri-logout-box-r-line"></i>تسجيل الخروج</button>
             </nav>
         </aside>
         <div id="sbOverlay" class="sb-overlay"></div>
@@ -47,6 +71,7 @@
                 <div id="globalSearchResults" style="display:none" class="records-list"></div>
                 <div id="homeGrid" class="home-grid">
                     <div class="home-tile tile-closing" data-page="closing"><div class="tile-icon"><i class="ri-calculator-fill"></i></div><div class="tile-label">التقفيلة</div><div class="tile-desc">تقفيل الكاشيرات اليومي</div></div>
+                    <div class="home-tile tile-individual" data-page="individual"><div class="tile-icon"><i class="ri-git-branch-fill"></i></div><div class="tile-label">التقفيلات المنفصلة</div><div class="tile-desc">تقفيلات كل كاشير على حدة</div></div>
                     <div class="home-tile tile-safe" data-page="safe"><div class="tile-icon"><i class="ri-safe-2-fill"></i></div><div class="tile-label">الخزنة</div><div class="tile-desc">رصيد ومعاملات الخزنة</div></div>
                     <div class="home-tile tile-debts" data-page="debts"><div class="tile-icon"><i class="ri-file-list-3-fill"></i></div><div class="tile-label">الديون</div><div class="tile-desc">سجل ديون الموظفين والعملاء</div></div>
                     <div class="home-tile tile-expenses" data-page="expenses"><div class="tile-icon"><i class="ri-money-dollar-box-fill"></i></div><div class="tile-label">المصاريف</div><div class="tile-desc">جرد كامل المصاريف</div></div>
@@ -55,18 +80,28 @@
                     <div class="home-tile tile-capital" data-page="capital"><div class="tile-icon"><i class="ri-funds-fill"></i></div><div class="tile-label">رأس المال</div><div class="tile-desc">إدارة رأس المال</div></div>
                     <div class="home-tile tile-purchases" data-page="purchases"><div class="tile-icon"><i class="ri-shopping-cart-2-fill"></i></div><div class="tile-label">المشتريات</div><div class="tile-desc">سجل شراء البضاعة</div></div>
                     <div class="home-tile tile-report" data-page="report"><div class="tile-icon"><i class="ri-bar-chart-box-fill"></i></div><div class="tile-label">التقرير الشهري</div><div class="tile-desc">تقرير شامل للطباعة</div></div>
+                    <div class="home-tile tile-security" id="securityTile" data-page="security" style="display:none"><div class="tile-icon"><i class="ri-shield-keyhole-fill"></i></div><div class="tile-label">الحماية</div><div class="tile-desc">إدارة المستخدمين والصلاحيات</div></div>
                     <div class="home-tile tile-settings" data-page="settings"><div class="tile-icon"><i class="ri-settings-4-fill"></i></div><div class="tile-label">الإعدادات</div><div class="tile-desc">إعدادات النظام</div></div>
                 </div>
             </section>
 
             <!-- CLOSING (التقفيلة) -->
             <section id="page-closing" class="page">
-                <div class="section-head"><h2><i class="ri-calculator-fill"></i> التقفيلة</h2></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-calculator-fill"></i> التقفيلة</h2></div>
                 <div class="date-bar"><i class="ri-calendar-line"></i><span id="closingDateDisplay"></span></div>
                 <button class="btn btn-primary btn-block" id="newClosingBtn"><i class="ri-add-circle-line"></i> تقفيلة جديدة</button>
                 <div class="filter-bar" style="margin-top:12px"><input type="text" id="closingSearch" class="input-field" placeholder="بحث في التقفيلات..."><button class="btn btn-primary btn-sm" onclick="renderClosings()"><i class="ri-search-line"></i></button></div>
                 <h3 class="sub-title">التقفيلات السابقة</h3>
                 <div id="closingsList" class="records-list"></div>
+            </section>
+
+            <!-- INDIVIDUAL CLOSINGS (التقفيلات المنفصلة) -->
+            <section id="page-individual" class="page">
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-git-branch-fill"></i> التقفيلات المنفصلة</h2></div>
+                <div class="date-bar"><i class="ri-calendar-line"></i><span id="individualDateDisplay"></span></div>
+                <div class="filter-bar" style="margin-top:12px"><input type="text" id="individualSearch" class="input-field" placeholder="بحث في التقفيلات المنفصلة..."><button class="btn btn-primary btn-sm" onclick="renderIndividual()"><i class="ri-search-line"></i></button></div>
+                <h3 class="sub-title">تقفيلات الكاشيرات</h3>
+                <div id="individualList" class="records-list"></div>
             </section>
 
             <!-- WIZARD -->
@@ -88,16 +123,14 @@
 
             <!-- SAFE -->
             <section id="page-safe" class="page">
-                <div class="section-head"><h2><i class="ri-safe-2-fill"></i> الخزنة</h2></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-safe-2-fill"></i> الخزنة</h2></div>
                 <div class="balance-card" id="safeBalanceCard">
                     <div class="bal-label">رصيد الخزنة الحالي</div>
                     <div class="bal-amount" id="safeBalance">0</div>
                 </div>
-                <div class="action-btns">
-                    <button class="btn btn-success" id="safeDepositBtn"><i class="ri-add-line"></i> إيداع</button>
-                    <button class="btn btn-danger" id="safeWithdrawBtn"><i class="ri-subtract-line"></i> سحب</button>
-                </div>
-                <div class="action-btns" style="margin-top:8px">
+                <div class="action-btns safe-actions">
+                    <button class="btn btn-success btn-sm" id="safeDepositBtn"><i class="ri-add-line"></i> إيداع</button>
+                    <button class="btn btn-danger btn-sm" id="safeWithdrawBtn"><i class="ri-subtract-line"></i> سحب</button>
                     <button class="btn btn-warning btn-sm" id="safePrintBtn"><i class="ri-printer-line"></i> طباعة</button>
                     <button class="btn btn-ghost btn-sm" id="safeExportBtn"><i class="ri-download-cloud-line"></i> تصدير</button>
                 </div>
@@ -108,7 +141,7 @@
 
             <!-- DEBTS -->
             <section id="page-debts" class="page">
-                <div class="section-head"><h2><i class="ri-file-list-3-fill"></i> الديون</h2></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-file-list-3-fill"></i> الديون</h2></div>
                 <div class="filter-bar" style="margin-bottom:10px"><input type="text" id="debtsSearch" class="input-field" placeholder="بحث في الديون..."><button class="btn btn-primary btn-sm" onclick="renderDebts()"><i class="ri-search-line"></i></button></div>
                 <div class="tabs-row">
                     <button class="tab active" data-dtab="employees"><i class="ri-user-line"></i> الموظفين</button>
@@ -123,7 +156,7 @@
 
             <!-- EXPENSES -->
             <section id="page-expenses" class="page">
-                <div class="section-head"><h2><i class="ri-money-dollar-box-fill"></i> المصاريف</h2></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-money-dollar-box-fill"></i> المصاريف</h2></div>
                 <div class="filter-bar">
                     <input type="month" id="expFilterMonth" class="input-field">
                     <button class="btn btn-primary btn-sm" id="expFilterBtn"><i class="ri-search-line"></i></button>
@@ -136,7 +169,7 @@
 
             <!-- SALARIES -->
             <section id="page-salaries" class="page">
-                <div class="section-head"><h2><i class="ri-team-fill"></i> الرواتب والموظفين</h2></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-team-fill"></i> الرواتب والموظفين</h2></div>
                 <div class="action-btns">
                     <button class="btn btn-primary" id="addEmployeeBtn"><i class="ri-user-add-line"></i> إضافة موظف</button>
                     <button class="btn btn-warning" id="printAllSalBtn"><i class="ri-printer-fill"></i> طباعة الجميع</button>
@@ -147,7 +180,7 @@
 
             <!-- PAYROLL (صرف الرواتب) -->
             <section id="page-payroll" class="page">
-                <div class="section-head"><h2><i class="ri-hand-coin-fill"></i> صرف الرواتب</h2></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-hand-coin-fill"></i> صرف الرواتب</h2></div>
                 <div class="filter-bar">
                     <input type="month" id="payrollMonth" class="input-field">
                     <button class="btn btn-primary btn-sm" id="payrollFilterBtn"><i class="ri-search-line"></i></button>
@@ -160,7 +193,7 @@
 
             <!-- CAPITAL -->
             <section id="page-capital" class="page">
-                <div class="section-head"><h2><i class="ri-funds-fill"></i> رأس المال</h2></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-funds-fill"></i> رأس المال</h2></div>
                 <div class="balance-card capital-card">
                     <div class="bal-label">رأس المال الحالي</div>
                     <div class="bal-amount" id="capitalBalance">0</div>
@@ -176,7 +209,7 @@
 
             <!-- PURCHASES -->
             <section id="page-purchases" class="page">
-                <div class="section-head"><h2><i class="ri-shopping-cart-2-fill"></i> المشتريات</h2></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-shopping-cart-2-fill"></i> المشتريات</h2></div>
                 <button class="btn btn-primary btn-block" id="addPurchaseBtn"><i class="ri-add-circle-line"></i> إضافة عملية شراء</button>
                 <div class="filter-bar" style="margin-top:12px"><input type="text" id="purchSearch" class="input-field" placeholder="بحث في المشتريات..."><button class="btn btn-primary btn-sm" onclick="renderPurchases()"><i class="ri-search-line"></i></button></div>
                 <div id="purchasesList" class="records-list"></div>
@@ -186,7 +219,7 @@
 
             <!-- MONTHLY REPORT -->
             <section id="page-report" class="page">
-                <div class="section-head"><h2><i class="ri-bar-chart-box-fill"></i> التقرير الشهري</h2></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-bar-chart-box-fill"></i> التقرير الشهري</h2></div>
                 <div class="filter-bar">
                     <input type="month" id="reportMonth" class="input-field">
                     <button class="btn btn-primary btn-sm" id="reportFilterBtn"><i class="ri-search-line"></i></button>
@@ -197,9 +230,16 @@
                 </div>
             </section>
 
+            <!-- SECURITY -->
+            <section id="page-security" class="page">
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-shield-keyhole-fill"></i> الحماية والمستخدمين</h2></div>
+                <div class="action-btns"><button class="btn btn-primary" id="addUserBtn"><i class="ri-user-add-line"></i> إضافة مستخدم</button></div>
+                <div id="securityUsersList" class="records-list" style="margin-top:12px"></div>
+            </section>
+
             <!-- SETTINGS -->
             <section id="page-settings" class="page">
-                <div class="section-head"><h2><i class="ri-settings-4-fill"></i> الإعدادات</h2></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-settings-4-fill"></i> الإعدادات</h2></div>
                 <div class="card">
                     <h3 class="card-h"><i class="ri-store-2-line"></i> معلومات المحل</h3>
                     <div class="field"><label>اسم المحل</label><input type="text" id="setStoreName" class="input-field" placeholder="اسم المحل"></div>
@@ -211,6 +251,13 @@
                     <button class="btn btn-success btn-block" id="saveSettingsBtn"><i class="ri-save-line"></i> حفظ</button>
                 </div>
                 <div class="card">
+                    <h3 class="card-h"><i class="ri-palette-line"></i> المظهر</h3>
+                    <div class="theme-toggle-row">
+                        <span class="theme-toggle-label"><i class="ri-moon-line"></i> الوضع الداكن</span>
+                        <label class="theme-switch"><input type="checkbox" id="themeToggle"><span class="slider"></span></label>
+                    </div>
+                </div>
+                <div class="card">
                     <h3 class="card-h"><i class="ri-database-2-line"></i> البيانات</h3>
                     <div class="stacked-btns">
                         <button class="btn btn-primary" id="exportBtn"><i class="ri-download-cloud-line"></i> تصدير</button>
@@ -219,6 +266,15 @@
                         <button class="btn btn-warning" id="demoBtn"><i class="ri-flask-line"></i> تحميل بيانات تجريبية</button>
                         <button class="btn btn-danger" id="clearBtn"><i class="ri-delete-bin-line"></i> مسح الكل</button>
                     </div>
+                </div>
+                <div class="card">
+                    <h3 class="card-h"><i class="ri-smartphone-line"></i> تطبيق الكاشير الفرعي</h3>
+                    <p style="font-size:.82rem;color:var(--text2);margin-bottom:10px;line-height:1.6">شارك رابط التطبيق الفرعي مع الكاشيرات لتقديم تقفيلاتهم مباشرة. التقفيلات تصل بشكل لحظي عبر Firebase.</p>
+                    <div class="stacked-btns">
+                        <a href="./cashier/index.html" target="_blank" class="btn btn-primary" style="text-decoration:none;text-align:center"><i class="ri-external-link-line"></i> فتح تطبيق الكاشير</a>
+                        <button class="btn btn-ghost" onclick="copyCashierLink()"><i class="ri-file-copy-line"></i> نسخ الرابط</button>
+                    </div>
+                    <div id="firebaseStatus" style="margin-top:10px;font-size:.78rem;display:flex;align-items:center;gap:6px"></div>
                 </div>
             </section>
         </main>
@@ -235,8 +291,20 @@
     <div id="modal" class="modal hidden">
         <div class="modal-card"><div class="modal-head"><h3 id="modalTitle"></h3><button class="modal-x" id="modalClose"><i class="ri-close-line"></i></button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFoot"></div></div>
     </div>
+    <div id="customDialog" class="custom-dialog hidden">
+        <div class="custom-dialog-backdrop"></div>
+        <div class="custom-dialog-card">
+            <div class="custom-dialog-icon" id="dialogIcon"><i class="ri-question-line"></i></div>
+            <h3 class="custom-dialog-title" id="dialogTitle">تأكيد</h3>
+            <p class="custom-dialog-msg" id="dialogMsg">هل أنت متأكد؟</p>
+            <div class="custom-dialog-actions" id="dialogActions"></div>
+        </div>
+    </div>
     <div id="toast" class="toast hidden"></div>
     <div id="printArea" class="print-area"></div>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
