@@ -51,7 +51,7 @@ async function doLogin(){
         if(password!==confirm)return toast('كلمة المرور غير متطابقة');
         if(password.length<4)return toast('كلمة المرور قصيرة جداً');
         const hash=await hashPwd(password);
-        const allPerms=['closing','safe','debts','expenses','salaries','payroll','capital','purchases','report','settings','security','edit','delete','print'];
+        const allPerms=['closing','safe','debts','expenses','generalExpenses','closingSheet','salaries','payroll','capital','purchases','report','settings','security','edit','delete','print'];
         const admin={id:uid(),username,passwordHash:hash,role:'admin',permissions:allPerms};
         saveUsers([admin]);
         setSession({id:admin.id,username:admin.username,role:'admin',permissions:allPerms});
@@ -252,7 +252,8 @@ function refreshActivePage(){
     const pid=activePage.id.replace('page-','');
     const r={closing:renderClosings,safe:renderSafe,debts:renderDebts,expenses:renderExpenses,
         salaries:renderSalaries,payroll:renderPayroll,capital:renderCapital,purchases:renderPurchases,
-        report:renderReport,settings:renderSettings,security:renderSecurity,individual:renderIndividual};
+        report:renderReport,settings:renderSettings,security:renderSecurity,individual:renderIndividual,
+        generalExpenses:renderGeneralExpenses,closingSheet:renderClosingSheet};
     if(r[pid])try{r[pid]();}catch(e){}
     if(pid==='home'){
         const secTile=$('#securityTile');if(secTile)secTile.style.display=isAdmin()?'':'none';
@@ -483,7 +484,7 @@ function importRemoteClosing(remote){
     /* save expense entries */
     const expEntries = loadData(KEYS.expenseEntries);
     (remote.expensesList||[]).forEach(exp => {
-        expEntries.push({id:uid(),amount:exp.amount,desc:exp.desc||'',cashier:remote.cashierLabel,date:date,by:by});
+        expEntries.push({id:uid(),amount:exp.amount,desc:exp.desc||'',type:exp.type||'dept',cashier:remote.cashierLabel,date:date,by:by});
     });
     saveData(KEYS.expenseEntries, expEntries);
 
@@ -509,7 +510,7 @@ function importRemoteClosing(remote){
     const activePage = document.querySelector('.page.active');
     if(activePage){
         const pid = activePage.id.replace('page-','');
-        const r = {closing:renderClosings,safe:renderSafe,debts:renderDebts,expenses:renderExpenses,capital:renderCapital,report:renderReport,individual:renderIndividual};
+        const r = {closing:renderClosings,safe:renderSafe,debts:renderDebts,expenses:renderExpenses,capital:renderCapital,report:renderReport,individual:renderIndividual,generalExpenses:renderGeneralExpenses,closingSheet:renderClosingSheet};
         if(r[pid]) r[pid]();
     }
 }
@@ -596,10 +597,10 @@ function navigate(page){
     const el=$('#page-'+page);if(el)el.classList.add('active');
     $$('.sb-item').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
     $$('.bn-item').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
-    const titles={home:'لوحة التحكم',closing:'التقفيلة',individual:'التقفيلات المنفصلة',safe:'الخزنة',debts:'الديون',expenses:'المصاريف',salaries:'الرواتب',payroll:'صرف الرواتب',capital:'رأس المال',purchases:'المشتريات',report:'التقرير الشهري',settings:'الإعدادات',security:'الحماية والمستخدمين'};
+    const titles={home:'لوحة التحكم',closing:'التقفيلة',individual:'التقفيلات المنفصلة',safe:'الخزنة',debts:'الديون',expenses:'المصاريف',generalExpenses:'المصاريف العامة',closingSheet:'كشف الحسابات',salaries:'الرواتب',payroll:'صرف الرواتب',capital:'رأس المال',purchases:'المشتريات',report:'التقرير الشهري',settings:'الإعدادات',security:'الحماية والمستخدمين'};
     $('#topbarTitle').textContent=titles[page]||'لوحة التحكم';
     closeSidebar();
-    const r={closing:renderClosings,individual:renderIndividual,safe:renderSafe,debts:renderDebts,expenses:renderExpenses,salaries:renderSalaries,payroll:renderPayroll,capital:renderCapital,purchases:renderPurchases,report:renderReport,settings:renderSettings,security:renderSecurity};
+    const r={closing:renderClosings,individual:renderIndividual,safe:renderSafe,debts:renderDebts,expenses:renderExpenses,generalExpenses:renderGeneralExpenses,closingSheet:renderClosingSheet,salaries:renderSalaries,payroll:renderPayroll,capital:renderCapital,purchases:renderPurchases,report:renderReport,settings:renderSettings,security:renderSecurity};
     if(r[page])r[page]();
     if(page==='home'){
         const secTile=$('#securityTile');if(secTile)secTile.style.display=isAdmin()?'':'none';
@@ -708,7 +709,7 @@ function recomputeClosingInPlace(cl){
      الإيداعات/السحوبات اليدوية غير المرتبطة)
    ============================================================ */
 const DATA_VERSION_KEY='cm_data_version';
-const CURRENT_DATA_VERSION=2;
+const CURRENT_DATA_VERSION=3;
 
 function runDataUpgrade(){
     const current=Number(localStorage.getItem(DATA_VERSION_KEY)||0);
@@ -716,6 +717,9 @@ function runDataUpgrade(){
 
     try{
         console.log('[Upgrade] بدء ترقية البيانات من v'+current+' إلى v'+CURRENT_DATA_VERSION);
+
+        /* ========= V2: إعادة حساب التقفيلات + مزامنة الخزنة ========= */
+        if(current < 2){
 
         /* 1. إعادة حساب صوافي كل التقفيلات */
         const closings=loadData(KEYS.closings);
@@ -726,7 +730,7 @@ function runDataUpgrade(){
             if(oldTotal!==cl.totalNet) fixedCount++;
         });
         saveData(KEYS.closings,closings);
-        console.log('[Upgrade] تم إعادة احتساب '+fixedCount+' تقفيلة');
+        console.log('[Upgrade v2] تم إعادة احتساب '+fixedCount+' تقفيلة');
 
         /* 2. إعادة حساب التقفيلات الفردية */
         const inds=loadData(KEYS.individualClosings);
@@ -735,21 +739,14 @@ function runDataUpgrade(){
         });
         saveData(KEYS.individualClosings,inds);
 
-        /* 3. إعادة بناء معاملات الخزنة المرتبطة بالتقفيلات
-              دون حذف المعاملات اليدوية. التعرف على معاملات التقفيلة:
-              - وجود closingId في المعاملة، أو
-              - الملاحظة تبدأ بـ "تقفيلة " (للبيانات القديمة) */
+        /* 3. إعادة بناء معاملات الخزنة المرتبطة بالتقفيلات */
         let safe=loadData(KEYS.safe);
-
-        /* نفصل الإيداعات/السحوبات اليدوية (التي ليست مرتبطة بتقفيلة) */
         const manualSafe=safe.filter(t=>{
             if(t.closingId) return false;
             const note=(t.note||'').trim();
             if(note.startsWith('تقفيلة ')) return false;
             return true;
         });
-
-        /* نبني معاملات الخزنة من التقفيلات الحالية */
         const closingSafe=[];
         closings.forEach(cl=>{
             if(!cl.totalNet || cl.totalNet===0) return;
@@ -766,22 +763,33 @@ function runDataUpgrade(){
                 mergedClosing:cl.source==='cashier-app'
             });
         });
-
-        /* نحفظ الخزنة الجديدة = المعاملات اليدوية + المعاملات من التقفيلات */
         saveData(KEYS.safe,[...manualSafe,...closingSafe]);
-        /* نحفظ التقفيلات مجدداً لحفظ safeLinkId */
         saveData(KEYS.closings,closings);
+        console.log('[Upgrade v2] تم إصلاح الخزنة');
 
-        console.log('[Upgrade] تم إصلاح الخزنة: '+manualSafe.length+' معاملة يدوية + '+closingSafe.length+' معاملة تقفيلة');
-
-        localStorage.setItem(DATA_VERSION_KEY,String(CURRENT_DATA_VERSION));
-
-        /* إشعار المستخدم */
         setTimeout(()=>{
             if(typeof toast==='function'){
                 toast('✅ تم تحديث الحسابات - '+fixedCount+' تقفيلة');
             }
         },800);
+
+        }
+
+        /* ========= V3: إضافة type='dept' للمصاريف القديمة ========= */
+        if(current < 3){
+            const entries=loadData(KEYS.expenseEntries);
+            let typeAdded=0;
+            entries.forEach(e=>{
+                if(!e.type){
+                    e.type='dept';
+                    typeAdded++;
+                }
+            });
+            saveData(KEYS.expenseEntries,entries);
+            console.log('[Upgrade v3] تم إضافة type=dept إلى '+typeAdded+' مصروف قديم');
+        }
+
+        localStorage.setItem(DATA_VERSION_KEY,String(CURRENT_DATA_VERSION));
     }catch(e){
         console.error('[Upgrade] فشل:',e);
     }
@@ -996,29 +1004,49 @@ function removeWizDebt(ck,i){
     renderWizStep();
 }
 
-/* expense entry UI */
+/* expense entry UI - with type selector (قسم/إدارة/عامة) */
 function buildExpenseEntryUI(ck){
     const list=wizData.cashiers[ck].expensesList||[];
-    let items=list.map((e,i)=>`<div class="debt-item"><span>${e.desc||'مصروف'}: ${fmtNum(e.amount)}</span><button onclick="removeWizExpense('${ck}',${i})"><i class="ri-close-circle-line"></i></button></div>`).join('');
+    const typeLabel=t=>t==='admin'?'<span style="color:#7c3aed;font-size:.7rem">[إدارة]</span>':t==='general'?'<span style="color:#0891b2;font-size:.7rem">[عامة]</span>':'<span style="color:var(--text2);font-size:.7rem">[قسم]</span>';
+    let items=list.map((e,i)=>`<div class="debt-item"><span>${typeLabel(e.type||'dept')} ${e.desc||'مصروف'}: ${fmtNum(e.amount)}</span><button onclick="removeWizExpense('${ck}',${i})"><i class="ri-close-circle-line"></i></button></div>`).join('');
     return `<div class="wiz-debt-entry"><h4><i class="ri-money-dollar-box-line"></i> تفاصيل المصاريف</h4>
     <input type="number" class="input-field" id="expEntryAmountInput" placeholder="المبلغ (بالآلاف)" inputmode="decimal">
     <input type="text" class="input-field" id="expEntryDescInput" placeholder="وصف المصروف (مثال: مواد تنظيف)" style="margin-top:6px">
+    <div style="margin-top:8px;display:flex;gap:4px;background:var(--surface2);border-radius:8px;padding:4px" id="expTypeBox_${ck}">
+        <label class="exp-type-opt active" data-type="dept" style="flex:1;text-align:center;padding:6px 8px;cursor:pointer;border-radius:6px;background:var(--primary);color:#fff;font-size:.78rem;font-weight:700" onclick="selectExpType('${ck}','dept')"><i class="ri-store-line"></i> قسم</label>
+        <label class="exp-type-opt" data-type="general" style="flex:1;text-align:center;padding:6px 8px;cursor:pointer;border-radius:6px;color:var(--text);font-size:.78rem;font-weight:700" onclick="selectExpType('${ck}','general')"><i class="ri-building-line"></i> عامة</label>
+        <label class="exp-type-opt" data-type="admin" style="flex:1;text-align:center;padding:6px 8px;cursor:pointer;border-radius:6px;color:var(--text);font-size:.78rem;font-weight:700" onclick="selectExpType('${ck}','admin')"><i class="ri-user-star-line"></i> إدارة</label>
+    </div>
+    <div style="font-size:.72rem;color:var(--text2);margin-top:4px"><i class="ri-information-line"></i> "عامة/إدارة" لا تُخصم من صافي الكاشير، بل تُسجّل في <strong>المصاريف العامة</strong></div>
     <button class="btn btn-primary btn-sm btn-block" onclick="addWizExpense('${ck}')" style="margin-top:8px"><i class="ri-add-line"></i> إضافة مصروف</button>
     <div class="debt-list">${items}</div></div>`;
+}
+function selectExpType(ck,type){
+    const box=document.getElementById('expTypeBox_'+ck);if(!box)return;
+    box.querySelectorAll('.exp-type-opt').forEach(el=>{
+        const isActive=el.dataset.type===type;
+        el.classList.toggle('active',isActive);
+        el.style.background=isActive?'var(--primary)':'transparent';
+        el.style.color=isActive?'#fff':'var(--text)';
+    });
+    box.dataset.selected=type;
 }
 function addWizExpense(ck){
     const amount=parseK($('#expEntryAmountInput')?.value);
     const desc=$('#expEntryDescInput')?.value||'';
     if(!amount)return toast('أدخل المبلغ');
-    wizData.cashiers[ck].expensesList.push({amount,desc});
-    const total=wizData.cashiers[ck].expensesList.reduce((s,e)=>s+e.amount,0);
-    wizData.cashiers[ck].expenses=total;
+    const box=document.getElementById('expTypeBox_'+ck);
+    const type=(box&&box.dataset.selected)||'dept';
+    wizData.cashiers[ck].expensesList.push({amount,desc,type});
+    /* expenses field = only dept expenses (these deduct from cashier net) */
+    const deptTotal=wizData.cashiers[ck].expensesList.filter(e=>(e.type||'dept')==='dept').reduce((s,e)=>s+e.amount,0);
+    wizData.cashiers[ck].expenses=deptTotal;
     renderWizStep();
 }
 function removeWizExpense(ck,i){
     wizData.cashiers[ck].expensesList.splice(i,1);
-    const total=wizData.cashiers[ck].expensesList.reduce((s,e)=>s+e.amount,0);
-    wizData.cashiers[ck].expenses=total;
+    const deptTotal=wizData.cashiers[ck].expensesList.filter(e=>(e.type||'dept')==='dept').reduce((s,e)=>s+e.amount,0);
+    wizData.cashiers[ck].expenses=deptTotal;
     renderWizStep();
 }
 
@@ -1150,9 +1178,9 @@ function saveClosing(){
             withdrawals.push({id:uid(),person:w.person,amount:w.amount,note:w.note||'',cashier:c.label,date,by});
             debts.push({id:uid(),person:w.person,amount:w.amount,note:'سحب: '+(w.note||''),type:'withdraw',cashier:c.label,date,by});
         });
-        /* save expense entries */
+        /* save expense entries with type */
         (d.expensesList||[]).forEach(exp=>{
-            expEntries.push({id:uid(),amount:exp.amount,desc:exp.desc||'',cashier:c.label,date,by});
+            expEntries.push({id:uid(),amount:exp.amount,desc:exp.desc||'',type:exp.type||'dept',cashier:c.label,date,by});
         });
     });
     /* save closing */
@@ -1569,10 +1597,17 @@ function renderIndWizStep(){
             <div class="debt-list">${list}</div></div>`;
     }
     if(field.key==='expenses'){
-        const list=indWizData.expensesList.map((e,i)=>`<div class="debt-item"><span>${e.desc||'مصروف'}: ${fmtNum(e.amount)}</span><button onclick="indRemoveExp(${i})"><i class="ri-close-circle-line"></i></button></div>`).join('');
+        const typeLabel=t=>t==='admin'?'<span style="color:#7c3aed;font-size:.7rem">[إدارة]</span>':t==='general'?'<span style="color:#0891b2;font-size:.7rem">[عامة]</span>':'<span style="color:var(--text2);font-size:.7rem">[قسم]</span>';
+        const list=indWizData.expensesList.map((e,i)=>`<div class="debt-item"><span>${typeLabel(e.type||'dept')} ${e.desc||'مصروف'}: ${fmtNum(e.amount)}</span><button onclick="indRemoveExp(${i})"><i class="ri-close-circle-line"></i></button></div>`).join('');
         extra=`<div class="wiz-debt-entry"><h4><i class="ri-money-dollar-box-line"></i> تفاصيل المصاريف</h4>
             <input type="number" id="indExpAmount" class="input-field" placeholder="المبلغ (بالآلاف)" inputmode="decimal">
             <input type="text" id="indExpDesc" class="input-field" placeholder="الوصف" style="margin-top:6px">
+            <div style="margin-top:8px;display:flex;gap:4px;background:var(--surface2);border-radius:8px;padding:4px" id="indExpTypeBox" data-selected="dept">
+                <label class="exp-type-opt active" data-type="dept" style="flex:1;text-align:center;padding:6px 8px;cursor:pointer;border-radius:6px;background:var(--primary);color:#fff;font-size:.78rem;font-weight:700" onclick="indSelectExpType('dept')"><i class="ri-store-line"></i> قسم</label>
+                <label class="exp-type-opt" data-type="general" style="flex:1;text-align:center;padding:6px 8px;cursor:pointer;border-radius:6px;color:var(--text);font-size:.78rem;font-weight:700" onclick="indSelectExpType('general')"><i class="ri-building-line"></i> عامة</label>
+                <label class="exp-type-opt" data-type="admin" style="flex:1;text-align:center;padding:6px 8px;cursor:pointer;border-radius:6px;color:var(--text);font-size:.78rem;font-weight:700" onclick="indSelectExpType('admin')"><i class="ri-user-star-line"></i> إدارة</label>
+            </div>
+            <div style="font-size:.72rem;color:var(--text2);margin-top:4px"><i class="ri-information-line"></i> "عامة/إدارة" لا تُخصم من صافي الكاشير</div>
             <button class="btn btn-primary btn-sm btn-block" onclick="indAddExp()" style="margin-top:8px"><i class="ri-add-line"></i> إضافة</button>
             <div class="debt-list">${list}</div></div>`;
     }
@@ -1626,11 +1661,28 @@ function indAddExp(){
     const amount=parseK(document.getElementById('indExpAmount')?.value);
     const desc=document.getElementById('indExpDesc')?.value.trim()||'مصروف';
     if(!amount)return toast('أدخل المبلغ');
-    indWizData.expensesList.push({amount,desc});
-    indWizData.fields.expenses=indWizData.expensesList.reduce((s,e)=>s+e.amount,0);
+    const box=document.getElementById('indExpTypeBox');
+    const type=(box&&box.dataset.selected)||'dept';
+    indWizData.expensesList.push({amount,desc,type});
+    /* expenses field = only dept */
+    indWizData.fields.expenses=indWizData.expensesList.filter(e=>(e.type||'dept')==='dept').reduce((s,e)=>s+e.amount,0);
     renderIndWizStep();
 }
-function indRemoveExp(i){indWizData.expensesList.splice(i,1);indWizData.fields.expenses=indWizData.expensesList.reduce((s,e)=>s+e.amount,0);renderIndWizStep();}
+function indSelectExpType(type){
+    const box=document.getElementById('indExpTypeBox');if(!box)return;
+    box.querySelectorAll('.exp-type-opt').forEach(el=>{
+        const isActive=el.dataset.type===type;
+        el.classList.toggle('active',isActive);
+        el.style.background=isActive?'var(--primary)':'transparent';
+        el.style.color=isActive?'#fff':'var(--text)';
+    });
+    box.dataset.selected=type;
+}
+function indRemoveExp(i){
+    indWizData.expensesList.splice(i,1);
+    indWizData.fields.expenses=indWizData.expensesList.filter(e=>(e.type||'dept')==='dept').reduce((s,e)=>s+e.amount,0);
+    renderIndWizStep();
+}
 
 function saveIndividualClosing(){
     const cashier = CASHIERS.find(c=>c.key===indWizData.cashierKey)||{};
@@ -1670,7 +1722,7 @@ function saveIndividualClosing(){
     // Save expenses
     const expEntries=loadData(KEYS.expenseEntries)||[];
     (indWizData.expensesList||[]).forEach(exp=>{
-        expEntries.push({id:uid(),amount:exp.amount,desc:exp.desc||'',cashier:cashier.label,date,by});
+        expEntries.push({id:uid(),amount:exp.amount,desc:exp.desc||'',type:exp.type||'dept',cashier:cashier.label,date,by});
     });
     saveData(KEYS.expenseEntries,expEntries);
 
@@ -2191,8 +2243,8 @@ function renderExpenses(){
     if(!monthInput.value)monthInput.value=today().slice(0,7);
     const ym=monthInput.value;
 
-    /* new individual expense entries */
-    let entries=loadData(KEYS.expenseEntries).filter(e=>e.date&&e.date.startsWith(ym));
+    /* new individual expense entries - استبعاد مصاريف "إدارة" و "عامة" (تظهر في صفحة المصاريف العامة) */
+    let entries=loadData(KEYS.expenseEntries).filter(e=>e.date&&e.date.startsWith(ym)&&(e.type||'dept')==='dept');
 
     /* legacy expenses from closings (lunch + expenses without detail) */
     const closings=loadData(KEYS.closings).filter(c=>c.date&&c.date.startsWith(ym));
@@ -3080,6 +3132,394 @@ function printReport(){
     showPrintDialog(html);
 }
 
+/* ============================================================
+   ==============  GENERAL EXPENSES PAGE  =====================
+   ============================================================ */
+let _genExpChartInstance=null;
+
+function getGeneralExpenses(ym, typeFilter){
+    /* دمج: من expenseEntries + من closings (legacy fallback) */
+    let all=loadData(KEYS.expenseEntries)||[];
+    if(ym) all=all.filter(e=>e.date&&e.date.startsWith(ym));
+    /* استبعاد dept - نعرض فقط general و admin */
+    all=all.filter(e=>{
+        const t=e.type||'dept';
+        return t==='general' || t==='admin';
+    });
+    if(typeFilter && typeFilter!=='all') all=all.filter(e=>(e.type||'dept')===typeFilter);
+    /* sort newest first */
+    all.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    return all;
+}
+
+function renderGeneralExpenses(){
+    const s=loadSettings();const cur=s.currency||'د.ع';
+    const monthInput=$('#genExpMonth');
+    if(monthInput && !monthInput.value) monthInput.value=today().slice(0,7);
+    const ym=monthInput?monthInput.value:'';
+    const typeFilter=$('#genExpTypeFilter')?.value||'all';
+
+    const entries=getGeneralExpenses(ym,typeFilter);
+    const totalAll=entries.reduce((s,e)=>s+(e.amount||0),0);
+    const totalAdmin=entries.filter(e=>e.type==='admin').reduce((s,e)=>s+(e.amount||0),0);
+    const totalGeneral=entries.filter(e=>e.type==='general').reduce((s,e)=>s+(e.amount||0),0);
+
+    $('#genExpTotalAll').textContent=fmtNum(totalAll)+' '+cur;
+    $('#genExpTotalAdmin').textContent=fmtNum(totalAdmin)+' '+cur;
+    $('#genExpTotalGeneral').textContent=fmtNum(totalGeneral)+' '+cur;
+    $('#genExpCount').textContent=entries.length;
+
+    /* القائمة */
+    const list=$('#genExpList');
+    if(!entries.length){
+        list.innerHTML='<div class="empty-state"><i class="ri-inbox-line"></i><p>لا توجد مصاريف عامة/إدارة لهذا الشهر</p></div>';
+    } else {
+        const canEdit=hasAction('edit'),canDel=hasAction('delete');
+        /* تجميع بالتاريخ */
+        const groups={};
+        entries.forEach(e=>{const d=e.date||'';if(!groups[d])groups[d]=[];groups[d].push(e);});
+        let html='';
+        Object.keys(groups).sort((a,b)=>b.localeCompare(a)).forEach(date=>{
+            html+=`<div style="font-size:.82rem;font-weight:700;color:var(--text2);margin:10px 0 4px;padding:4px 8px;background:var(--bg);border-radius:6px"><i class="ri-calendar-line"></i> ${date}</div>`;
+            groups[date].forEach(e=>{
+                const typeBadge=e.type==='admin'
+                    ?'<span style="background:#ede9fe;color:#7c3aed;padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:700">إدارة</span>'
+                    :'<span style="background:#cffafe;color:#0891b2;padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:700">عامة</span>';
+                const actions=e.id?`<div class="rec-actions">${canEdit?`<button onclick="editGenExpense('${e.id}')"><i class="ri-edit-line"></i></button>`:''}${canDel?`<button onclick="deleteGenExpense('${e.id}')"><i class="ri-delete-bin-line"></i></button>`:''}</div>`:'';
+                html+=`<div class="record-card">
+                    <div class="rec-info">
+                        <div class="rec-title">${typeBadge} ${e.desc||'مصروف'}</div>
+                        <div class="rec-sub">${e.cashier?'القسم: '+e.cashier+' | ':''}${e.by?'<span class="by-tag">'+e.by+'</span>':''}</div>
+                    </div>
+                    <div class="rec-amount expense">${fmtNum(e.amount)} ${cur}</div>
+                    ${actions}
+                </div>`;
+            });
+        });
+        list.innerHTML=html;
+    }
+
+    /* الرسم البياني الشهري - آخر 12 شهر */
+    renderGenExpChart();
+}
+
+function renderGenExpChart(){
+    const canvas=document.getElementById('genExpChart');
+    if(!canvas || typeof Chart==='undefined') return;
+    /* آخر 12 شهر */
+    const now=new Date();
+    const months=[];
+    for(let i=11;i>=0;i--){
+        const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+        months.push({
+            key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),
+            label:d.toLocaleDateString('ar-IQ',{year:'2-digit',month:'short'})
+        });
+    }
+    const allEntries=loadData(KEYS.expenseEntries)||[];
+    const dataAdmin=months.map(m=>allEntries.filter(e=>e.date&&e.date.startsWith(m.key)&&e.type==='admin').reduce((s,e)=>s+e.amount,0));
+    const dataGeneral=months.map(m=>allEntries.filter(e=>e.date&&e.date.startsWith(m.key)&&e.type==='general').reduce((s,e)=>s+e.amount,0));
+
+    if(_genExpChartInstance){_genExpChartInstance.destroy();}
+    _genExpChartInstance=new Chart(canvas.getContext('2d'),{
+        type:'bar',
+        data:{
+            labels:months.map(m=>m.label),
+            datasets:[
+                {label:'مصاريف إدارة',data:dataAdmin,backgroundColor:'#7c3aed',borderRadius:4},
+                {label:'مصاريف عامة',data:dataGeneral,backgroundColor:'#0891b2',borderRadius:4}
+            ]
+        },
+        options:{
+            responsive:true,maintainAspectRatio:false,
+            plugins:{legend:{position:'bottom',labels:{font:{family:'Tajawal',size:11}}}},
+            scales:{
+                x:{stacked:false,ticks:{font:{family:'Tajawal',size:10}}},
+                y:{stacked:false,ticks:{font:{family:'Tajawal',size:10},callback:v=>fmtNum(v)}}
+            }
+        }
+    });
+}
+
+function editGenExpense(id){
+    if(!hasAction('edit'))return toast('غير مصرح');
+    const entries=loadData(KEYS.expenseEntries);
+    const e=entries.find(x=>x.id===id);if(!e)return;
+    const curType=e.type||'general';
+    openModal('تعديل المصروف العام',`
+    <div class="field"><label>الوصف</label><input type="text" id="editGenExpDesc" class="input-field" value="${e.desc||''}"></div>
+    <div class="field"><label>المبلغ (بالآلاف)</label><input type="number" id="editGenExpAmount" class="input-field" value="${toK(e.amount)}" inputmode="decimal"></div>
+    <div class="field"><label>النوع</label>
+        <select id="editGenExpType" class="input-field">
+            <option value="general" ${curType==='general'?'selected':''}>عامة</option>
+            <option value="admin" ${curType==='admin'?'selected':''}>إدارة</option>
+            <option value="dept" ${curType==='dept'?'selected':''}>قسم (ينقل لصفحة المصاريف)</option>
+        </select>
+    </div>
+    <div class="field"><label>التاريخ</label><input type="date" id="editGenExpDate" class="input-field" value="${e.date}"></div>`,
+    `<button class="btn btn-success" onclick="saveEditGenExpense('${id}')">حفظ</button><button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>`);
+}
+function saveEditGenExpense(id){
+    const entries=loadData(KEYS.expenseEntries);
+    const idx=entries.findIndex(x=>x.id===id);if(idx<0)return;
+    entries[idx].desc=$('#editGenExpDesc').value.trim();
+    entries[idx].amount=parseK($('#editGenExpAmount').value);
+    entries[idx].type=$('#editGenExpType').value;
+    entries[idx].date=$('#editGenExpDate').value||entries[idx].date;
+    entries[idx].by=getByTag();
+    saveData(KEYS.expenseEntries,entries);
+    closeModal();toast('تم التحديث');renderGeneralExpenses();
+}
+function deleteGenExpense(id){
+    if(!hasAction('delete'))return toast('غير مصرح');
+    if(!confirm('حذف هذا المصروف؟'))return;
+    let arr=loadData(KEYS.expenseEntries);
+    arr=arr.filter(e=>e.id!==id);
+    saveData(KEYS.expenseEntries,arr);
+    toast('تم الحذف');renderGeneralExpenses();
+}
+
+function printGeneralExpenses(){
+    if(!hasAction('print'))return toast('غير مصرح');
+    const s=loadSettings();const cur=s.currency||'د.ع';const store=s.storeName||'';
+    const ym=$('#genExpMonth')?.value||today().slice(0,7);
+    const typeFilter=$('#genExpTypeFilter')?.value||'all';
+    const entries=getGeneralExpenses(ym,typeFilter);
+    const totalAll=entries.reduce((s,e)=>s+(e.amount||0),0);
+    const totalAdmin=entries.filter(e=>e.type==='admin').reduce((s,e)=>s+(e.amount||0),0);
+    const totalGeneral=entries.filter(e=>e.type==='general').reduce((s,e)=>s+(e.amount||0),0);
+    const printDate=new Date().toLocaleDateString('ar-IQ',{year:'numeric',month:'long',day:'numeric'});
+
+    let html=`<div class="print-page-border">`;
+    html+=`<div class="print-header"><h2>كشف المصاريف العامة والإدارية</h2>`;
+    if(store)html+=`<p>${store}</p>`;
+    html+=`<p class="print-date">الشهر: ${ym} | تاريخ الطباعة: ${printDate}</p></div>`;
+
+    html+=`<div class="print-summary-box">
+        <span>إجمالي: ${fmtNum(totalAll)} ${cur}</span>
+        <span>إدارة: ${fmtNum(totalAdmin)} ${cur}</span>
+        <span>عامة: ${fmtNum(totalGeneral)} ${cur}</span>
+        <span>عدد: ${entries.length}</span>
+    </div>`;
+
+    if(entries.length){
+        html+=`<table><thead><tr><th>#</th><th>التاريخ</th><th>النوع</th><th>الوصف</th><th>القسم</th><th>المبلغ</th></tr></thead><tbody>`;
+        entries.forEach((e,i)=>{
+            const typeText=e.type==='admin'?'إدارة':'عامة';
+            const typeColor=e.type==='admin'?'#7c3aed':'#0891b2';
+            html+=`<tr><td>${i+1}</td><td>${e.date}</td><td style="color:${typeColor};font-weight:700">${typeText}</td><td>${e.desc||'-'}</td><td>${e.cashier||'-'}</td><td class="print-amount p-expense">${fmtNum(e.amount)} ${cur}</td></tr>`;
+        });
+        html+=`<tr style="font-weight:700;background:#f1f5f9"><td colspan="5">الإجمالي</td><td class="print-amount p-expense">${fmtNum(totalAll)} ${cur}</td></tr></tbody></table>`;
+    } else {
+        html+=`<p style="text-align:center;padding:20px;color:#666">لا توجد مصاريف</p>`;
+    }
+    html+=`</div>`;
+    showPrintDialog(html);
+}
+
+function exportGeneralExpensesPDF(){
+    /* نستخدم نافذة الطباعة مع حفظ PDF (المتصفح يدعمه) */
+    printGeneralExpenses();
+    toast('اختر "حفظ كـ PDF" من نافذة الطباعة');
+}
+
+/* ============================================================
+   ================  CLOSING SHEET PAGE  ======================
+   ============================================================ */
+let _sheetMode='vertical';
+
+function setSheetMode(mode){
+    _sheetMode=mode;
+    document.querySelectorAll('.sheet-mode-btn').forEach(b=>{
+        const active=b.dataset.mode===mode;
+        b.classList.toggle('active',active);
+        b.style.background=active?'var(--primary)':'transparent';
+        b.style.color=active?'#fff':'var(--text)';
+    });
+    renderClosingSheet();
+}
+
+function renderClosingSheet(){
+    const s=loadSettings();const cur=s.currency||'د.ع';
+    const monthInput=$('#sheetMonth');
+    if(monthInput && !monthInput.value) monthInput.value=today().slice(0,7);
+    const ym=monthInput?monthInput.value:today().slice(0,7);
+
+    const closings=loadData(KEYS.closings)
+        .filter(c=>c.date&&c.date.startsWith(ym))
+        .sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+
+    const content=$('#closingSheetContent');
+    if(!closings.length){
+        content.innerHTML='<div class="empty-state"><i class="ri-inbox-line"></i><p>لا توجد تقفيلات لهذا الشهر</p></div>';
+        return;
+    }
+
+    /* حساب إجمالي كل يوم */
+    const rows=closings.map(c=>({
+        date:c.date,
+        total:calcClosingTotal(c),
+        manager:c.manager||'',
+        cashiers:CASHIERS.reduce((acc,cs)=>{
+            const d=c.cashiers[cs.key];
+            acc[cs.key]=d?calcCashierNet(d).net:0;
+            return acc;
+        },{})
+    }));
+
+    const grandTotal=rows.reduce((s,r)=>s+r.total,0);
+
+    if(_sheetMode==='vertical'){
+        /* نمط عمودي كما الورقة - أرقام فوق بعض مع خط جمع */
+        let html=`<div class="sheet-vertical" style="background:#fffaf0;border:2px solid #fbbf24;border-radius:12px;padding:20px;max-width:500px;margin:0 auto;font-family:'Tajawal',serif">
+        <div style="text-align:center;margin-bottom:14px;border-bottom:2px dashed #92400e;padding-bottom:10px">
+            <div style="font-weight:800;color:#92400e;font-size:1.1rem"><i class="ri-file-list-line"></i> كشف حسابات التقفيلات</div>
+            <div style="font-size:.85rem;color:#b45309;margin-top:4px">${ym} | عدد التقفيلات: ${closings.length}</div>
+        </div>
+        <div style="font-family:'Courier New',monospace;font-size:1.15rem;line-height:1.8;text-align:left;direction:ltr">`;
+
+        rows.forEach((r,i)=>{
+            const sign=r.total<0?'-':' ';
+            const absVal=Math.abs(r.total);
+            const str=fmtNum(absVal).padStart(10,' ');
+            html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 8px">
+                <span style="color:#64748b;font-size:.75rem;font-family:'Tajawal'">${r.date}</span>
+                <span style="color:${r.total>=0?'#166534':'#991b1b'};font-weight:700">${sign}${str}</span>
+            </div>`;
+        });
+
+        /* الخط + المجموع */
+        html+=`<div style="border-top:3px double #92400e;margin:8px 8px 4px;padding-top:6px"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:#fde68a;border-radius:6px;margin-top:4px">
+            <span style="font-family:'Tajawal';font-weight:800;color:#78350f">الإجمالي</span>
+            <span style="color:${grandTotal>=0?'#166534':'#991b1b'};font-weight:800;font-size:1.25rem">${grandTotal<0?'-':''}${fmtNum(Math.abs(grandTotal))} ${cur}</span>
+        </div>`;
+        html+=`</div></div>`;
+
+        content.innerHTML=html;
+    } else {
+        /* نمط أفقي - جدول */
+        let html=`<div class="card" style="padding:14px;overflow-x:auto">
+        <table class="report-table" style="width:100%;font-size:.85rem">
+            <thead><tr style="background:var(--primary);color:#fff">
+                <th>التاريخ</th>
+                <th>المدير</th>`;
+        CASHIERS.forEach(cs=>html+=`<th>${cs.label}</th>`);
+        html+=`<th style="background:#0284c7">الإجمالي</th></tr></thead><tbody>`;
+
+        /* إجماليات كل كاشير */
+        const cashierTotals={};
+        CASHIERS.forEach(cs=>cashierTotals[cs.key]=0);
+
+        rows.forEach((r,i)=>{
+            html+=`<tr style="background:${i%2===0?'var(--bg)':'var(--surface)'}">
+                <td style="font-weight:700">${r.date}</td>
+                <td style="font-size:.8rem">${r.manager||'-'}</td>`;
+            CASHIERS.forEach(cs=>{
+                const v=r.cashiers[cs.key];
+                cashierTotals[cs.key]+=v;
+                const clr=v<0?'color:var(--clr-expense)':v>0?'color:var(--text)':'color:var(--text3)';
+                html+=`<td style="${clr}">${v!==0?fmtNum(v):'—'}</td>`;
+            });
+            const tclr=r.total<0?'color:var(--clr-expense)':'color:var(--clr-income)';
+            html+=`<td style="${tclr};font-weight:800">${fmtNum(r.total)}</td></tr>`;
+        });
+
+        /* صف الإجمالي */
+        html+=`<tr style="background:#fde68a;font-weight:800;border-top:3px double #92400e">
+            <td colspan="2" style="color:#78350f">الإجمالي الشهري</td>`;
+        CASHIERS.forEach(cs=>{
+            const t=cashierTotals[cs.key];
+            const clr=t<0?'color:var(--clr-expense)':'color:#166534';
+            html+=`<td style="${clr}">${fmtNum(t)}</td>`;
+        });
+        const gclr=grandTotal<0?'color:var(--clr-expense)':'color:#166534';
+        html+=`<td style="${gclr};font-size:1.05rem">${fmtNum(grandTotal)} ${cur}</td></tr>`;
+        html+=`</tbody></table></div>`;
+
+        /* ملخص */
+        html+=`<div style="margin-top:12px;padding:12px;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;border-radius:10px;text-align:center">
+            <div style="font-size:.85rem;opacity:.9">مجموع صوافي جميع التقفيلات</div>
+            <div style="font-size:1.8rem;font-weight:800">${fmtNum(grandTotal)} ${cur}</div>
+            <div style="font-size:.78rem;opacity:.85;margin-top:4px">${closings.length} تقفيلة</div>
+        </div>`;
+
+        content.innerHTML=html;
+    }
+}
+
+function printClosingSheet(){
+    if(!hasAction('print'))return toast('غير مصرح');
+    const s=loadSettings();const cur=s.currency||'د.ع';const store=s.storeName||'';
+    const ym=$('#sheetMonth')?.value||today().slice(0,7);
+    const closings=loadData(KEYS.closings)
+        .filter(c=>c.date&&c.date.startsWith(ym))
+        .sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+    const printDate=new Date().toLocaleDateString('ar-IQ',{year:'numeric',month:'long',day:'numeric'});
+
+    let html=`<div class="print-page-border">`;
+    html+=`<div class="print-header"><h2>كشف حسابات التقفيلات</h2>`;
+    if(store)html+=`<p>${store}</p>`;
+    html+=`<p class="print-date">الشهر: ${ym} | تاريخ الطباعة: ${printDate}</p></div>`;
+
+    if(!closings.length){
+        html+=`<p style="text-align:center;padding:30px">لا توجد تقفيلات لهذا الشهر</p></div>`;
+        showPrintDialog(html);
+        return;
+    }
+
+    let grandTotal=0;
+    const cashierTotals={};
+    CASHIERS.forEach(cs=>cashierTotals[cs.key]=0);
+
+    if(_sheetMode==='vertical'){
+        /* نمط عمودي للطباعة */
+        html+=`<div style="max-width:400px;margin:0 auto;font-family:'Courier New',monospace;font-size:14pt;line-height:1.9">`;
+        closings.forEach(c=>{
+            const t=calcClosingTotal(c);
+            grandTotal+=t;
+            const sign=t<0?'-':' ';
+            html+=`<div style="display:flex;justify-content:space-between;border-bottom:1px dotted #999;padding:2px 6px">
+                <span style="font-family:Arial;font-size:10pt">${c.date}</span>
+                <span style="color:${t<0?'#991b1b':'#166534'}">${sign}${fmtNum(Math.abs(t))}</span>
+            </div>`;
+        });
+        html+=`<div style="border-top:3px double #000;margin:6px;padding-top:6px;display:flex;justify-content:space-between;font-weight:800;font-size:16pt">
+            <span style="font-family:Arial">الإجمالي</span>
+            <span style="color:${grandTotal<0?'#991b1b':'#166534'}">${grandTotal<0?'-':''}${fmtNum(Math.abs(grandTotal))} ${cur}</span>
+        </div></div>`;
+    } else {
+        /* نمط أفقي للطباعة */
+        html+=`<table><thead><tr><th>التاريخ</th><th>المدير</th>`;
+        CASHIERS.forEach(cs=>html+=`<th>${cs.label}</th>`);
+        html+=`<th>الإجمالي</th></tr></thead><tbody>`;
+
+        closings.forEach(c=>{
+            const t=calcClosingTotal(c);
+            grandTotal+=t;
+            html+=`<tr><td>${c.date}</td><td>${c.manager||'-'}</td>`;
+            CASHIERS.forEach(cs=>{
+                const d=c.cashiers[cs.key];
+                const v=d?calcCashierNet(d).net:0;
+                cashierTotals[cs.key]+=v;
+                html+=`<td style="color:${v<0?'#991b1b':'inherit'}">${v!==0?fmtNum(v):'-'}</td>`;
+            });
+            html+=`<td class="print-amount" style="color:${t<0?'#dc2626':'#16a34a'};font-weight:700">${fmtNum(t)} ${cur}</td></tr>`;
+        });
+
+        html+=`<tr style="font-weight:700;background:#fde68a"><td colspan="2">الإجمالي الشهري</td>`;
+        CASHIERS.forEach(cs=>{
+            const t=cashierTotals[cs.key];
+            html+=`<td style="color:${t<0?'#991b1b':'#166534'}">${fmtNum(t)}</td>`;
+        });
+        html+=`<td class="print-amount" style="color:${grandTotal<0?'#dc2626':'#16a34a'}">${fmtNum(grandTotal)} ${cur}</td></tr>`;
+        html+=`</tbody></table>`;
+    }
+
+    html+=`</div>`;
+    showPrintDialog(html);
+}
+
 /* ========= SETTINGS ========= */
 function renderSettings(){
     const s=loadSettings();
@@ -3672,6 +4112,16 @@ function initApp(){
     const reportDateEl=document.getElementById('reportDate');
     if(reportDateEl)reportDateEl.addEventListener('change',renderReport);
     $('#printReportBtn').addEventListener('click',printReport);
+
+    /* General Expenses page filters */
+    const genExpMonthEl=document.getElementById('genExpMonth');
+    if(genExpMonthEl)genExpMonthEl.addEventListener('change',renderGeneralExpenses);
+    const genExpTypeEl=document.getElementById('genExpTypeFilter');
+    if(genExpTypeEl)genExpTypeEl.addEventListener('change',renderGeneralExpenses);
+
+    /* Closing Sheet page filter */
+    const sheetMonthEl=document.getElementById('sheetMonth');
+    if(sheetMonthEl)sheetMonthEl.addEventListener('change',renderClosingSheet);
 
     /* settings */
     $('#saveSettingsBtn').addEventListener('click',saveSettingsForm);

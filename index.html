@@ -16,6 +16,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <!-- LOGIN OVERLAY -->
@@ -90,6 +91,8 @@
                     <div class="home-tile tile-safe" data-page="safe"><div class="tile-icon"><i class="ri-safe-2-fill"></i></div><div class="tile-label">الخزنة</div><div class="tile-desc">رصيد ومعاملات الخزنة</div></div>
                     <div class="home-tile tile-debts" data-page="debts"><div class="tile-icon"><i class="ri-file-list-3-fill"></i></div><div class="tile-label">الديون</div><div class="tile-desc">سجل ديون الموظفين والعملاء</div></div>
                     <div class="home-tile tile-expenses" data-page="expenses"><div class="tile-icon"><i class="ri-money-dollar-box-fill"></i></div><div class="tile-label">المصاريف</div><div class="tile-desc">جرد كامل المصاريف</div></div>
+                    <div class="home-tile tile-general-exp" data-page="generalExpenses" style="background:linear-gradient(135deg,#f97316 0%,#ea580c 100%);color:#fff"><div class="tile-icon"><i class="ri-building-line"></i></div><div class="tile-label">المصاريف العامة</div><div class="tile-desc">مصاريف الإدارة والمصاريف العامة</div></div>
+                    <div class="home-tile tile-closing-sheet" data-page="closingSheet" style="background:linear-gradient(135deg,#0ea5e9 0%,#0284c7 100%);color:#fff"><div class="tile-icon"><i class="ri-file-list-line"></i></div><div class="tile-label">كشف الحسابات</div><div class="tile-desc">معادلة المبلغ النهائي للتقفيلات</div></div>
                     <div class="home-tile tile-salaries" data-page="salaries"><div class="tile-icon"><i class="ri-team-fill"></i></div><div class="tile-label">الرواتب</div><div class="tile-desc">بيانات الموظفين</div></div>
                     <div class="home-tile tile-payroll" data-page="payroll"><div class="tile-icon"><i class="ri-hand-coin-fill"></i></div><div class="tile-label">صرف الرواتب</div><div class="tile-desc">تسليم رواتب الموظفين</div></div>
                     <div class="home-tile tile-capital" data-page="capital"><div class="tile-icon"><i class="ri-funds-fill"></i></div><div class="tile-label">رأس المال</div><div class="tile-desc">إدارة رأس المال</div></div>
@@ -339,6 +342,69 @@
                         <button class="btn btn-ghost" onclick="copyCashierLink()"><i class="ri-file-copy-line"></i> نسخ الرابط</button>
                     </div>
                 </div>
+            </section>
+
+            <!-- ============ GENERAL EXPENSES (المصاريف العامة) ============ -->
+            <section id="page-generalExpenses" class="page">
+                <div class="section-head">
+                    <h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-building-line"></i> المصاريف العامة</h2>
+                    <div class="page-io-btns">
+                        <button class="btn btn-ghost btn-sm" onclick="printGeneralExpenses()" title="طباعة / PDF"><i class="ri-printer-line"></i></button>
+                        <button class="btn btn-ghost btn-sm" onclick="exportGeneralExpensesPDF()" title="تصدير PDF"><i class="ri-file-pdf-line"></i></button>
+                    </div>
+                </div>
+                <div class="filter-bar" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+                    <input type="month" id="genExpMonth" class="input-field" style="flex:1;min-width:140px">
+                    <select id="genExpTypeFilter" class="input-field" style="flex:1;min-width:140px">
+                        <option value="all">كل الأنواع</option>
+                        <option value="admin">إدارة</option>
+                        <option value="general">عامة</option>
+                    </select>
+                    <button class="btn btn-primary btn-sm" onclick="renderGeneralExpenses()"><i class="ri-filter-line"></i> تطبيق</button>
+                </div>
+                <div class="summary-grid" style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
+                    <div class="card" style="padding:12px;text-align:center;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff">
+                        <div style="font-size:.8rem;opacity:.9">إجمالي المصاريف العامة</div>
+                        <div id="genExpTotalAll" style="font-size:1.4rem;font-weight:800">0</div>
+                    </div>
+                    <div class="card" style="padding:12px;text-align:center">
+                        <div style="font-size:.8rem;color:var(--text2)">مصاريف إدارة</div>
+                        <div id="genExpTotalAdmin" style="font-size:1.25rem;font-weight:700;color:#7c3aed">0</div>
+                    </div>
+                    <div class="card" style="padding:12px;text-align:center">
+                        <div style="font-size:.8rem;color:var(--text2)">مصاريف عامة</div>
+                        <div id="genExpTotalGeneral" style="font-size:1.25rem;font-weight:700;color:#0891b2">0</div>
+                    </div>
+                    <div class="card" style="padding:12px;text-align:center">
+                        <div style="font-size:.8rem;color:var(--text2)">عدد المصاريف</div>
+                        <div id="genExpCount" style="font-size:1.25rem;font-weight:700">0</div>
+                    </div>
+                </div>
+                <div class="card" style="margin-top:12px;padding:14px">
+                    <h3 class="card-h"><i class="ri-bar-chart-2-line"></i> الرسم البياني الشهري</h3>
+                    <canvas id="genExpChart" style="max-height:220px;width:100%"></canvas>
+                </div>
+                <h3 class="sub-title" style="margin-top:14px">السجل التفصيلي</h3>
+                <div id="genExpList" class="records-list"></div>
+            </section>
+
+            <!-- ============ CLOSING SHEET (كشف الحسابات) ============ -->
+            <section id="page-closingSheet" class="page">
+                <div class="section-head">
+                    <h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-file-list-line"></i> كشف الحسابات</h2>
+                    <div class="page-io-btns">
+                        <button class="btn btn-ghost btn-sm" onclick="printClosingSheet()" title="طباعة"><i class="ri-printer-line"></i></button>
+                    </div>
+                </div>
+                <div class="filter-bar" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+                    <input type="month" id="sheetMonth" class="input-field" style="flex:1;min-width:140px">
+                    <div class="sheet-toggle" style="display:flex;gap:4px;background:var(--surface2);border-radius:8px;padding:4px">
+                        <button class="sheet-mode-btn active" data-mode="vertical" onclick="setSheetMode('vertical')" style="padding:6px 12px;border:none;background:var(--primary);color:#fff;border-radius:6px;cursor:pointer;font-size:.82rem"><i class="ri-list-ordered"></i> عمودي</button>
+                        <button class="sheet-mode-btn" data-mode="horizontal" onclick="setSheetMode('horizontal')" style="padding:6px 12px;border:none;background:transparent;color:var(--text);border-radius:6px;cursor:pointer;font-size:.82rem"><i class="ri-table-line"></i> أفقي</button>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="renderClosingSheet()"><i class="ri-filter-line"></i> تطبيق</button>
+                </div>
+                <div id="closingSheetContent" style="margin-top:12px"></div>
             </section>
         </main>
 
