@@ -456,7 +456,7 @@ function importRemoteClosing(remote){
         debtsList: remote.debtsList || [],
         withdrawList: remote.withdrawList || [],
         expensesList: remote.expensesList || [],
-        net: d.network || 0,
+        net: calcCashierNet(d).net,
         by: by,
         timestamp: remote.timestamp || Date.now(),
         source: 'cashier-app'
@@ -535,15 +535,16 @@ function mergeIndividualClosings(date){
         const ind = byCashier[c.key];
         if(ind){
             const dd = ind.data || {};
+            const r = calcCashierNet(dd);             // الحساب الصحيح
             cashiersData[c.key] = {
                 sales:dd.sales||0, network:dd.network||0, returns:dd.returns||0,
                 expenses:dd.expenses||0, lunch:dd.lunch||0, debts:dd.debts||0,
                 withdrawals:dd.withdrawals||0,
                 debtsList:ind.debtsList||[], withdrawList:ind.withdrawList||[],
-                expensesList:ind.expensesList||[], net:dd.network||0,
+                expensesList:ind.expensesList||[], net:r.net,
                 manager:ind.manager||''
             };
-            totalNet += dd.network||0;
+            totalNet += r.net;
             if(ind.manager && !manager) manager = ind.manager;
         } else {
             cashiersData[c.key] = {sales:0,network:0,returns:0,expenses:0,lunch:0,debts:0,withdrawals:0,debtsList:[],withdrawList:[],expensesList:[],net:0,manager:''};
@@ -650,6 +651,152 @@ const CASHIER_FIELDS=[
     {key:'withdrawals',label:'السحوبات',icon:'ri-hand-coin-line',type:'withdraw'}
 ];
 const TOTAL_STEPS = CASHIERS.length * CASHIER_FIELDS.length + 2; // +1 manager +1 summary
+
+/* ========= CENTRAL CALCULATION ENGINE ========= */
+/* هذه هي الدالة الوحيدة والمعتمدة لحساب صافي كل كاشير.
+   القاعدة:
+     الصافي = المبيعات - (المرتجعات + المصاريف + الغداء + الديون + السحوبات)
+   المبلغ المستلم (network) هو مجرد مرجع للمقارنة، ليس هو الصافي.
+   الفرق = المبلغ المستلم - الصافي المحسوب (يدل على زيادة/نقص في الكاشير).
+   الصافي قد يكون سالباً إذا زادت الخصومات عن المبيعات - وهذا مقصود.
+*/
+function calcCashierNet(d){
+    if(!d) return {gross:0,deductions:0,net:0,network:0,diff:0};
+    const gross      = Number(d.sales)       || 0;
+    const returns    = Number(d.returns)     || 0;
+    const expenses   = Number(d.expenses)    || 0;
+    const lunch      = Number(d.lunch)       || 0;
+    const debts      = Number(d.debts)       || 0;
+    const withdraws  = Number(d.withdrawals) || 0;
+    const network    = Number(d.network)     || 0;
+    const deductions = returns + expenses + lunch + debts + withdraws;
+    const net        = gross - deductions;            // may be negative
+    const diff       = network - net;                 // actual - expected
+    return {gross,deductions,net,network,diff,
+            returns,expenses,lunch,debts,withdraws};
+}
+
+/* حساب إجمالي تقفيلة كاملة */
+function calcClosingTotal(cl){
+    if(!cl||!cl.cashiers) return 0;
+    let t=0;
+    CASHIERS.forEach(c=>{
+        const d=cl.cashiers[c.key]; if(!d) return;
+        t += calcCashierNet(d).net;
+    });
+    return t;
+}
+
+/* إعادة ترقيم حقل net داخل كل كاشير (للبيانات القديمة) */
+function recomputeClosingInPlace(cl){
+    if(!cl||!cl.cashiers) return cl;
+    let total=0;
+    CASHIERS.forEach(c=>{
+        const d=cl.cashiers[c.key]; if(!d) return;
+        const r=calcCashierNet(d);
+        d.net=r.net;
+        total+=r.net;
+    });
+    cl.totalNet=total;
+    return cl;
+}
+
+/* ============================================================
+   ترقية البيانات: تُستدعى مرة واحدة عند تشغيل التطبيق بعد التحديث.
+   - تعيد حساب net/totalNet لكل تقفيلة بالصيغة الصحيحة
+   - تعيد بناء معاملات الخزنة المرتبطة بالتقفيلات (مع الحفاظ على
+     الإيداعات/السحوبات اليدوية غير المرتبطة)
+   ============================================================ */
+const DATA_VERSION_KEY='cm_data_version';
+const CURRENT_DATA_VERSION=2;
+
+function runDataUpgrade(){
+    const current=Number(localStorage.getItem(DATA_VERSION_KEY)||0);
+    if(current>=CURRENT_DATA_VERSION) return;
+
+    try{
+        console.log('[Upgrade] بدء ترقية البيانات من v'+current+' إلى v'+CURRENT_DATA_VERSION);
+
+        /* 1. إعادة حساب صوافي كل التقفيلات */
+        const closings=loadData(KEYS.closings);
+        let fixedCount=0;
+        closings.forEach(cl=>{
+            const oldTotal=cl.totalNet||0;
+            recomputeClosingInPlace(cl);
+            if(oldTotal!==cl.totalNet) fixedCount++;
+        });
+        saveData(KEYS.closings,closings);
+        console.log('[Upgrade] تم إعادة احتساب '+fixedCount+' تقفيلة');
+
+        /* 2. إعادة حساب التقفيلات الفردية */
+        const inds=loadData(KEYS.individualClosings);
+        inds.forEach(ind=>{
+            if(ind.data) ind.net=calcCashierNet(ind.data).net;
+        });
+        saveData(KEYS.individualClosings,inds);
+
+        /* 3. إعادة بناء معاملات الخزنة المرتبطة بالتقفيلات
+              دون حذف المعاملات اليدوية. التعرف على معاملات التقفيلة:
+              - وجود closingId في المعاملة، أو
+              - الملاحظة تبدأ بـ "تقفيلة " (للبيانات القديمة) */
+        let safe=loadData(KEYS.safe);
+
+        /* نفصل الإيداعات/السحوبات اليدوية (التي ليست مرتبطة بتقفيلة) */
+        const manualSafe=safe.filter(t=>{
+            if(t.closingId) return false;
+            const note=(t.note||'').trim();
+            if(note.startsWith('تقفيلة ')) return false;
+            return true;
+        });
+
+        /* نبني معاملات الخزنة من التقفيلات الحالية */
+        const closingSafe=[];
+        closings.forEach(cl=>{
+            if(!cl.totalNet || cl.totalNet===0) return;
+            const safeId=cl.safeLinkId || uid();
+            cl.safeLinkId=safeId;
+            closingSafe.push({
+                id:safeId,
+                date:cl.date,
+                type:cl.totalNet>0?'deposit':'withdraw',
+                amount:Math.abs(cl.totalNet),
+                note:'تقفيلة '+cl.date+(cl.manager?' - المدير: '+cl.manager:''),
+                by:cl.by||'',
+                closingId:cl.id,
+                mergedClosing:cl.source==='cashier-app'
+            });
+        });
+
+        /* نحفظ الخزنة الجديدة = المعاملات اليدوية + المعاملات من التقفيلات */
+        saveData(KEYS.safe,[...manualSafe,...closingSafe]);
+        /* نحفظ التقفيلات مجدداً لحفظ safeLinkId */
+        saveData(KEYS.closings,closings);
+
+        console.log('[Upgrade] تم إصلاح الخزنة: '+manualSafe.length+' معاملة يدوية + '+closingSafe.length+' معاملة تقفيلة');
+
+        localStorage.setItem(DATA_VERSION_KEY,String(CURRENT_DATA_VERSION));
+
+        /* إشعار المستخدم */
+        setTimeout(()=>{
+            if(typeof toast==='function'){
+                toast('✅ تم تحديث الحسابات - '+fixedCount+' تقفيلة');
+            }
+        },800);
+    }catch(e){
+        console.error('[Upgrade] فشل:',e);
+    }
+}
+
+/* إعادة الترقية يدوياً (من الإعدادات) */
+function forceRecomputeAll(){
+    if(!confirm('سيتم إعادة حساب جميع التقفيلات وإصلاح الخزنة. هل تريد المتابعة؟')) return;
+    localStorage.removeItem(DATA_VERSION_KEY);
+    runDataUpgrade();
+    toast('✅ تم إعادة الحساب بنجاح');
+    if(typeof renderClosings==='function') renderClosings();
+    if(typeof renderSafe==='function') renderSafe();
+    if(typeof renderReport==='function' && $('#page-report')?.classList.contains('active')) renderReport();
+}
 
 /* ========= wizard state ========= */
 let wizData={};
@@ -932,11 +1079,11 @@ function renderWizSummary(body){
     let grandNet=0;
     CASHIERS.forEach(c=>{
         const d=wizData.cashiers[c.key];
-        const net=d.network||0;
-        const deductions=(d.returns||0)+(d.expenses||0)+(d.lunch||0)+(d.debts||0)+(d.withdrawals||0);
-        const expected=(d.sales||0)-deductions;
-        const diff=(d.network||0)-expected;
-        grandNet+=net;
+        const r=calcCashierNet(d);
+        const deductions=r.deductions;
+        const expected=r.net;                         // الصافي المحسوب = المتوقع
+        const diff=r.diff;                            // المستلم - المحسوب
+        grandNet+=r.net;
         html+=`<h4 style="color:${c.color};margin:10px 0 6px;font-size:.9rem"><i class="${c.icon}"></i> ${c.label}</h4>`;
         html+=`<table><thead><tr><th>البيان</th><th>المبلغ</th></tr></thead><tbody>`;
         CASHIER_FIELDS.forEach(f=>{
@@ -945,10 +1092,10 @@ function renderWizSummary(body){
             html+=`<tr><td>${f.label}</td><td style="color:${clr};font-weight:700">${fmtNum(v)} ${cur}</td></tr>`;
         });
         html+=`<tr style="background:var(--surface2)"><td>إجمالي الخصومات</td><td style="color:var(--clr-expense);font-weight:700">${fmtNum(deductions)} ${cur}</td></tr>`;
-        html+=`<tr style="background:var(--surface2)"><td>المتوقع (الرصيد - الخصومات)</td><td style="font-weight:700">${fmtNum(expected)} ${cur}</td></tr>`;
-        if(diff!==0)html+=`<tr style="background:#fef3c7"><td>الفرق</td><td style="color:${diff>0?'var(--clr-income)':'var(--clr-expense)'};font-weight:700">${fmtNum(diff)} ${cur}</td></tr>`;
-        const netClr=net>=0?'var(--clr-income)':'var(--clr-expense)';
-        html+=`<tr class="total-row"><td>الصافي (المبلغ المستلم)</td><td style="color:${netClr}">${fmtNum(net)} ${cur}</td></tr>`;
+        html+=`<tr style="background:var(--surface2)"><td>الصافي المحسوب (الرصيد - الخصومات)</td><td style="font-weight:700;color:${r.net>=0?'var(--clr-income)':'var(--clr-expense)'}">${fmtNum(r.net)} ${cur}</td></tr>`;
+        if(diff!==0)html+=`<tr style="background:#fef3c7"><td>الفرق (المستلم - المحسوب)</td><td style="color:${diff>0?'var(--clr-income)':'var(--clr-expense)'};font-weight:700">${fmtNum(diff)} ${cur}</td></tr>`;
+        const netClr=r.net>=0?'var(--clr-income)':'var(--clr-expense)';
+        html+=`<tr class="total-row"><td>الصافي النهائي</td><td style="color:${netClr}">${fmtNum(r.net)} ${cur}</td></tr>`;
         html+=`</tbody></table>`;
     });
     html+=`<div style="text-align:center;margin-top:14px;padding:12px;background:var(--bg);border-radius:var(--radius-sm)">
@@ -991,9 +1138,9 @@ function saveClosing(){
     const cashiersData={};
     CASHIERS.forEach(c=>{
         const d=wizData.cashiers[c.key];
-        const net=d.network||0;
-        cashiersData[c.key]={...d,net,manager:wizData.manager||''};
-        totalNet+=net;
+        const r=calcCashierNet(d);                    // المحسوب: مبيعات - خصومات (يقبل السالب)
+        cashiersData[c.key]={...d,net:r.net,manager:wizData.manager||''};
+        totalNet+=r.net;
         /* save debts */
         (d.debtsList||[]).forEach(debt=>{
             debts.push({id:uid(),person:debt.person,amount:debt.amount,note:debt.note||'',type:'debt',cashier:c.label,date,by});
@@ -1010,10 +1157,16 @@ function saveClosing(){
     });
     /* save closing */
     const closingId=uid();
-    closings.push({id:closingId,date,manager:wizData.manager||'',cashiers:cashiersData,totalNet,by});
-    /* safe transaction */
+    closings.push({id:closingId,date,manager:wizData.manager||'',cashiers:cashiersData,totalNet,by,safeLinkId:null});
+    /* safe transaction - ربط بـ safeLinkId للحذف المتزامن */
     if(totalNet!==0){
-        safe.push({id:uid(),date,type:totalNet>0?'deposit':'withdraw',amount:Math.abs(totalNet),note:'تقفيلة '+date+(wizData.manager?' - المدير: '+wizData.manager:''),by});
+        const safeId=uid();
+        safe.push({id:safeId,date,type:totalNet>0?'deposit':'withdraw',amount:Math.abs(totalNet),
+            note:'تقفيلة '+date+(wizData.manager?' - المدير: '+wizData.manager:''),by,
+            closingId:closingId});
+        /* update the closing we just pushed with link id */
+        const ci=closings.findIndex(c=>c.id===closingId);
+        if(ci>=0) closings[ci].safeLinkId=safeId;
     }
     saveData(KEYS.closings,closings);
     saveData(KEYS.safe,safe);
@@ -1040,7 +1193,8 @@ function renderClosings(){
     const list=$('#closingsList');
     if(!closings.length){list.innerHTML='<div class="empty-state"><i class="ri-inbox-line"></i><p>لا توجد تقفيلات</p></div>';return;}
     list.innerHTML=closings.map(c=>{
-        const clr=c.totalNet>=0?'income':'expense';
+        const cTotal=calcClosingTotal(c);             // الحساب الصحيح من المصدر
+        const clr=cTotal>=0?'income':'expense';
         const mgr=c.manager?`<span style="color:var(--primary);font-size:.75rem"><i class="ri-user-star-line"></i> ${c.manager}</span>`:'';
         const detailsBtn=`<button onclick="viewClosingDetails('${c.id}')" title="تفاصيل"><i class="ri-eye-line"></i></button>`;
         const editBtn=hasAction('edit')?`<button onclick="editClosing('${c.id}')" title="تعديل"><i class="ri-edit-line"></i></button>`:'';
@@ -1048,15 +1202,35 @@ function renderClosings(){
         const delBtn=hasAction('delete')?`<button onclick="deleteClosing('${c.id}')"><i class="ri-delete-bin-line"></i></button>`:'';
         return `<div class="record-card">
         <div class="rec-info"><div class="rec-title">${c.date} ${mgr}</div><div class="rec-sub">${CASHIERS.map(cs=>cs.label).join(' | ')}${c.by?' | <span class="by-tag">بواسطة: '+c.by+'</span>':''}</div></div>
-        <div class="rec-amount ${clr}">${fmtNum(c.totalNet)} ${cur}</div>
+        <div class="rec-amount ${clr}">${fmtNum(cTotal)} ${cur}</div>
         <div class="rec-actions">${detailsBtn}${editBtn}${printBtn}${delBtn}</div>
     </div>`;}).join('');
 }
 function deleteClosing(id){
     if(!hasAction('delete'))return toast('غير مصرح');
-    if(!confirm('حذف التقفيلة؟'))return;
-    let arr=loadData(KEYS.closings);arr=arr.filter(c=>c.id!==id);saveData(KEYS.closings,arr);
+    if(!confirm('حذف التقفيلة؟ سيتم حذف معاملة الخزنة المرتبطة أيضاً.'))return;
+    let arr=loadData(KEYS.closings);
+    const target=arr.find(c=>c.id===id);
+    arr=arr.filter(c=>c.id!==id);
+    saveData(KEYS.closings,arr);
+    /* حذف معاملة الخزنة المرتبطة */
+    if(target){
+        let safe=loadData(KEYS.safe);
+        const before=safe.length;
+        safe=safe.filter(t=>{
+            if(target.safeLinkId && t.id===target.safeLinkId) return false;
+            if(t.closingId===id) return false;
+            /* للبيانات القديمة: حذف بالمطابقة على التاريخ والمبلغ والملاحظة */
+            if(!target.safeLinkId && t.date===target.date
+               && t.amount===Math.abs(target.totalNet||0)
+               && (t.note||'').includes('تقفيلة')
+               && (t.note||'').includes(target.date)) return false;
+            return true;
+        });
+        if(safe.length!==before) saveData(KEYS.safe,safe);
+    }
     toast('تم الحذف');renderClosings();
+    if(typeof renderSafe==='function' && $('#page-safe')?.classList.contains('active')) renderSafe();
 }
 function editClosing(id){
     if(!hasAction('edit'))return toast('غير مصرح');
@@ -1078,6 +1252,8 @@ function saveEditClosing(id){
     const closings=loadData(KEYS.closings);
     const idx=closings.findIndex(c=>c.id===id);if(idx<0)return;
     const cl=closings[idx];
+    const oldTotalNet=cl.totalNet||0;
+    const oldSafeLinkId=cl.safeLinkId;
     cl.date=$('#editClDate').value||cl.date;
     cl.manager=$('#editClManager').value.trim();
     let totalNet=0;
@@ -1086,15 +1262,47 @@ function saveEditClosing(id){
             cl.cashiers[c.key][f.key]=parseK($(`#editCl_${c.key}_${f.key}`).value);
         });
         const d=cl.cashiers[c.key];
-        const net=d.network||0;
-        d.net=net;
-        totalNet+=net;
+        const r=calcCashierNet(d);                    // الحساب الصحيح
+        d.net=r.net;
+        totalNet+=r.net;
     });
     cl.totalNet=totalNet;
     cl.by=getByTag();
     closings[idx]=cl;
     saveData(KEYS.closings,closings);
+
+    /* مزامنة معاملة الخزنة المرتبطة */
+    let safe=loadData(KEYS.safe);
+    let linkedIdx=-1;
+    if(oldSafeLinkId) linkedIdx=safe.findIndex(t=>t.id===oldSafeLinkId);
+    if(linkedIdx<0) linkedIdx=safe.findIndex(t=>t.closingId===id);
+    if(linkedIdx>=0){
+        if(totalNet===0){
+            safe.splice(linkedIdx,1);
+            cl.safeLinkId=null;
+        } else {
+            safe[linkedIdx].amount=Math.abs(totalNet);
+            safe[linkedIdx].type=totalNet>0?'deposit':'withdraw';
+            safe[linkedIdx].date=cl.date;
+            safe[linkedIdx].note='تقفيلة '+cl.date+(cl.manager?' - المدير: '+cl.manager:'');
+            safe[linkedIdx].by=cl.by;
+            safe[linkedIdx].closingId=id;
+            cl.safeLinkId=safe[linkedIdx].id;
+        }
+    } else if(totalNet!==0){
+        const newSafeId=uid();
+        safe.push({id:newSafeId,date:cl.date,type:totalNet>0?'deposit':'withdraw',
+            amount:Math.abs(totalNet),
+            note:'تقفيلة '+cl.date+(cl.manager?' - المدير: '+cl.manager:''),
+            by:cl.by,closingId:id});
+        cl.safeLinkId=newSafeId;
+    }
+    closings[idx]=cl;
+    saveData(KEYS.closings,closings);
+    saveData(KEYS.safe,safe);
+
     closeModal();toast('تم التحديث');renderClosings();
+    if(typeof renderSafe==='function' && $('#page-safe')?.classList.contains('active')) renderSafe();
 }
 
 /* ========= PRINT CLOSING ========= */
@@ -1114,7 +1322,8 @@ function printClosing(id){
         const d=cl.cashiers[c.key];if(!d)return;
         const hasData=(d.sales||0)||(d.network||0);
         if(!hasData)return;
-        const deductions=(d.returns||0)+(d.expenses||0)+(d.lunch||0)+(d.debts||0)+(d.withdrawals||0);
+        const r=calcCashierNet(d);
+        const deductions=r.deductions;
         const cashierMgr=d.manager||cl.manager||'';
         html+=`<div class="print-section"><h3>${c.label}${cashierMgr?' <span class="print-cashier-mgr">( '+cashierMgr+' )</span>':''}</h3><table><tbody>`;
         CASHIER_FIELDS.forEach(f=>{
@@ -1123,8 +1332,11 @@ function printClosing(id){
             html+=`<tr><td style="width:55%">${f.label}</td><td class="print-amount ${pClr}">${fmtNum(v)} ${cur}</td></tr>`;
         });
         html+=`<tr style="border-top:2px solid #999;background:#f0f0f0"><td style="width:55%"><strong>إجمالي الخصومات</strong></td><td class="print-amount p-expense">${fmtNum(deductions)} ${cur}</td></tr>`;
-        const net=d.net||0;
-        html+=`<tr style="border-top:2.5px solid #333;background:#e8e8e8"><td style="width:55%"><strong>الصافي (المبلغ المستلم)</strong></td><td class="print-amount" style="color:${net>=0?'#16a34a':'#dc2626'}">${fmtNum(net)} ${cur}</td></tr>`;
+        html+=`<tr style="background:#f7f7f7"><td style="width:55%"><strong>الصافي المحسوب (الرصيد - الخصومات)</strong></td><td class="print-amount" style="color:${r.net>=0?'#16a34a':'#dc2626'}">${fmtNum(r.net)} ${cur}</td></tr>`;
+        if(r.diff!==0){
+            html+=`<tr style="background:#fff7e0"><td style="width:55%"><strong>الفرق (المستلم - المحسوب)</strong></td><td class="print-amount" style="color:${r.diff>0?'#16a34a':'#dc2626'}">${fmtNum(r.diff)} ${cur}</td></tr>`;
+        }
+        html+=`<tr style="border-top:2.5px solid #333;background:#e8e8e8"><td style="width:55%"><strong>الصافي النهائي</strong></td><td class="print-amount" style="color:${r.net>=0?'#16a34a':'#dc2626'}">${fmtNum(r.net)} ${cur}</td></tr>`;
         html+=`</tbody></table>`;
         if(d.debtsList&&d.debtsList.length){
             html+=`<div class="print-detail-header" style="color:#ef4444">تفاصيل الديون:</div>`;
@@ -1165,14 +1377,15 @@ function printAllClosings(){
     html+=`<th>الصافي</th></tr></thead><tbody>`;
     let grandTotal=0;
     closings.forEach((c,i)=>{
-        grandTotal+=c.totalNet||0;
+        const cTotal=calcClosingTotal(c);
+        grandTotal+=cTotal;
         html+=`<tr><td>${i+1}</td><td>${c.date}</td><td>${c.manager||'-'}</td>`;
-        CASHIERS.forEach(cs=>{const d=c.cashiers[cs.key];html+=`<td>${d?fmtNum(d.net||0):'-'}</td>`;});
-        html+=`<td style="color:${c.totalNet>=0?'#16a34a':'#dc2626'};font-weight:700">${fmtNum(c.totalNet)} ${cur}</td></tr>`;
+        CASHIERS.forEach(cs=>{const d=c.cashiers[cs.key];html+=`<td>${d?fmtNum(calcCashierNet(d).net):'-'}</td>`;});
+        html+=`<td style="color:${cTotal>=0?'#16a34a':'#dc2626'};font-weight:700">${fmtNum(cTotal)} ${cur}</td></tr>`;
     });
     html+=`<tr style="font-weight:700;background:#f1f5f9"><td colspan="3">الإجمالي (${closings.length} تقفيلة)</td>`;
     CASHIERS.forEach(cs=>{
-        const total=closings.reduce((s,c)=>{const d=c.cashiers[cs.key];return s+(d?d.net||0:0);},0);
+        const total=closings.reduce((s,c)=>{const d=c.cashiers[cs.key];return s+(d?calcCashierNet(d).net:0);},0);
         html+=`<td>${fmtNum(total)}</td>`;
     });
     html+=`<td style="color:${grandTotal>=0?'#16a34a':'#dc2626'}">${fmtNum(grandTotal)} ${cur}</td></tr>`;
@@ -1188,9 +1401,10 @@ function viewClosingDetails(id){
     if(cl.manager)html+=`<div style="text-align:center;font-weight:700;color:var(--primary);margin-bottom:10px"><i class="ri-user-star-line"></i> المدير: ${cl.manager}</div>`;
     CASHIERS.forEach(c=>{
         const d=cl.cashiers[c.key];if(!d)return;
-        const deductions=(d.returns||0)+(d.expenses||0)+(d.lunch||0)+(d.debts||0)+(d.withdrawals||0);
-        const expected=(d.sales||0)-deductions;
-        const diff=(d.network||0)-expected;
+        const r=calcCashierNet(d);
+        const deductions=r.deductions;
+        const expected=r.net;
+        const diff=r.diff;
         html+=`<h4 style="color:${c.color};margin:10px 0 6px;font-size:.9rem"><i class="${c.icon}"></i> ${c.label}</h4>`;
         html+=`<table style="width:100%;font-size:.85rem;border-collapse:collapse"><tbody>`;
         CASHIER_FIELDS.forEach(f=>{
@@ -1199,10 +1413,10 @@ function viewClosingDetails(id){
             html+=`<tr><td style="padding:4px 8px">${f.label}</td><td style="padding:4px 8px;font-weight:700;color:${clr};text-align:left">${fmtNum(v)} ${cur}</td></tr>`;
         });
         html+=`<tr style="background:var(--surface2)"><td style="padding:4px 8px">إجمالي الخصومات</td><td style="padding:4px 8px;font-weight:700;color:var(--clr-expense);text-align:left">${fmtNum(deductions)} ${cur}</td></tr>`;
-        html+=`<tr style="background:var(--surface2)"><td style="padding:4px 8px">المتوقع</td><td style="padding:4px 8px;font-weight:700;text-align:left">${fmtNum(expected)} ${cur}</td></tr>`;
-        if(diff!==0)html+=`<tr style="background:#fef3c7"><td style="padding:4px 8px">الفرق</td><td style="padding:4px 8px;font-weight:700;color:${diff>0?'var(--clr-income)':'var(--clr-expense)'};text-align:left">${fmtNum(diff)} ${cur}</td></tr>`;
-        const net=d.net||0;
-        html+=`<tr style="border-top:2px solid var(--border);font-weight:800"><td style="padding:4px 8px">الصافي</td><td style="padding:4px 8px;color:${net>=0?'var(--clr-income)':'var(--clr-expense)'};text-align:left">${fmtNum(net)} ${cur}</td></tr>`;
+        html+=`<tr style="background:var(--surface2)"><td style="padding:4px 8px">الصافي المحسوب</td><td style="padding:4px 8px;font-weight:700;text-align:left;color:${r.net>=0?'var(--clr-income)':'var(--clr-expense)'}">${fmtNum(r.net)} ${cur}</td></tr>`;
+        if(diff!==0)html+=`<tr style="background:#fef3c7"><td style="padding:4px 8px">الفرق (المستلم - المحسوب)</td><td style="padding:4px 8px;font-weight:700;color:${diff>0?'var(--clr-income)':'var(--clr-expense)'};text-align:left">${fmtNum(diff)} ${cur}</td></tr>`;
+        const net=r.net;                              // الصافي النهائي هو المحسوب
+        html+=`<tr style="border-top:2px solid var(--border);font-weight:800"><td style="padding:4px 8px">الصافي النهائي</td><td style="padding:4px 8px;color:${net>=0?'var(--clr-income)':'var(--clr-expense)'};text-align:left">${fmtNum(net)} ${cur}</td></tr>`;
         html+=`</tbody></table>`;
         if(d.debtsList&&d.debtsList.length){
             html+=`<div style="font-size:.78rem;margin-top:4px;color:#ef4444;font-weight:600">الديون:</div>`;
@@ -1374,10 +1588,10 @@ function renderIndWizStep(){
 function renderIndWizSummary(body, s, cur){
     const cashier = CASHIERS.find(c=>c.key===indWizData.cashierKey)||{};
     const d = indWizData.fields;
-    const deductions=(d.returns||0)+(d.expenses||0)+(d.lunch||0)+(d.debts||0)+(d.withdrawals||0);
-    const expected=(d.sales||0)-deductions;
-    const net=d.network||0;
-    const diff=net-expected;
+    const r = calcCashierNet(d);
+    const deductions=r.deductions;
+    const net=r.net;
+    const diff=r.diff;
     let html=`<div class="wiz-summary">`;
     if(indWizData.manager) html+=`<div style="text-align:center;font-weight:700;color:var(--primary);margin-bottom:10px"><i class="ri-user-star-line"></i> المدير: ${indWizData.manager}</div>`;
     html+=`<h4 style="color:${cashier.color||'var(--primary)'};margin:6px 0;font-size:.9rem;text-align:center"><i class="${cashier.icon||''}"></i> ${cashier.label}</h4>`;
@@ -1388,9 +1602,9 @@ function renderIndWizSummary(body, s, cur){
         html+=`<tr><td>${f.label}</td><td style="color:${clr};font-weight:700">${fmtNum(v)} ${cur}</td></tr>`;
     });
     html+=`<tr style="background:var(--surface2)"><td>إجمالي الخصومات</td><td style="color:var(--clr-expense);font-weight:700">${fmtNum(deductions)} ${cur}</td></tr>`;
-    html+=`<tr style="background:var(--surface2)"><td>المتوقع</td><td style="font-weight:700">${fmtNum(expected)} ${cur}</td></tr>`;
-    if(diff!==0)html+=`<tr style="background:#fef3c7"><td>الفرق</td><td style="color:${diff>0?'var(--clr-income)':'var(--clr-expense)'};font-weight:700">${fmtNum(diff)} ${cur}</td></tr>`;
-    html+=`<tr class="total-row"><td>الصافي (المبلغ المستلم)</td><td style="color:${net>=0?'var(--clr-income)':'var(--clr-expense)'}">${fmtNum(net)} ${cur}</td></tr>`;
+    html+=`<tr style="background:var(--surface2)"><td>الصافي المحسوب</td><td style="font-weight:700;color:${net>=0?'var(--clr-income)':'var(--clr-expense)'}">${fmtNum(net)} ${cur}</td></tr>`;
+    if(diff!==0)html+=`<tr style="background:#fef3c7"><td>الفرق (المستلم - المحسوب)</td><td style="color:${diff>0?'var(--clr-income)':'var(--clr-expense)'};font-weight:700">${fmtNum(diff)} ${cur}</td></tr>`;
+    html+=`<tr class="total-row"><td>الصافي النهائي</td><td style="color:${net>=0?'var(--clr-income)':'var(--clr-expense)'}">${fmtNum(net)} ${cur}</td></tr>`;
     html+=`</tbody></table></div>`;
     body.innerHTML=html;
 }
@@ -1421,7 +1635,7 @@ function indRemoveExp(i){indWizData.expensesList.splice(i,1);indWizData.fields.e
 function saveIndividualClosing(){
     const cashier = CASHIERS.find(c=>c.key===indWizData.cashierKey)||{};
     const d = indWizData.fields;
-    const net = d.network||0;
+    const net = calcCashierNet(d).net;                // الحساب الصحيح (يقبل السالب)
     const date = today();
     const by = getByTag();
 
@@ -1510,10 +1724,11 @@ function viewIndividualDetails(id){
     const s=loadSettings();const cur=s.currency||'د.ع';
     const cashierInfo = CASHIERS.find(c=>c.key===cl.cashierKey) || {};
     const d = cl.data || {};
-    const net = d.network || 0;
-    const deductions = (d.returns||0)+(d.expenses||0)+(d.lunch||0)+(d.debts||0)+(d.withdrawals||0);
-    const expected = (d.sales||0)-deductions;
-    const diff = net - expected;
+    const r = calcCashierNet(d);
+    const net = r.net;
+    const deductions = r.deductions;
+    const expected = r.net;
+    const diff = r.diff;
     let html = '';
     if(cl.manager)html+=`<div style="text-align:center;font-weight:700;color:var(--primary);margin-bottom:10px"><i class="ri-user-star-line"></i> المدير: ${cl.manager}</div>`;
     html+=`<h4 style="color:${cashierInfo.color||'var(--primary)'};margin:6px 0;font-size:.9rem;text-align:center"><i class="${cashierInfo.icon||''}"></i> ${cl.cashierLabel}</h4>`;
@@ -1524,9 +1739,9 @@ function viewIndividualDetails(id){
         html+=`<tr><td style="padding:4px 8px">${f.label}</td><td style="padding:4px 8px;font-weight:700;color:${clr};text-align:left">${fmtNum(v)} ${cur}</td></tr>`;
     });
     html+=`<tr style="background:var(--surface2)"><td style="padding:4px 8px">إجمالي الخصومات</td><td style="padding:4px 8px;font-weight:700;color:var(--clr-expense);text-align:left">${fmtNum(deductions)} ${cur}</td></tr>`;
-    html+=`<tr style="background:var(--surface2)"><td style="padding:4px 8px">المتوقع</td><td style="padding:4px 8px;font-weight:700;text-align:left">${fmtNum(expected)} ${cur}</td></tr>`;
-    if(diff!==0)html+=`<tr style="background:#fef3c7"><td style="padding:4px 8px">الفرق</td><td style="padding:4px 8px;font-weight:700;color:${diff>0?'var(--clr-income)':'var(--clr-expense)'};text-align:left">${fmtNum(diff)} ${cur}</td></tr>`;
-    html+=`<tr style="border-top:2px solid var(--border);font-weight:800"><td style="padding:4px 8px">الصافي</td><td style="padding:4px 8px;color:${net>=0?'var(--clr-income)':'var(--clr-expense)'};text-align:left">${fmtNum(net)} ${cur}</td></tr>`;
+    html+=`<tr style="background:var(--surface2)"><td style="padding:4px 8px">الصافي المحسوب</td><td style="padding:4px 8px;font-weight:700;text-align:left;color:${net>=0?'var(--clr-income)':'var(--clr-expense)'}">${fmtNum(net)} ${cur}</td></tr>`;
+    if(diff!==0)html+=`<tr style="background:#fef3c7"><td style="padding:4px 8px">الفرق (المستلم - المحسوب)</td><td style="padding:4px 8px;font-weight:700;color:${diff>0?'var(--clr-income)':'var(--clr-expense)'};text-align:left">${fmtNum(diff)} ${cur}</td></tr>`;
+    html+=`<tr style="border-top:2px solid var(--border);font-weight:800"><td style="padding:4px 8px">الصافي النهائي</td><td style="padding:4px 8px;color:${net>=0?'var(--clr-income)':'var(--clr-expense)'};text-align:left">${fmtNum(net)} ${cur}</td></tr>`;
     html+=`</tbody></table>`;
     if(cl.debtsList&&cl.debtsList.length){
         html+=`<div style="font-size:.78rem;margin-top:4px;color:#ef4444;font-weight:600">الديون:</div>`;
@@ -2582,19 +2797,20 @@ function renderReport(){
     const expEntries=loadData(KEYS.expenseEntries).filter(e=>e.date&&e.date.startsWith(filterPrefix));
     const sec = reportSection; /* active section filter */
 
-    /* gather all closing details per cashier */
+    /* gather all closing details per cashier - باستخدام الحساب المركزي */
     let totalSales=0,totalNetwork=0,totalReturns=0,totalExpFromClosings=0,totalLunch=0,totalDebtsFromClosings=0,totalWithdrawals=0,totalNet=0;
     closings.forEach(c=>{
-        totalNet+=c.totalNet||0;
         CASHIERS.forEach(cs=>{
             const d=c.cashiers[cs.key];if(!d)return;
-            totalSales+=(d.sales||0);
-            totalNetwork+=(d.network||0);
-            totalReturns+=(d.returns||0);
-            totalExpFromClosings+=(d.expenses||0);
-            totalLunch+=(d.lunch||0);
-            totalDebtsFromClosings+=(d.debts||0);
-            totalWithdrawals+=(d.withdrawals||0);
+            const r=calcCashierNet(d);
+            totalSales+=r.gross;
+            totalNetwork+=r.network;
+            totalReturns+=r.returns;
+            totalExpFromClosings+=r.expenses;
+            totalLunch+=r.lunch;
+            totalDebtsFromClosings+=r.debts;
+            totalWithdrawals+=r.withdraws;
+            totalNet+=r.net;                          // الصافي المحسوب الصحيح
         });
     });
 
@@ -2624,6 +2840,10 @@ function renderReport(){
     let html='';
 
     /* ===== SUMMARY SECTION ===== */
+    /* معادلة التحقق: صافي التقفيلات = المبيعات - المرتجعات - المصاريف - الغداء - الديون - السحوبات */
+    const totalDeductionsClosings = totalReturns + totalExpFromClosings + totalLunch + totalDebtsFromClosings + totalWithdrawals;
+    const verifyNet = totalSales - totalDeductionsClosings;
+
     html+=`<div class="report-summary"><h3><i class="ri-bar-chart-box-fill"></i> ملخص ${filterLabel}</h3><div class="summary-grid">
     <div class="summary-item"><div class="s-label">إجمالي المبيعات</div><div class="s-val">${fmtNum(totalSales)}</div></div>
     <div class="summary-item"><div class="s-label">صافي التقفيلات</div><div class="s-val">${fmtNum(totalNet)}</div></div>
@@ -2635,6 +2855,24 @@ function renderReport(){
     <div class="summary-item" style="border:2px solid rgba(255,255,255,.3);border-radius:10px"><div class="s-label">رصيد الخزنة</div><div class="s-val" style="font-size:1.2rem">${fmtNum(safeBalance)}</div></div>
     </div></div>`;
 
+    /* ===== VERIFICATION BOX - معادلة التحقق ===== */
+    if(closings.length){
+        html+=`<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin:12px 0">
+        <div style="font-weight:700;color:#0f172a;margin-bottom:8px"><i class="ri-calculator-line"></i> معادلة التحقق</div>
+        <div style="font-size:.88rem;line-height:1.8;color:#334155">
+            المبيعات <strong style="color:#16a34a">${fmtNum(totalSales)}</strong>
+            − المرتجعات ${fmtNum(totalReturns)}
+            − المصاريف ${fmtNum(totalExpFromClosings)}
+            − الغداء ${fmtNum(totalLunch)}
+            − الديون ${fmtNum(totalDebtsFromClosings)}
+            − السحوبات ${fmtNum(totalWithdrawals)}
+            = <strong style="color:${verifyNet>=0?'#16a34a':'#dc2626'}">${fmtNum(verifyNet)} ${cur}</strong>
+        </div>
+        <div style="font-size:.82rem;color:#64748b;margin-top:6px">صافي التقفيلات المخزن: <strong>${fmtNum(totalNet)}</strong>
+        ${Math.abs(verifyNet-totalNet)<1?'<span style="color:#16a34a">✓ مطابق</span>':'<span style="color:#dc2626">⚠ غير مطابق - اضغط "إعادة حساب" في الإعدادات</span>'}</div>
+        </div>`;
+    }
+
     /* ===== CLOSINGS DETAIL ===== */
     if((sec==='all'||sec==='closing')&&closings.length){
         html+=`<div class="report-section"><h3><i class="ri-calculator-fill"></i> التقفيلات (${closings.length})</h3>`;
@@ -2642,13 +2880,14 @@ function renderReport(){
         CASHIERS.forEach(cs=>html+=`<th>${cs.label}</th>`);
         html+=`<th>الصافي</th></tr></thead><tbody>`;
         closings.forEach(c=>{
-            const clr=c.totalNet>=0?'color:var(--clr-income)':'color:var(--clr-expense)';
+            const cTotal=calcClosingTotal(c);           // إعادة الحساب من المصدر
+            const clr=cTotal>=0?'color:var(--clr-income)':'color:var(--clr-expense)';
             html+=`<tr><td>${c.date}</td><td>${c.manager||'-'}</td>`;
             CASHIERS.forEach(cs=>{
                 const d=c.cashiers[cs.key];
-                html+=`<td>${d?fmtNum(d.net||0):'-'}</td>`;
+                html+=`<td>${d?fmtNum(calcCashierNet(d).net):'-'}</td>`;
             });
-            html+=`<td style="${clr};font-weight:700">${fmtNum(c.totalNet)} ${cur}</td></tr>`;
+            html+=`<td style="${clr};font-weight:700">${fmtNum(cTotal)} ${cur}</td></tr>`;
         });
         html+=`<tr class="total-row"><td colspan="${2+CASHIERS.length}">إجمالي صافي التقفيلات</td><td>${fmtNum(totalNet)} ${cur}</td></tr></tbody></table>`;
 
@@ -2744,8 +2983,20 @@ function printReport(){
     const debts=loadData(KEYS.debts).filter(d=>d.date&&d.date.startsWith(ym));
     const expEntries=loadData(KEYS.expenseEntries).filter(e=>e.date&&e.date.startsWith(ym));
 
-    let totalSales=0,totalNet=0,totalExpFromClosings=0,totalLunch=0,totalDebtsFromClosings=0,totalWithdrawals=0;
-    closings.forEach(c=>{totalNet+=c.totalNet||0;CASHIERS.forEach(cs=>{const d=c.cashiers[cs.key];if(!d)return;totalSales+=(d.sales||0);totalExpFromClosings+=(d.expenses||0);totalLunch+=(d.lunch||0);totalDebtsFromClosings+=(d.debts||0);totalWithdrawals+=(d.withdrawals||0);});});
+    let totalSales=0,totalNet=0,totalExpFromClosings=0,totalLunch=0,totalDebtsFromClosings=0,totalWithdrawals=0,totalReturns=0;
+    closings.forEach(c=>{
+        CASHIERS.forEach(cs=>{
+            const d=c.cashiers[cs.key];if(!d)return;
+            const r=calcCashierNet(d);
+            totalSales+=r.gross;
+            totalReturns+=r.returns;
+            totalExpFromClosings+=r.expenses;
+            totalLunch+=r.lunch;
+            totalDebtsFromClosings+=r.debts;
+            totalWithdrawals+=r.withdraws;
+            totalNet+=r.net;
+        });
+    });
     const totalPurchases=purchases.reduce((s,p)=>s+p.amount,0);
     const totalPayrollGross=payrollData.reduce((s,p)=>s+p.amount,0);
     const totalPayroll=payrollData.reduce((s,p)=>s+(p.netPay||p.amount),0);
@@ -2776,9 +3027,10 @@ function printReport(){
         CASHIERS.forEach(cs=>html+=`<th>${cs.label}</th>`);
         html+=`<th>الصافي</th></tr></thead><tbody>`;
         closings.forEach(c=>{
+            const cTotal=calcClosingTotal(c);
             html+=`<tr><td>${c.date}</td><td>${c.manager||'-'}</td>`;
-            CASHIERS.forEach(cs=>{const d=c.cashiers[cs.key];html+=`<td>${d?fmtNum(d.net||0):'-'}</td>`;});
-            html+=`<td style="color:${c.totalNet>=0?'#16a34a':'#dc2626'};font-weight:700">${fmtNum(c.totalNet)} ${cur}</td></tr>`;
+            CASHIERS.forEach(cs=>{const d=c.cashiers[cs.key];html+=`<td>${d?fmtNum(calcCashierNet(d).net):'-'}</td>`;});
+            html+=`<td style="color:${cTotal>=0?'#16a34a':'#dc2626'};font-weight:700">${fmtNum(cTotal)} ${cur}</td></tr>`;
         });
         html+=`</tbody></table>`;
     }
@@ -3332,6 +3584,9 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 function initApp(){
     showDate();
+
+    /* ترقية البيانات القديمة: إعادة احتساب الصوافي وإصلاح الخزنة */
+    runDataUpgrade();
 
     /* apply theme */
     const settings=loadSettings();
