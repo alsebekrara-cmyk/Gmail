@@ -2075,7 +2075,17 @@ function renderDebts(){
     const grid=$('#debtsPersonsList');
     const pKeys=Object.keys(persons);
     if(!pKeys.length){grid.innerHTML='<div class="empty-state"><i class="ri-inbox-line"></i><p>لا توجد ديون</p></div>';}
-    else{grid.innerHTML=pKeys.map(p=>`<div class="person-card" onclick="showPersonDebts('${p}')"><div class="person-icon"><i class="ri-user-line"></i></div><div class="person-name">${p}</div><div class="person-amount">${fmtNum(persons[p])} ${cur}</div></div>`).join('');}
+    else{grid.innerHTML=pKeys.map(p=>{
+        const safePerson=p.replace(/'/g,"\\'");
+        return `<div class="person-card" onclick="showPersonDebts('${safePerson}')" style="position:relative">
+            <button class="person-quick-add" onclick="event.stopPropagation();quickAddDebtFor('${safePerson}')" title="إضافة دين جديد لـ ${p}" style="position:absolute;top:6px;left:6px;background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.1rem;box-shadow:0 2px 6px rgba(220,38,38,.4);z-index:2">
+                <i class="ri-add-line"></i>
+            </button>
+            <div class="person-icon"><i class="ri-user-line"></i></div>
+            <div class="person-name">${p}</div>
+            <div class="person-amount">${fmtNum(persons[p])} ${cur}</div>
+        </div>`;
+    }).join('');}
 
     /* all debts list */
     const allList=$('#debtsAllList');
@@ -2095,6 +2105,83 @@ function renderDebts(){
     const total=filtered.reduce((s,d)=>s+d.amount,0);
     $('#debtsTotalDisp').textContent=fmtNum(total)+' '+cur;
 }
+/* ======== QUICK ADD DEBT FOR SPECIFIC PERSON ======== */
+function quickAddDebtFor(personName){
+    if(!hasAction('edit'))return toast('غير مصرح');
+    if(!personName)return;
+    const s=loadSettings();const cur=s.currency||'د.ع';
+    const debts=loadData(KEYS.debts);
+    const currentBalance=debts.filter(d=>d.person===personName).reduce((t,d)=>t+d.amount,0);
+    const cashierOpts=`<option value="">-- عام --</option>`+CASHIERS.map(c=>`<option value="${c.label}">${c.label}</option>`).join('');
+
+    const html=`
+        <div style="background:linear-gradient(135deg,#fee2e2,#fecaca);border:1px solid #f87171;border-radius:10px;padding:12px;margin-bottom:14px">
+            <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:42px;height:42px;background:#dc2626;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem">
+                    <i class="ri-user-line"></i>
+                </div>
+                <div style="flex:1">
+                    <div style="font-weight:800;color:#7f1d1d">${personName}</div>
+                    <div style="font-size:.78rem;color:#991b1b">الرصيد الحالي: <strong>${fmtNum(currentBalance)} ${cur}</strong></div>
+                </div>
+            </div>
+        </div>
+        <div class="field"><label>المبلغ الجديد (بالآلاف)</label>
+            <input type="number" id="qAddDebtAmount" class="input-field" inputmode="decimal" placeholder="مثال: 25 = 25,000" autofocus>
+        </div>
+        <div class="field"><label>السبب / ملاحظة</label>
+            <input type="text" id="qAddDebtNote" class="input-field" placeholder="مثال: ملابس، عطر، بضاعة...">
+        </div>
+        <div class="field"><label>الكاشير المرتبط</label>
+            <select id="qAddDebtCashier" class="input-field">${cashierOpts}</select>
+        </div>
+        <div class="field"><label>التاريخ</label>
+            <input type="date" id="qAddDebtDate" class="input-field" value="${today()}">
+        </div>
+        <div style="background:#fef3c7;padding:8px 10px;border-radius:6px;font-size:.78rem;color:#92400e;margin-top:8px">
+            <i class="ri-information-line"></i> بعد الإضافة سيصبح رصيد <strong>${personName}</strong> هو: <span id="qAddDebtPreview">${fmtNum(currentBalance)} ${cur}</span>
+        </div>`;
+    openModal('إضافة دين جديد على '+personName, html,
+        `<button class="btn btn-danger" onclick="confirmQuickAddDebt('${personName.replace(/'/g,"\\'")}')"><i class="ri-add-circle-line"></i> إضافة الدين</button>
+         <button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>`);
+    /* live preview of new balance */
+    setTimeout(()=>{
+        const amtInput=document.getElementById('qAddDebtAmount');
+        const preview=document.getElementById('qAddDebtPreview');
+        if(amtInput&&preview){
+            amtInput.addEventListener('input',()=>{
+                const v=parseK(amtInput.value)||0;
+                preview.innerHTML=`<strong style="color:${(currentBalance+v)>0?'#dc2626':'#16a34a'}">${fmtNum(currentBalance+v)} ${cur}</strong>`;
+            });
+            amtInput.focus();
+        }
+    },100);
+}
+
+function confirmQuickAddDebt(personName){
+    const amount=parseK(document.getElementById('qAddDebtAmount')?.value);
+    if(!amount||amount<=0)return toast('أدخل مبلغاً صحيحاً');
+    const note=(document.getElementById('qAddDebtNote')?.value||'').trim();
+    const cashier=document.getElementById('qAddDebtCashier')?.value||'';
+    const date=document.getElementById('qAddDebtDate')?.value||today();
+    const by=getByTag();
+    const debts=loadData(KEYS.debts);
+    debts.push({
+        id:uid(),
+        person:personName,
+        amount:amount,
+        note:note,
+        type:'debt',
+        cashier:cashier,
+        date:date,
+        by:by
+    });
+    saveData(KEYS.debts,debts);
+    closeModal();
+    toast('✅ تمت إضافة '+fmtNum(amount)+' على '+personName);
+    renderDebts();
+}
+
 /* ======== ADD DEBT MANUALLY ======== */
 function openAddDebtModal(){
     if(!hasAction('edit'))return toast('غير مصرح');
@@ -2261,8 +2348,9 @@ function showPersonDebts(person){
         html+=`<div class="record-card"><div class="rec-info"><div class="rec-title">${lbl}</div><div class="rec-sub">${d.date} - ${d.note||d.cashier||''}</div></div><div class="rec-amount ${clr}">${fmtNum(d.amount)} ${cur}</div></div>`;
     });
     html+=`</div>`;
+    html+=`<button class="btn btn-danger btn-block" onclick="closeModal();setTimeout(()=>quickAddDebtFor('${person.replace(/'/g,"\\'")}'),150)" style="margin-top:10px"><i class="ri-add-circle-line"></i> إضافة دين جديد</button>`;
     if(total>0){
-        html+=`<button class="btn btn-success btn-block" onclick="repayDebt('${person}')" style="margin-top:10px"><i class="ri-money-dollar-circle-line"></i> تسديد دين</button>`;
+        html+=`<button class="btn btn-success btn-block" onclick="repayDebt('${person}')" style="margin-top:6px"><i class="ri-money-dollar-circle-line"></i> تسديد دين</button>`;
     }
     html+=`<button class="btn btn-warning btn-block" onclick="printPersonDebts('${person}')" style="margin-top:6px"><i class="ri-printer-line"></i> طباعة</button>`;
     openModal('ديون '+person,html);
