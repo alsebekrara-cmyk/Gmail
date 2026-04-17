@@ -580,7 +580,11 @@ function mergeIndividualClosings(date){
 }
 
 /* ========= navigation ========= */
-function navigate(page){
+/* ========= navigation with history API (back button support) ========= */
+let _navStack=['home'];           /* مكدس الصفحات داخلياً */
+let _navInProgress=false;          /* لمنع التكرار */
+
+function navigate(page, fromPopState){
     const user=getCurrentUser();
     if(user&&page!=='home'){
         if(page==='security'){if(!isAdmin()){toast('غير مصرح');return;}}
@@ -605,6 +609,55 @@ function navigate(page){
     if(page==='home'){
         const secTile=$('#securityTile');if(secTile)secTile.style.display=isAdmin()?'':'none';
     }
+
+    /* إدارة التاريخ - push state فقط إن لم تكن العملية من popstate */
+    if(!fromPopState && !_navInProgress){
+        try{
+            history.pushState({page},'','#'+page);
+            if(_navStack[_navStack.length-1]!==page) _navStack.push(page);
+        }catch(e){console.warn('pushState failed',e);}
+    }
+}
+
+/* استقبال زر الرجوع في الهاتف */
+window.addEventListener('popstate', e=>{
+    _navInProgress=true;
+    try{
+        const state=e.state;
+        /* أي modal مفتوح - أغلقه أولاً بدلاً من الرجوع */
+        const openModal=document.querySelector('.modal-overlay:not(.hidden)');
+        if(openModal){
+            closeModal();
+            history.pushState({page:_currentPage()},'','#'+_currentPage());
+            _navInProgress=false;
+            return;
+        }
+        /* أي معالج تقفيلة مفتوح - أغلقه */
+        const wizOverlay=document.getElementById('wizardOverlay');
+        if(wizOverlay && !wizOverlay.classList.contains('hidden')){
+            doCloseWizard();
+            history.pushState({page:_currentPage()},'','#'+_currentPage());
+            _navInProgress=false;
+            return;
+        }
+        const indOverlay=document.getElementById('indWizOverlay');
+        if(indOverlay && !indOverlay.classList.contains('hidden')){
+            indOverlay.classList.add('hidden');
+            document.body.classList.remove('wizard-open');
+            history.pushState({page:_currentPage()},'','#'+_currentPage());
+            _navInProgress=false;
+            return;
+        }
+        /* تنقل عادي بين الصفحات */
+        const targetPage=(state && state.page) || 'home';
+        navigate(targetPage, true);
+    }catch(err){console.error(err);}
+    _navInProgress=false;
+});
+
+function _currentPage(){
+    const active=document.querySelector('.page.active');
+    return active?active.id.replace('page-',''):'home';
 }
 function closeSidebar(){if(window.innerWidth>=1024)return;$('#sidebar').classList.remove('open');$('#sbOverlay').classList.remove('show');}
 
@@ -1877,15 +1930,53 @@ function renderSafe(){
             const isDep=t.type==='deposit';
             const clr=isDep?'income':'expense';
             const sign=isDep?'+':'-';
-            const editBtn=canEdit?`<button onclick="editSafeTrans('${t.id}')"><i class="ri-edit-line"></i></button>`:'';
-            const delBtn=canDel?`<button onclick="deleteSafeTrans('${t.id}')"><i class="ri-delete-bin-line"></i></button>`:'';
-            html+=`<div class="record-card"><div class="rec-info"><div class="rec-title">${t.note||t.type}</div><div class="rec-sub">${t.date}${t.by?' | <span class="by-tag">'+t.by+'</span>':''}</div></div>
+            const detailsBtn=`<button onclick="viewSafeTransDetails('${t.id}')" title="تفاصيل"><i class="ri-eye-line"></i></button>`;
+            const editBtn=canEdit?`<button onclick="editSafeTrans('${t.id}')" title="تعديل"><i class="ri-edit-line"></i></button>`:'';
+            const delBtn=canDel?`<button onclick="deleteSafeTrans('${t.id}')" title="حذف"><i class="ri-delete-bin-line"></i></button>`:'';
+            const linkBadge=t.closingId?'<span style="background:#dbeafe;color:#1e40af;padding:2px 6px;border-radius:6px;font-size:.65rem;margin-right:4px">مرتبطة بتقفيلة</span>':'';
+            html+=`<div class="record-card"><div class="rec-info"><div class="rec-title">${linkBadge}${t.note||t.type}</div><div class="rec-sub">${t.date}${t.by?' | <span class="by-tag">'+t.by+'</span>':''}</div></div>
             <div class="rec-amount ${clr}">${sign}${fmtNum(t.amount)} ${cur}</div>
-            <div class="rec-actions">${editBtn}${delBtn}</div></div>`;
+            <div class="rec-actions">${detailsBtn}${editBtn}${delBtn}</div></div>`;
         });
     });
     list.innerHTML=html;
 }
+
+/* عرض تفاصيل معاملة الخزنة */
+function viewSafeTransDetails(id){
+    const trans=loadData(KEYS.safe);
+    const t=trans.find(x=>x.id===id);if(!t)return;
+    const s=loadSettings();const cur=s.currency||'د.ع';
+    const isDep=t.type==='deposit';
+    const typeLabel=isDep?'إيداع':'سحب';
+    const typeColor=isDep?'#16a34a':'#dc2626';
+    let linkedInfo='';
+    if(t.closingId){
+        const cl=loadData(KEYS.closings).find(c=>c.id===t.closingId);
+        if(cl){
+            const total=calcClosingTotal(cl);
+            linkedInfo=`
+            <tr style="background:#dbeafe"><td colspan="2" style="padding:10px"><strong><i class="ri-link"></i> مرتبطة بتقفيلة:</strong></td></tr>
+            <tr><td style="padding:8px;color:var(--text2)">التاريخ</td><td style="padding:8px">${cl.date}</td></tr>
+            <tr><td style="padding:8px;color:var(--text2)">المدير</td><td style="padding:8px">${cl.manager||'-'}</td></tr>
+            <tr><td style="padding:8px;color:var(--text2)">الإجمالي</td><td style="padding:8px;font-weight:700;color:${total>=0?'var(--clr-income)':'var(--clr-expense)'}">${fmtNum(total)} ${cur}</td></tr>
+            <tr><td colspan="2" style="padding:8px"><button class="btn btn-sm btn-ghost" onclick="closeModal();navigate('closing');setTimeout(()=>viewClosingDetails('${cl.id}'),200)"><i class="ri-external-link-line"></i> عرض التقفيلة</button></td></tr>`;
+        }
+    }
+    const html=`
+    <table style="width:100%;font-size:.9rem;border-collapse:collapse">
+        <tbody>
+            <tr><td style="padding:8px;color:var(--text2);width:40%">النوع</td><td style="padding:8px"><span style="background:${typeColor};color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;font-size:.82rem">${typeLabel}</span></td></tr>
+            <tr style="background:var(--surface2)"><td style="padding:8px;color:var(--text2)">المبلغ</td><td style="padding:8px;font-weight:700;color:${typeColor};font-size:1.15rem">${isDep?'+':'-'}${fmtNum(t.amount)} ${cur}</td></tr>
+            <tr><td style="padding:8px;color:var(--text2)">الملاحظة</td><td style="padding:8px">${t.note||'-'}</td></tr>
+            <tr style="background:var(--surface2)"><td style="padding:8px;color:var(--text2)">التاريخ</td><td style="padding:8px">${t.date||'-'}</td></tr>
+            ${t.by?`<tr><td style="padding:8px;color:var(--text2)">أضيف بواسطة</td><td style="padding:8px">${t.by}</td></tr>`:''}
+            ${linkedInfo}
+        </tbody>
+    </table>`;
+    openModal('تفاصيل معاملة الخزنة',html,`<button class="btn btn-ghost" onclick="closeModal()">إغلاق</button>`);
+}
+
 function safeTransaction(type){
     openModal(type==='deposit'?'إيداع في الخزنة':'سحب من الخزنة',`
     <div class="field"><label>المبلغ (بالآلاف)</label><input type="number" id="safeAmountInput" class="input-field" inputmode="decimal"></div>
@@ -2264,11 +2355,77 @@ function renderExpenses(){
     if(!entries.length){list.innerHTML='<div class="empty-state"><i class="ri-inbox-line"></i><p>لا توجد مصاريف</p></div>';$('#expTotalDisp').textContent='0';return;}
     const canEdit=hasAction('edit'),canDel=hasAction('delete');
     list.innerHTML=entries.map(e=>{
-        const actions=e.id&&!e.legacy?`<div class="rec-actions">${canEdit?`<button onclick="editExpense('${e.id}')"><i class="ri-edit-line"></i></button>`:''}${canDel?`<button onclick="deleteExpense('${e.id}')"><i class="ri-delete-bin-line"></i></button>`:''}</div>`:'';
-        return `<div class="record-card"><div class="rec-info"><div class="rec-title">${e.desc||'مصروف'}${e.cashier?' - '+e.cashier:''}</div><div class="rec-sub">${e.date}${e.by?' | <span class="by-tag">'+e.by+'</span>':''}</div></div><div class="rec-amount expense">${fmtNum(e.amount)} ${cur}</div>${actions}</div>`;
+        const detailsBtn=e.id&&!e.legacy?`<button onclick="viewExpenseDetails('${e.id}')" title="تفاصيل"><i class="ri-eye-line"></i></button>`:'';
+        const convertBtn=e.id&&!e.legacy?`<button onclick="convertExpenseType('${e.id}')" title="تحويل إلى عامة/إدارة" style="color:#f97316"><i class="ri-swap-line"></i></button>`:'';
+        const editBtn=e.id&&!e.legacy&&canEdit?`<button onclick="editExpense('${e.id}')" title="تعديل"><i class="ri-edit-line"></i></button>`:'';
+        const delBtn=e.id&&!e.legacy&&canDel?`<button onclick="deleteExpense('${e.id}')" title="حذف"><i class="ri-delete-bin-line"></i></button>`:'';
+        const actions=(detailsBtn||convertBtn||editBtn||delBtn)?`<div class="rec-actions">${detailsBtn}${convertBtn}${editBtn}${delBtn}</div>`:'';
+        const legacyBadge=e.legacy?'<span style="background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:6px;font-size:.68rem;margin-right:4px">قديم</span>':'';
+        return `<div class="record-card"><div class="rec-info"><div class="rec-title">${legacyBadge}${e.desc||'مصروف'}${e.cashier?' - '+e.cashier:''}</div><div class="rec-sub">${e.date}${e.by?' | <span class="by-tag">'+e.by+'</span>':''}</div></div><div class="rec-amount expense">${fmtNum(e.amount)} ${cur}</div>${actions}</div>`;
     }).join('');
     const total=entries.reduce((s,e)=>s+e.amount,0);
     $('#expTotalDisp').textContent=fmtNum(total)+' '+cur;
+}
+
+/* عرض تفاصيل المصروف */
+function viewExpenseDetails(id){
+    const entries=loadData(KEYS.expenseEntries);
+    const e=entries.find(x=>x.id===id);if(!e)return;
+    const s=loadSettings();const cur=s.currency||'د.ع';
+    const typeLabel={dept:'قسم',general:'عامة',admin:'إدارة'}[(e.type||'dept')]||'قسم';
+    const typeColor={dept:'#6366f1',general:'#0891b2',admin:'#7c3aed'}[(e.type||'dept')]||'#6366f1';
+    const html=`
+    <table style="width:100%;font-size:.9rem;border-collapse:collapse">
+        <tbody>
+            <tr><td style="padding:8px;color:var(--text2)">الوصف</td><td style="padding:8px;font-weight:700">${e.desc||'-'}</td></tr>
+            <tr style="background:var(--surface2)"><td style="padding:8px;color:var(--text2)">المبلغ</td><td style="padding:8px;font-weight:700;color:var(--clr-expense);font-size:1.1rem">${fmtNum(e.amount)} ${cur}</td></tr>
+            <tr><td style="padding:8px;color:var(--text2)">النوع</td><td style="padding:8px"><span style="background:${typeColor};color:#fff;padding:3px 10px;border-radius:10px;font-weight:700;font-size:.82rem">${typeLabel}</span></td></tr>
+            <tr style="background:var(--surface2)"><td style="padding:8px;color:var(--text2)">القسم</td><td style="padding:8px">${e.cashier||'-'}</td></tr>
+            <tr><td style="padding:8px;color:var(--text2)">التاريخ</td><td style="padding:8px">${e.date||'-'}</td></tr>
+            ${e.by?`<tr style="background:var(--surface2)"><td style="padding:8px;color:var(--text2)">أضيف بواسطة</td><td style="padding:8px">${e.by}</td></tr>`:''}
+        </tbody>
+    </table>`;
+    openModal('تفاصيل المصروف',html,`<button class="btn btn-ghost" onclick="closeModal()">إغلاق</button>`);
+}
+
+/* تحويل نوع المصروف (dept → general/admin أو العكس) */
+function convertExpenseType(id){
+    if(!hasAction('edit'))return toast('غير مصرح');
+    const entries=loadData(KEYS.expenseEntries);
+    const e=entries.find(x=>x.id===id);if(!e)return;
+    const curType=e.type||'dept';
+    const s=loadSettings();const cur=s.currency||'د.ع';
+    const html=`
+    <div style="padding:8px;background:var(--surface2);border-radius:8px;margin-bottom:12px">
+        <div style="font-size:.82rem;color:var(--text2)">${e.desc||'مصروف'}</div>
+        <div style="font-weight:800;color:var(--clr-expense);font-size:1.1rem">${fmtNum(e.amount)} ${cur}</div>
+    </div>
+    <div class="field"><label>حوّل المصروف إلى:</label>
+        <div style="display:flex;gap:6px;margin-top:6px">
+            <button class="btn ${curType==='dept'?'btn-primary':'btn-ghost'}" onclick="doConvertExpense('${id}','dept')" style="flex:1"><i class="ri-store-line"></i> قسم</button>
+            <button class="btn ${curType==='general'?'btn-primary':'btn-ghost'}" onclick="doConvertExpense('${id}','general')" style="flex:1;background:${curType==='general'?'#0891b2':''}"><i class="ri-building-line"></i> عامة</button>
+            <button class="btn ${curType==='admin'?'btn-primary':'btn-ghost'}" onclick="doConvertExpense('${id}','admin')" style="flex:1;background:${curType==='admin'?'#7c3aed':''}"><i class="ri-user-star-line"></i> إدارة</button>
+        </div>
+    </div>
+    <div style="font-size:.78rem;color:var(--text2);margin-top:8px;line-height:1.5;background:#fef3c7;padding:8px;border-radius:6px">
+        <i class="ri-information-line"></i> ملاحظة: سيتم تغيير النوع فقط دون تعديل التقفيلة المرتبطة. سيظهر المصروف في الصفحة المناسبة لنوعه الجديد.
+    </div>`;
+    openModal('تحويل نوع المصروف',html,`<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>`);
+}
+function doConvertExpense(id,newType){
+    const entries=loadData(KEYS.expenseEntries);
+    const idx=entries.findIndex(x=>x.id===id);if(idx<0)return;
+    const oldType=entries[idx].type||'dept';
+    if(oldType===newType){closeModal();toast('النوع لم يتغير');return;}
+    entries[idx].type=newType;
+    saveData(KEYS.expenseEntries,entries);
+    closeModal();
+    const labels={dept:'القسم',general:'العامة',admin:'الإدارة'};
+    toast('تم التحويل إلى مصاريف '+labels[newType]);
+    /* إعادة تحديث الصفحة النشطة */
+    const active=_currentPage();
+    if(active==='expenses') renderExpenses();
+    else if(active==='generalExpenses') renderGeneralExpenses();
 }
 function editExpense(id){
     if(!hasAction('edit'))return toast('غير مصرح');
@@ -3132,6 +3289,126 @@ function printReport(){
     showPrintDialog(html);
 }
 
+/* ============== إضافة مصروف/سحب مباشر في المصاريف العامة ============== */
+function addGeneralExpense(){
+    const s=loadSettings();const cur=s.currency||'د.ع';
+    const html=`
+    <div class="field"><label>الوصف</label><input type="text" id="newGenExpDesc" class="input-field" placeholder="مثال: إيجار، كهرباء، إنترنت..."></div>
+    <div class="field"><label>المبلغ (بالآلاف)</label><input type="number" id="newGenExpAmount" class="input-field" placeholder="0" inputmode="decimal"></div>
+    <div class="field"><label>النوع</label>
+        <div style="display:flex;gap:6px;margin-top:6px" id="newGenExpTypeBox" data-selected="general">
+            <button type="button" class="btn" onclick="selectGenExpType('general')" id="newGenTypeBtn_general" style="flex:1;background:#0891b2;color:#fff"><i class="ri-building-line"></i> عامة</button>
+            <button type="button" class="btn btn-ghost" onclick="selectGenExpType('admin')" id="newGenTypeBtn_admin" style="flex:1"><i class="ri-user-star-line"></i> إدارة</button>
+        </div>
+    </div>
+    <div class="field"><label>التاريخ</label><input type="date" id="newGenExpDate" class="input-field" value="${today()}"></div>
+    <div class="field"><label>القسم المرتبط (اختياري)</label>
+        <select id="newGenExpCashier" class="input-field">
+            <option value="">— بدون —</option>
+            ${CASHIERS.map(c=>`<option value="${c.label}">${c.label}</option>`).join('')}
+        </select>
+    </div>`;
+    openModal('إضافة مصروف عام/إدارة',html,
+        `<button class="btn btn-success" onclick="saveGeneralExpense()"><i class="ri-save-line"></i> حفظ</button><button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>`);
+}
+function selectGenExpType(type){
+    const box=document.getElementById('newGenExpTypeBox');if(!box)return;
+    box.dataset.selected=type;
+    const btnG=document.getElementById('newGenTypeBtn_general');
+    const btnA=document.getElementById('newGenTypeBtn_admin');
+    if(btnG){btnG.className='btn '+(type==='general'?'':'btn-ghost');btnG.style.background=type==='general'?'#0891b2':'';btnG.style.color=type==='general'?'#fff':'';}
+    if(btnA){btnA.className='btn '+(type==='admin'?'':'btn-ghost');btnA.style.background=type==='admin'?'#7c3aed':'';btnA.style.color=type==='admin'?'#fff':'';}
+}
+function saveGeneralExpense(){
+    const desc=$('#newGenExpDesc').value.trim();
+    const amount=parseK($('#newGenExpAmount').value);
+    const date=$('#newGenExpDate').value||today();
+    const cashier=$('#newGenExpCashier').value||'';
+    const type=document.getElementById('newGenExpTypeBox').dataset.selected||'general';
+    if(!desc)return toast('أدخل الوصف');
+    if(!amount)return toast('أدخل المبلغ');
+    const entries=loadData(KEYS.expenseEntries);
+    entries.push({id:uid(),amount,desc,type,cashier,date,by:getByTag()});
+    saveData(KEYS.expenseEntries,entries);
+    closeModal();
+    toast('✅ تم حفظ المصروف');
+    renderGeneralExpenses();
+}
+
+function addGeneralWithdraw(){
+    const allDebts=loadData(KEYS.debts);
+    const names=[...new Set(allDebts.map(d=>d.person))].filter(Boolean);
+    const options=names.map(n=>`<option value="${n}">${n}</option>`).join('');
+    const html=`
+    <div class="field"><label>الشخص</label>
+        <select id="newGenWdPerson" class="input-field">
+            <option value="">-- اختر --</option>
+            ${options}
+            <option value="__new__">+ شخص جديد</option>
+        </select>
+    </div>
+    <div class="field" id="newGenWdPersonNewWrap" style="display:none"><label>اسم الشخص الجديد</label><input type="text" id="newGenWdPersonNew" class="input-field"></div>
+    <div class="field"><label>المبلغ (بالآلاف)</label><input type="number" id="newGenWdAmount" class="input-field" inputmode="decimal"></div>
+    <div class="field"><label>ملاحظة</label><input type="text" id="newGenWdNote" class="input-field" placeholder="سبب السحب..."></div>
+    <div class="field"><label>التصنيف</label>
+        <div style="display:flex;gap:6px;margin-top:6px" id="newGenWdTypeBox" data-selected="general">
+            <button type="button" class="btn" onclick="selectGenWdType('general')" id="newGenWdTypeBtn_general" style="flex:1;background:#0891b2;color:#fff"><i class="ri-building-line"></i> عامة</button>
+            <button type="button" class="btn btn-ghost" onclick="selectGenWdType('admin')" id="newGenWdTypeBtn_admin" style="flex:1"><i class="ri-user-star-line"></i> إدارة</button>
+        </div>
+    </div>
+    <div class="field"><label>التاريخ</label><input type="date" id="newGenWdDate" class="input-field" value="${today()}"></div>
+    <div style="font-size:.78rem;color:var(--text2);background:#fef3c7;padding:8px;border-radius:6px;margin-top:8px"><i class="ri-information-line"></i> السحب سيُسجّل في الديون <strong>وأيضاً</strong> كمصروف ${'general'} في سجل المصاريف العامة.</div>`;
+    openModal('إضافة سحب عام/إدارة',html,
+        `<button class="btn btn-success" onclick="saveGeneralWithdraw()"><i class="ri-save-line"></i> حفظ</button><button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>`);
+    /* listener لإظهار حقل الاسم الجديد */
+    const sel=document.getElementById('newGenWdPerson');
+    if(sel)sel.addEventListener('change',e=>{
+        document.getElementById('newGenWdPersonNewWrap').style.display=e.target.value==='__new__'?'':'none';
+    });
+}
+function selectGenWdType(type){
+    const box=document.getElementById('newGenWdTypeBox');if(!box)return;
+    box.dataset.selected=type;
+    const btnG=document.getElementById('newGenWdTypeBtn_general');
+    const btnA=document.getElementById('newGenWdTypeBtn_admin');
+    if(btnG){btnG.className='btn '+(type==='general'?'':'btn-ghost');btnG.style.background=type==='general'?'#0891b2':'';btnG.style.color=type==='general'?'#fff':'';}
+    if(btnA){btnA.className='btn '+(type==='admin'?'':'btn-ghost');btnA.style.background=type==='admin'?'#7c3aed':'';btnA.style.color=type==='admin'?'#fff':'';}
+}
+function saveGeneralWithdraw(){
+    let person=$('#newGenWdPerson').value;
+    if(person==='__new__'){
+        person=$('#newGenWdPersonNew').value.trim();
+        if(!person)return toast('أدخل اسم الشخص');
+    }
+    if(!person)return toast('اختر الشخص');
+    const amount=parseK($('#newGenWdAmount').value);
+    if(!amount)return toast('أدخل المبلغ');
+    const note=$('#newGenWdNote').value.trim();
+    const date=$('#newGenWdDate').value||today();
+    const type=document.getElementById('newGenWdTypeBox').dataset.selected||'general';
+    const by=getByTag();
+    const typeLabel=type==='admin'?'إدارة':'عامة';
+
+    /* إضافة للسحوبات */
+    const withdrawals=loadData(KEYS.withdrawals);
+    withdrawals.push({id:uid(),person,amount,note:'['+typeLabel+'] '+note,cashier:'',date,by,generalType:type});
+    saveData(KEYS.withdrawals,withdrawals);
+
+    /* إضافة للديون (سحب) */
+    const debts=loadData(KEYS.debts);
+    debts.push({id:uid(),person,amount,note:'سحب ['+typeLabel+']: '+note,type:'withdraw',cashier:'',date,by});
+    saveData(KEYS.debts,debts);
+
+    /* إضافة كمصروف عام */
+    const entries=loadData(KEYS.expenseEntries);
+    entries.push({id:uid(),amount,desc:'سحب: '+person+(note?' — '+note:''),type,cashier:'',date,by,fromWithdraw:true});
+    saveData(KEYS.expenseEntries,entries);
+
+    closeModal();
+    toast('✅ تم حفظ السحب');
+    renderGeneralExpenses();
+}
+
 /* ============================================================
    ==============  GENERAL EXPENSES PAGE  =====================
    ============================================================ */
@@ -3185,7 +3462,11 @@ function renderGeneralExpenses(){
                 const typeBadge=e.type==='admin'
                     ?'<span style="background:#ede9fe;color:#7c3aed;padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:700">إدارة</span>'
                     :'<span style="background:#cffafe;color:#0891b2;padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:700">عامة</span>';
-                const actions=e.id?`<div class="rec-actions">${canEdit?`<button onclick="editGenExpense('${e.id}')"><i class="ri-edit-line"></i></button>`:''}${canDel?`<button onclick="deleteGenExpense('${e.id}')"><i class="ri-delete-bin-line"></i></button>`:''}</div>`:'';
+                const detailsBtn=e.id?`<button onclick="viewExpenseDetails('${e.id}')" title="تفاصيل"><i class="ri-eye-line"></i></button>`:'';
+                const convertBtn=e.id?`<button onclick="convertExpenseType('${e.id}')" title="تحويل" style="color:#f97316"><i class="ri-swap-line"></i></button>`:'';
+                const editBtn=e.id&&canEdit?`<button onclick="editGenExpense('${e.id}')" title="تعديل"><i class="ri-edit-line"></i></button>`:'';
+                const delBtn=e.id&&canDel?`<button onclick="deleteGenExpense('${e.id}')" title="حذف"><i class="ri-delete-bin-line"></i></button>`:'';
+                const actions=(detailsBtn||convertBtn||editBtn||delBtn)?`<div class="rec-actions">${detailsBtn}${convertBtn}${editBtn}${delBtn}</div>`:'';
                 html+=`<div class="record-card">
                     <div class="rec-info">
                         <div class="rec-title">${typeBadge} ${e.desc||'مصروف'}</div>
@@ -3327,6 +3608,7 @@ function exportGeneralExpensesPDF(){
    ================  CLOSING SHEET PAGE  ======================
    ============================================================ */
 let _sheetMode='vertical';
+let _sheetTab='net';   /* 'net' = الصافي النهائي، 'gross' = الرصيد الخام */
 
 function setSheetMode(mode){
     _sheetMode=mode;
@@ -3335,6 +3617,22 @@ function setSheetMode(mode){
         b.classList.toggle('active',active);
         b.style.background=active?'var(--primary)':'transparent';
         b.style.color=active?'#fff':'var(--text)';
+    });
+    renderClosingSheet();
+}
+
+function setSheetTab(tab){
+    _sheetTab=tab;
+    document.querySelectorAll('.sheet-tab-btn').forEach(b=>{
+        const active=b.dataset.tab===tab;
+        b.classList.toggle('active',active);
+        if(active){
+            b.style.background=tab==='net'?'linear-gradient(135deg,#0ea5e9,#0284c7)':'linear-gradient(135deg,#f59e0b,#d97706)';
+            b.style.color='#fff';
+        } else {
+            b.style.background='transparent';
+            b.style.color='var(--text)';
+        }
     });
     renderClosingSheet();
 }
@@ -3350,102 +3648,233 @@ function renderClosingSheet(){
         .sort((a,b)=>(a.date||'').localeCompare(b.date||''));
 
     const content=$('#closingSheetContent');
+
+    /* التبويبان */
+    const tabsHTML=`
+    <div style="display:flex;gap:4px;background:var(--surface2);border-radius:10px;padding:5px;margin-bottom:14px">
+        <button class="sheet-tab-btn ${_sheetTab==='net'?'active':''}" data-tab="net" onclick="setSheetTab('net')" style="flex:1;border:none;padding:10px;border-radius:7px;cursor:pointer;font-weight:700;font-size:.88rem;background:${_sheetTab==='net'?'linear-gradient(135deg,#0ea5e9,#0284c7)':'transparent'};color:${_sheetTab==='net'?'#fff':'var(--text)'}">
+            <i class="ri-checkbox-circle-line"></i> صافي التقفيلات
+            <div style="font-size:.7rem;opacity:.9;font-weight:400;margin-top:2px">الناتج النهائي بعد الخصم</div>
+        </button>
+        <button class="sheet-tab-btn ${_sheetTab==='gross'?'active':''}" data-tab="gross" onclick="setSheetTab('gross')" style="flex:1;border:none;padding:10px;border-radius:7px;cursor:pointer;font-weight:700;font-size:.88rem;background:${_sheetTab==='gross'?'linear-gradient(135deg,#f59e0b,#d97706)':'transparent'};color:${_sheetTab==='gross'?'#fff':'var(--text)'}">
+            <i class="ri-stack-line"></i> رصيد الكاشير الخام
+            <div style="font-size:.7rem;opacity:.9;font-weight:400;margin-top:2px">المبيعات ثم الخصومات</div>
+        </button>
+    </div>`;
+
     if(!closings.length){
-        content.innerHTML='<div class="empty-state"><i class="ri-inbox-line"></i><p>لا توجد تقفيلات لهذا الشهر</p></div>';
+        content.innerHTML=tabsHTML+'<div class="empty-state"><i class="ri-inbox-line"></i><p>لا توجد تقفيلات لهذا الشهر</p></div>';
         return;
     }
 
-    /* حساب إجمالي كل يوم */
-    const rows=closings.map(c=>({
-        date:c.date,
-        total:calcClosingTotal(c),
-        manager:c.manager||'',
-        cashiers:CASHIERS.reduce((acc,cs)=>{
+    /* حساب كلا الجانبين */
+    const rows=closings.map(c=>{
+        const cashierDetails={};
+        let gross=0,returns=0,expenses=0,lunch=0,debts=0,withdraws=0;
+        CASHIERS.forEach(cs=>{
             const d=c.cashiers[cs.key];
-            acc[cs.key]=d?calcCashierNet(d).net:0;
-            return acc;
-        },{})
-    }));
+            if(d){
+                const r=calcCashierNet(d);
+                cashierDetails[cs.key]={net:r.net,gross:r.gross};
+                gross+=r.gross;
+                returns+=r.returns;
+                expenses+=r.expenses;
+                lunch+=r.lunch;
+                debts+=r.debts;
+                withdraws+=r.withdraws;
+            } else {
+                cashierDetails[cs.key]={net:0,gross:0};
+            }
+        });
+        const totalDeductions=returns+expenses+lunch+debts+withdraws;
+        return {
+            date:c.date, manager:c.manager||'',
+            total:calcClosingTotal(c),
+            cashiers:cashierDetails,
+            gross, returns, expenses, lunch, debts, withdraws, totalDeductions
+        };
+    });
 
     const grandTotal=rows.reduce((s,r)=>s+r.total,0);
+    const grandGross=rows.reduce((s,r)=>s+r.gross,0);
+    const grandReturns=rows.reduce((s,r)=>s+r.returns,0);
+    const grandExpenses=rows.reduce((s,r)=>s+r.expenses,0);
+    const grandLunch=rows.reduce((s,r)=>s+r.lunch,0);
+    const grandDebts=rows.reduce((s,r)=>s+r.debts,0);
+    const grandWithdraws=rows.reduce((s,r)=>s+r.withdraws,0);
+    const grandTotalDeductions=grandReturns+grandExpenses+grandLunch+grandDebts+grandWithdraws;
 
+    /* ====================== التبويب الأول: الصافي النهائي ====================== */
+    if(_sheetTab==='net'){
+        let html=tabsHTML;
+        if(_sheetMode==='vertical'){
+            html+=`<div class="sheet-vertical" style="background:#fffaf0;border:2px solid #fbbf24;border-radius:12px;padding:20px;max-width:500px;margin:0 auto;font-family:'Tajawal',serif">
+            <div style="text-align:center;margin-bottom:14px;border-bottom:2px dashed #92400e;padding-bottom:10px">
+                <div style="font-weight:800;color:#92400e;font-size:1.1rem"><i class="ri-file-list-line"></i> كشف صافي التقفيلات</div>
+                <div style="font-size:.85rem;color:#b45309;margin-top:4px">${ym} | عدد التقفيلات: ${closings.length}</div>
+            </div>
+            <div style="font-family:'Courier New',monospace;font-size:1.15rem;line-height:1.8;text-align:left;direction:ltr">`;
+            rows.forEach(r=>{
+                const sign=r.total<0?'-':' ';
+                const str=fmtNum(Math.abs(r.total)).padStart(10,' ');
+                html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 8px">
+                    <span style="color:#64748b;font-size:.75rem;font-family:'Tajawal'">${r.date}</span>
+                    <span style="color:${r.total>=0?'#166534':'#991b1b'};font-weight:700">${sign}${str}</span>
+                </div>`;
+            });
+            html+=`<div style="border-top:3px double #92400e;margin:8px 8px 4px;padding-top:6px"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:#fde68a;border-radius:6px;margin-top:4px">
+                <span style="font-family:'Tajawal';font-weight:800;color:#78350f">الإجمالي</span>
+                <span style="color:${grandTotal>=0?'#166534':'#991b1b'};font-weight:800;font-size:1.25rem">${grandTotal<0?'-':''}${fmtNum(Math.abs(grandTotal))} ${cur}</span>
+            </div></div></div>`;
+        } else {
+            /* أفقي */
+            html+=`<div class="card" style="padding:14px;overflow-x:auto">
+            <table class="report-table" style="width:100%;font-size:.85rem">
+                <thead><tr style="background:var(--primary);color:#fff">
+                    <th>التاريخ</th><th>المدير</th>`;
+            CASHIERS.forEach(cs=>html+=`<th>${cs.label}</th>`);
+            html+=`<th style="background:#0284c7">الإجمالي</th></tr></thead><tbody>`;
+            const cashierTotals={};CASHIERS.forEach(cs=>cashierTotals[cs.key]=0);
+            rows.forEach((r,i)=>{
+                html+=`<tr style="background:${i%2===0?'var(--bg)':'var(--surface)'}">
+                    <td style="font-weight:700">${r.date}</td>
+                    <td style="font-size:.8rem">${r.manager||'-'}</td>`;
+                CASHIERS.forEach(cs=>{
+                    const v=r.cashiers[cs.key].net;
+                    cashierTotals[cs.key]+=v;
+                    const clr=v<0?'color:var(--clr-expense)':v>0?'color:var(--text)':'color:var(--text3)';
+                    html+=`<td style="${clr}">${v!==0?fmtNum(v):'—'}</td>`;
+                });
+                const tclr=r.total<0?'color:var(--clr-expense)':'color:var(--clr-income)';
+                html+=`<td style="${tclr};font-weight:800">${fmtNum(r.total)}</td></tr>`;
+            });
+            html+=`<tr style="background:#fde68a;font-weight:800;border-top:3px double #92400e">
+                <td colspan="2" style="color:#78350f">الإجمالي الشهري</td>`;
+            CASHIERS.forEach(cs=>{
+                const t=cashierTotals[cs.key];
+                const clr=t<0?'color:var(--clr-expense)':'color:#166534';
+                html+=`<td style="${clr}">${fmtNum(t)}</td>`;
+            });
+            const gclr=grandTotal<0?'color:var(--clr-expense)':'color:#166534';
+            html+=`<td style="${gclr};font-size:1.05rem">${fmtNum(grandTotal)} ${cur}</td></tr>`;
+            html+=`</tbody></table></div>`;
+            html+=`<div style="margin-top:12px;padding:12px;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;border-radius:10px;text-align:center">
+                <div style="font-size:.85rem;opacity:.9">مجموع صوافي جميع التقفيلات</div>
+                <div style="font-size:1.8rem;font-weight:800">${fmtNum(grandTotal)} ${cur}</div>
+                <div style="font-size:.78rem;opacity:.85;margin-top:4px">${closings.length} تقفيلة</div>
+            </div>`;
+        }
+        content.innerHTML=html;
+        return;
+    }
+
+    /* ====================== التبويب الثاني: الرصيد الخام مع الخصومات ====================== */
+    let html=tabsHTML;
     if(_sheetMode==='vertical'){
-        /* نمط عمودي كما الورقة - أرقام فوق بعض مع خط جمع */
-        let html=`<div class="sheet-vertical" style="background:#fffaf0;border:2px solid #fbbf24;border-radius:12px;padding:20px;max-width:500px;margin:0 auto;font-family:'Tajawal',serif">
-        <div style="text-align:center;margin-bottom:14px;border-bottom:2px dashed #92400e;padding-bottom:10px">
-            <div style="font-weight:800;color:#92400e;font-size:1.1rem"><i class="ri-file-list-line"></i> كشف حسابات التقفيلات</div>
-            <div style="font-size:.85rem;color:#b45309;margin-top:4px">${ym} | عدد التقفيلات: ${closings.length}</div>
+        /* نعرض: مبيعات كل يوم عموديًا ثم المجموع ثم الخصومات ثم النتيجة */
+        html+=`<div style="background:#fff7ed;border:2px solid #fb923c;border-radius:12px;padding:20px;max-width:520px;margin:0 auto;font-family:'Tajawal'">
+        <div style="text-align:center;margin-bottom:14px;border-bottom:2px dashed #9a3412;padding-bottom:10px">
+            <div style="font-weight:800;color:#9a3412;font-size:1.1rem"><i class="ri-stack-line"></i> كشف رصيد الكاشير الخام</div>
+            <div style="font-size:.82rem;color:#c2410c;margin-top:4px">${ym} | المبيعات قبل أي خصم</div>
         </div>
-        <div style="font-family:'Courier New',monospace;font-size:1.15rem;line-height:1.8;text-align:left;direction:ltr">`;
 
-        rows.forEach((r,i)=>{
-            const sign=r.total<0?'-':' ';
-            const absVal=Math.abs(r.total);
-            const str=fmtNum(absVal).padStart(10,' ');
-            html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 8px">
-                <span style="color:#64748b;font-size:.75rem;font-family:'Tajawal'">${r.date}</span>
-                <span style="color:${r.total>=0?'#166534':'#991b1b'};font-weight:700">${sign}${str}</span>
+        <!-- القسم 1: المبيعات اليومية -->
+        <div style="font-weight:700;color:#9a3412;font-size:.9rem;margin-bottom:6px;padding:6px 10px;background:#fed7aa;border-radius:6px"><i class="ri-arrow-up-line"></i> رصيد الكاشير (المبيعات)</div>
+        <div style="font-family:'Courier New',monospace;font-size:1.1rem;line-height:1.7;direction:ltr;padding:0 8px">`;
+        rows.forEach(r=>{
+            const str=fmtNum(r.gross).padStart(10,' ');
+            html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:1px 4px">
+                <span style="color:#64748b;font-size:.72rem;font-family:'Tajawal'">${r.date}</span>
+                <span style="color:#166534;font-weight:700"> ${str}</span>
             </div>`;
         });
+        html+=`<div style="border-top:2px solid #9a3412;margin:6px 4px 4px;padding-top:4px"></div>
+        <div style="display:flex;justify-content:space-between;padding:4px;background:#fed7aa;border-radius:4px;font-weight:800">
+            <span style="font-family:'Tajawal';color:#7c2d12">إجمالي المبيعات</span>
+            <span style="color:#166534">${fmtNum(grandGross)}</span>
+        </div></div>
 
-        /* الخط + المجموع */
-        html+=`<div style="border-top:3px double #92400e;margin:8px 8px 4px;padding-top:6px"></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:#fde68a;border-radius:6px;margin-top:4px">
-            <span style="font-family:'Tajawal';font-weight:800;color:#78350f">الإجمالي</span>
-            <span style="color:${grandTotal>=0?'#166534':'#991b1b'};font-weight:800;font-size:1.25rem">${grandTotal<0?'-':''}${fmtNum(Math.abs(grandTotal))} ${cur}</span>
+        <!-- القسم 2: الخصومات -->
+        <div style="font-weight:700;color:#9a3412;font-size:.9rem;margin:14px 0 6px;padding:6px 10px;background:#fed7aa;border-radius:6px"><i class="ri-arrow-down-line"></i> الخصومات الشهرية</div>
+        <div style="font-family:'Courier New',monospace;font-size:1.05rem;line-height:1.7;direction:ltr;padding:0 8px;color:#991b1b">`;
+        if(grandReturns)html+=`<div style="display:flex;justify-content:space-between"><span style="font-family:Tajawal">- المرتجعات</span><span>${fmtNum(grandReturns).padStart(10,' ')}</span></div>`;
+        if(grandExpenses)html+=`<div style="display:flex;justify-content:space-between"><span style="font-family:Tajawal">- المصاريف (قسم)</span><span>${fmtNum(grandExpenses).padStart(10,' ')}</span></div>`;
+        if(grandLunch)html+=`<div style="display:flex;justify-content:space-between"><span style="font-family:Tajawal">- الغداء</span><span>${fmtNum(grandLunch).padStart(10,' ')}</span></div>`;
+        if(grandDebts)html+=`<div style="display:flex;justify-content:space-between"><span style="font-family:Tajawal">- الديون</span><span>${fmtNum(grandDebts).padStart(10,' ')}</span></div>`;
+        if(grandWithdraws)html+=`<div style="display:flex;justify-content:space-between"><span style="font-family:Tajawal">- السحوبات</span><span>${fmtNum(grandWithdraws).padStart(10,' ')}</span></div>`;
+        if(grandTotalDeductions===0)html+=`<div style="text-align:center;color:#9a3412;font-family:Tajawal;padding:8px">لا توجد خصومات</div>`;
+        html+=`<div style="border-top:2px solid #991b1b;margin:6px 4px 4px;padding-top:4px"></div>
+        <div style="display:flex;justify-content:space-between;padding:4px;background:#fecaca;border-radius:4px;font-weight:800">
+            <span style="font-family:'Tajawal';color:#7f1d1d">إجمالي الخصومات</span>
+            <span>${fmtNum(grandTotalDeductions)}</span>
+        </div></div>
+
+        <!-- القسم 3: الناتج النهائي -->
+        <div style="margin-top:14px;padding:12px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-radius:10px;text-align:center">
+            <div style="font-family:'Courier New',monospace;font-size:.95rem;opacity:.9;direction:ltr">
+                ${fmtNum(grandGross)} − ${fmtNum(grandTotalDeductions)} =
+            </div>
+            <div style="font-size:1.8rem;font-weight:800;margin-top:4px">${grandTotal<0?'-':''}${fmtNum(Math.abs(grandTotal))} ${cur}</div>
+            <div style="font-size:.78rem;opacity:.9;margin-top:2px">الناتج النهائي</div>
+        </div>
         </div>`;
-        html+=`</div></div>`;
-
-        content.innerHTML=html;
     } else {
-        /* نمط أفقي - جدول */
-        let html=`<div class="card" style="padding:14px;overflow-x:auto">
+        /* أفقي */
+        html+=`<div class="card" style="padding:14px;overflow-x:auto">
         <table class="report-table" style="width:100%;font-size:.85rem">
-            <thead><tr style="background:var(--primary);color:#fff">
-                <th>التاريخ</th>
-                <th>المدير</th>`;
-        CASHIERS.forEach(cs=>html+=`<th>${cs.label}</th>`);
-        html+=`<th style="background:#0284c7">الإجمالي</th></tr></thead><tbody>`;
-
-        /* إجماليات كل كاشير */
-        const cashierTotals={};
-        CASHIERS.forEach(cs=>cashierTotals[cs.key]=0);
-
+            <thead><tr style="background:#f59e0b;color:#fff">
+                <th>التاريخ</th><th>المدير</th>`;
+        CASHIERS.forEach(cs=>html+=`<th>${cs.label}<br><span style="font-size:.7rem;opacity:.85;font-weight:400">(مبيعات)</span></th>`);
+        html+=`<th>إجمالي المبيعات</th><th>خصومات</th><th style="background:#d97706">الناتج</th></tr></thead><tbody>`;
+        const cashierTotals={};CASHIERS.forEach(cs=>cashierTotals[cs.key]=0);
         rows.forEach((r,i)=>{
             html+=`<tr style="background:${i%2===0?'var(--bg)':'var(--surface)'}">
                 <td style="font-weight:700">${r.date}</td>
                 <td style="font-size:.8rem">${r.manager||'-'}</td>`;
             CASHIERS.forEach(cs=>{
-                const v=r.cashiers[cs.key];
+                const v=r.cashiers[cs.key].gross;
                 cashierTotals[cs.key]+=v;
-                const clr=v<0?'color:var(--clr-expense)':v>0?'color:var(--text)':'color:var(--text3)';
-                html+=`<td style="${clr}">${v!==0?fmtNum(v):'—'}</td>`;
+                html+=`<td style="color:${v>0?'#166534':'var(--text3)'}">${v?fmtNum(v):'—'}</td>`;
             });
+            html+=`<td style="color:#166534;font-weight:700">${fmtNum(r.gross)}</td>`;
+            html+=`<td style="color:#991b1b">${r.totalDeductions?fmtNum(r.totalDeductions):'—'}</td>`;
             const tclr=r.total<0?'color:var(--clr-expense)':'color:var(--clr-income)';
             html+=`<td style="${tclr};font-weight:800">${fmtNum(r.total)}</td></tr>`;
         });
-
-        /* صف الإجمالي */
-        html+=`<tr style="background:#fde68a;font-weight:800;border-top:3px double #92400e">
-            <td colspan="2" style="color:#78350f">الإجمالي الشهري</td>`;
+        html+=`<tr style="background:#fed7aa;font-weight:800;border-top:3px double #9a3412">
+            <td colspan="2" style="color:#7c2d12">الإجمالي الشهري</td>`;
         CASHIERS.forEach(cs=>{
-            const t=cashierTotals[cs.key];
-            const clr=t<0?'color:var(--clr-expense)':'color:#166534';
-            html+=`<td style="${clr}">${fmtNum(t)}</td>`;
+            html+=`<td style="color:#166534">${fmtNum(cashierTotals[cs.key])}</td>`;
         });
+        html+=`<td style="color:#166534;font-size:1.05rem">${fmtNum(grandGross)}</td>`;
+        html+=`<td style="color:#991b1b">${fmtNum(grandTotalDeductions)}</td>`;
         const gclr=grandTotal<0?'color:var(--clr-expense)':'color:#166534';
         html+=`<td style="${gclr};font-size:1.05rem">${fmtNum(grandTotal)} ${cur}</td></tr>`;
         html+=`</tbody></table></div>`;
 
-        /* ملخص */
-        html+=`<div style="margin-top:12px;padding:12px;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;border-radius:10px;text-align:center">
-            <div style="font-size:.85rem;opacity:.9">مجموع صوافي جميع التقفيلات</div>
-            <div style="font-size:1.8rem;font-weight:800">${fmtNum(grandTotal)} ${cur}</div>
-            <div style="font-size:.78rem;opacity:.85;margin-top:4px">${closings.length} تقفيلة</div>
+        /* تفصيل الخصومات */
+        html+=`<div class="card" style="margin-top:12px;padding:14px">
+        <h3 class="card-h"><i class="ri-pie-chart-2-line"></i> تفصيل الخصومات الشهرية</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;font-size:.85rem">
+            ${grandReturns?`<div style="background:#fef3c7;padding:10px;border-radius:8px;text-align:center"><div style="color:#92400e;font-size:.78rem">المرتجعات</div><div style="font-weight:800;color:#b45309;font-size:1.1rem">${fmtNum(grandReturns)}</div></div>`:''}
+            ${grandExpenses?`<div style="background:#fee2e2;padding:10px;border-radius:8px;text-align:center"><div style="color:#7f1d1d;font-size:.78rem">مصاريف (قسم)</div><div style="font-weight:800;color:#b91c1c;font-size:1.1rem">${fmtNum(grandExpenses)}</div></div>`:''}
+            ${grandLunch?`<div style="background:#fed7aa;padding:10px;border-radius:8px;text-align:center"><div style="color:#7c2d12;font-size:.78rem">الغداء</div><div style="font-weight:800;color:#c2410c;font-size:1.1rem">${fmtNum(grandLunch)}</div></div>`:''}
+            ${grandDebts?`<div style="background:#fecaca;padding:10px;border-radius:8px;text-align:center"><div style="color:#7f1d1d;font-size:.78rem">الديون</div><div style="font-weight:800;color:#dc2626;font-size:1.1rem">${fmtNum(grandDebts)}</div></div>`:''}
+            ${grandWithdraws?`<div style="background:#fde68a;padding:10px;border-radius:8px;text-align:center"><div style="color:#78350f;font-size:.78rem">السحوبات</div><div style="font-weight:800;color:#d97706;font-size:1.1rem">${fmtNum(grandWithdraws)}</div></div>`:''}
+        </div>
         </div>`;
 
-        content.innerHTML=html;
+        /* المعادلة النهائية */
+        html+=`<div style="margin-top:12px;padding:14px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-radius:10px;text-align:center">
+            <div style="font-family:'Courier New',monospace;font-size:1rem;opacity:.9;direction:ltr;margin-bottom:4px">
+                ${fmtNum(grandGross)} − ${fmtNum(grandTotalDeductions)} =
+            </div>
+            <div style="font-size:1.8rem;font-weight:800">${fmtNum(grandTotal)} ${cur}</div>
+            <div style="font-size:.78rem;opacity:.85;margin-top:2px">الناتج النهائي (مبيعات خام − خصومات)</div>
+        </div>`;
     }
+    content.innerHTML=html;
 }
 
 function printClosingSheet(){
@@ -4027,6 +4456,16 @@ function initApp(){
 
     /* ترقية البيانات القديمة: إعادة احتساب الصوافي وإصلاح الخزنة */
     runDataUpgrade();
+
+    /* تهيئة history API - حقن الصفحة الرئيسية كأول دخول */
+    try{
+        /* قراءة hash إن وجد */
+        let initialPage='home';
+        const hash=location.hash.replace(/^#/,'');
+        if(hash && document.getElementById('page-'+hash)) initialPage=hash;
+        history.replaceState({page:initialPage},'','#'+initialPage);
+        if(initialPage!=='home') navigate(initialPage,true);
+    }catch(e){console.warn('history init failed',e);}
 
     /* apply theme */
     const settings=loadSettings();

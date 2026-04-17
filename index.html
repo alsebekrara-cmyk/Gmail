@@ -362,6 +362,10 @@
                     </select>
                     <button class="btn btn-primary btn-sm" onclick="renderGeneralExpenses()"><i class="ri-filter-line"></i> تطبيق</button>
                 </div>
+                <div style="display:flex;gap:8px;margin-top:10px">
+                    <button class="btn btn-block" style="flex:1;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff" onclick="addGeneralExpense()"><i class="ri-add-circle-line"></i> إضافة مصروف</button>
+                    <button class="btn btn-block" style="flex:1;background:linear-gradient(135deg,#d97706,#b45309);color:#fff" onclick="addGeneralWithdraw()"><i class="ri-hand-coin-line"></i> إضافة سحب</button>
+                </div>
                 <div class="summary-grid" style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
                     <div class="card" style="padding:12px;text-align:center;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff">
                         <div style="font-size:.8rem;opacity:.9">إجمالي المصاريف العامة</div>
