@@ -1367,6 +1367,21 @@ function saveClosing(){
     saveData(KEYS.debts,debts);
     saveData(KEYS.withdrawals,withdrawals);
     saveData(KEYS.expenseEntries,expEntries);
+    /* إنشاء تقفيلات منفصلة لكل كاشير */
+    const indClosings=loadData(KEYS.individualClosings);
+    CASHIERS.forEach(c=>{
+        const d=wizData.cashiers[c.key];if(!d)return;
+        const r=calcCashierNet(d);
+        indClosings.push({
+            id:uid(),firebaseId:null,
+            cashierKey:c.key,cashierLabel:c.label,
+            date,manager:wizData.manager||'',
+            data:{sales:d.sales||0,network:d.network||0,returns:d.returns||0,expenses:d.expenses||0,lunch:d.lunch||0,debts:d.debts||0,withdrawals:d.withdrawals||0},
+            debtsList:d.debtsList||[],withdrawList:d.withdrawList||[],expensesList:d.expensesList||[],
+            net:r.net,by,timestamp:Date.now(),source:'main-app',closingId
+        });
+    });
+    saveData(KEYS.individualClosings,indClosings);
     /* sync to Firebase */
     if(fbDb){
         const fbData={id:closingId,date,manager:wizData.manager||'',cashiers:cashiersData,totalNet,by,timestamp:Date.now(),source:'main-app'};
@@ -1428,6 +1443,11 @@ function deleteClosing(id){
         });
         if(safe.length!==before) saveData(KEYS.safe,safe);
     }
+    /* حذف التقفيلات المنفصلة المرتبطة */
+    let indArr=loadData(KEYS.individualClosings);
+    const indBefore=indArr.length;
+    indArr=indArr.filter(c=>c.closingId!==id);
+    if(indArr.length!==indBefore) saveData(KEYS.individualClosings,indArr);
     toast('تم الحذف');renderClosings();
     if(typeof renderSafe==='function' && $('#page-safe')?.classList.contains('active')) renderSafe();
 }
@@ -1909,7 +1929,33 @@ function saveIndividualClosing(){
     renderIndividual();
 }
 
+function _syncClosingsToIndividual(){
+    const combined=loadData(KEYS.closings);
+    const indArr=loadData(KEYS.individualClosings);
+    const linkedIds=new Set(indArr.filter(c=>c.closingId).map(c=>c.closingId));
+    let added=false;
+    combined.forEach(cl=>{
+        if(linkedIds.has(cl.id))return;
+        if(!cl.cashiers)return;
+        CASHIERS.forEach(c=>{
+            const d=cl.cashiers[c.key];if(!d)return;
+            const r=calcCashierNet(d);
+            indArr.push({
+                id:uid(),firebaseId:null,
+                cashierKey:c.key,cashierLabel:c.label,
+                date:cl.date,manager:cl.manager||d.manager||'',
+                data:{sales:d.sales||0,network:d.network||0,returns:d.returns||0,expenses:d.expenses||0,lunch:d.lunch||0,debts:d.debts||0,withdrawals:d.withdrawals||0},
+                debtsList:d.debtsList||[],withdrawList:d.withdrawList||[],expensesList:d.expensesList||[],
+                net:r.net,by:cl.by||'',timestamp:Date.now(),source:'main-app',closingId:cl.id
+            });
+        });
+        added=true;
+    });
+    if(added)saveData(KEYS.individualClosings,indArr);
+}
+
 function renderIndividual(){
+    _syncClosingsToIndividual();
     showDate();
     const searchVal=($('#individualSearch')?.value||'').trim().toLowerCase();
     let closings=loadData(KEYS.individualClosings).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.timestamp||0)-(a.timestamp||0));
@@ -1922,7 +1968,7 @@ function renderIndividual(){
     closings.forEach(c=>{const d=c.date||'';if(!groups[d])groups[d]=[];groups[d].push(c);});
     let html='';
     Object.keys(groups).sort((a,b)=>b.localeCompare(a)).forEach(date=>{
-        html+=`<div style="font-size:.82rem;font-weight:700;color:var(--text2);margin:10px 0 4px;padding:4px 8px;background:var(--bg);border-radius:6px"><i class="ri-calendar-line"></i> ${date}</div>`;
+        html+=`<div style="display:flex;align-items:center;justify-content:space-between;font-size:.82rem;font-weight:700;color:var(--text2);margin:10px 0 4px;padding:4px 8px;background:var(--bg);border-radius:6px"><span><i class="ri-calendar-line"></i> ${date}</span><button class="btn btn-sm btn-warning" onclick="printIndividualByDate('${date}')" title="طباعة تقفيلات ${date}"><i class="ri-printer-line"></i> طباعة اليوم</button></div>`;
         groups[date].forEach(c=>{
             const cashierInfo = CASHIERS.find(cs=>cs.key===c.cashierKey) || {};
             const clr=c.net>=0?'income':'expense';
@@ -2024,6 +2070,69 @@ function printIndividualClosing(id){
     html+=`</div>`;
     if(cl.by)html+=`<div style="text-align:center;font-size:11pt;font-weight:600;margin-top:10px;color:#555">بواسطة: ${cl.by}</div>`;
     html+=`</div>`;
+    showPrintDialog(html);
+}
+function _buildIndPrintBlock(cl){
+    const s=loadSettings();const cur=s.currency||'د.ع';const store=s.storeName||'';
+    const cashierInfo=CASHIERS.find(c=>c.key===cl.cashierKey)||{};
+    const d=cl.data||{};
+    const deductions=(d.returns||0)+(d.expenses||0)+(d.lunch||0)+(d.debts||0)+(d.withdrawals||0);
+    const expected=(d.sales||0)-deductions;
+    const diff=(d.network||0)-expected;
+    const net=cl.net||0;
+    let html=`<div class="print-page-border">`;
+    html+=`<div class="print-header"><h2>تقفيلة منفصلة - ${cl.cashierLabel}</h2>`;
+    if(store)html+=`<p>${store}</p>`;
+    html+=`<p class="print-date">تاريخ التقفيلة: ${cl.date}</p></div>`;
+    if(cl.manager)html+=`<div class="print-manager"><i class="ri-user-star-line"></i> المدير المسؤول: ${cl.manager}</div>`;
+    html+=`<div class="print-section"><h3>${cl.cashierLabel}${cl.manager?' <span class="print-cashier-mgr">( '+cl.manager+' )</span>':''}</h3><table><tbody>`;
+    CASHIER_FIELDS.forEach(f=>{
+        const v=d[f.key]||0;
+        const pClr=getPrintColorClass(f.type);
+        html+=`<tr><td style="width:55%">${f.label}</td><td class="print-amount ${pClr}">${fmtNum(v)} ${cur}</td></tr>`;
+    });
+    html+=`<tr style="border-top:2px solid #999;background:#f0f0f0"><td style="width:55%"><strong>إجمالي الخصومات</strong></td><td class="print-amount p-expense">${fmtNum(deductions)} ${cur}</td></tr>`;
+    html+=`<tr style="background:#f0f0f0"><td style="width:55%"><strong>المتوقع</strong></td><td class="print-amount">${fmtNum(expected)} ${cur}</td></tr>`;
+    if(diff!==0)html+=`<tr style="background:#fef9c4"><td style="width:55%"><strong>الفرق</strong></td><td class="print-amount" style="color:${diff>0?'#16a34a':'#dc2626'}">${fmtNum(diff)} ${cur}</td></tr>`;
+    html+=`<tr style="border-top:2.5px solid #333;background:#e8e8e8"><td style="width:55%"><strong>الصافي (المبلغ المستلم)</strong></td><td class="print-amount" style="color:${net>=0?'#16a34a':'#dc2626'}">${fmtNum(net)} ${cur}</td></tr>`;
+    html+=`</tbody></table>`;
+    if(cl.debtsList&&cl.debtsList.length){
+        html+=`<div class="print-detail-header" style="color:#ef4444">تفاصيل الديون:</div>`;
+        cl.debtsList.forEach(db=>html+=`<div class="print-detail-row">● ${db.person}: ${fmtNum(db.amount)} ${cur} ${db.note?'('+db.note+')':''}</div>`);
+    }
+    if(cl.withdrawList&&cl.withdrawList.length){
+        html+=`<div class="print-detail-header" style="color:#d97706">تفاصيل السحوبات:</div>`;
+        cl.withdrawList.forEach(w=>html+=`<div class="print-detail-row">● ${w.person}: ${fmtNum(w.amount)} ${cur} ${w.note?'('+w.note+')':''}</div>`);
+    }
+    if(cl.expensesList&&cl.expensesList.length){
+        html+=`<div class="print-detail-header" style="color:#f59e0b">تفاصيل المصاريف:</div>`;
+        cl.expensesList.forEach(ex=>html+=`<div class="print-detail-row">● ${ex.desc||'مصروف'}: ${fmtNum(ex.amount)} ${cur}</div>`);
+    }
+    html+=`</div>`;
+    if(cl.by)html+=`<div style="text-align:center;font-size:11pt;font-weight:600;margin-top:10px;color:#555">بواسطة: ${cl.by}</div>`;
+    html+=`</div>`;
+    return html;
+}
+function printAllIndividualClosings(){
+    if(!hasAction('print'))return toast('غير مصرح');
+    const closings=loadData(KEYS.individualClosings).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    if(!closings.length)return toast('لا توجد تقفيلات منفصلة');
+    let html='';
+    closings.forEach((cl,i)=>{
+        if(i>0)html+=`<div style="page-break-before:always"></div>`;
+        html+=_buildIndPrintBlock(cl);
+    });
+    showPrintDialog(html);
+}
+function printIndividualByDate(date){
+    if(!hasAction('print'))return toast('غير مصرح');
+    const closings=loadData(KEYS.individualClosings).filter(c=>c.date===date).sort((a,b)=>(a.cashierKey||'').localeCompare(b.cashierKey||''));
+    if(!closings.length)return toast('لا توجد تقفيلات لهذا التاريخ');
+    let html='';
+    closings.forEach((cl,i)=>{
+        if(i>0)html+=`<div style="page-break-before:always"></div>`;
+        html+=_buildIndPrintBlock(cl);
+    });
     showPrintDialog(html);
 }
 function getSafeBalance(){
