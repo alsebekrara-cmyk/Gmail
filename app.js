@@ -711,10 +711,10 @@ function navigate(page, fromPopState){
     const el=$('#page-'+page);if(el)el.classList.add('active');
     $$('.sb-item').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
     $$('.bn-item').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
-    const titles={home:'لوحة التحكم',closing:'التقفيلة',individual:'التقفيلات المنفصلة',safe:'الخزنة',debts:'الديون',expenses:'المصاريف',generalExpenses:'المصاريف العامة',closingSheet:'كشف الحسابات',salaries:'الرواتب',payroll:'صرف الرواتب',capital:'رأس المال',purchases:'المشتريات',report:'التقرير الشهري',settings:'الإعدادات',security:'الحماية والمستخدمين'};
+    const titles={home:'لوحة التحكم',closing:'التقفيلة',individual:'التقفيلات المنفصلة',safe:'الخزنة',debts:'الديون',expenses:'المصاريف',generalExpenses:'المصاريف العامة',closingSheet:'كشف الحسابات',salaries:'الرواتب',payroll:'صرف الرواتب',capital:'رأس المال',purchases:'المشتريات',salaryAdvances:'سحوبات الرواتب',profitLoss:'تحليل الأرباح',report:'التقرير الشهري',settings:'الإعدادات',security:'الحماية والمستخدمين'};
     $('#topbarTitle').textContent=titles[page]||'لوحة التحكم';
     closeSidebar();
-    const r={closing:renderClosings,individual:renderIndividual,safe:renderSafe,debts:renderDebts,expenses:renderExpenses,generalExpenses:renderGeneralExpenses,closingSheet:renderClosingSheet,salaries:renderSalaries,payroll:renderPayroll,capital:renderCapital,purchases:renderPurchases,report:renderReport,settings:renderSettings,security:renderSecurity};
+    const r={closing:renderClosings,individual:renderIndividual,safe:renderSafe,debts:renderDebts,expenses:renderExpenses,generalExpenses:renderGeneralExpenses,closingSheet:renderClosingSheet,salaries:renderSalaries,payroll:renderPayroll,capital:renderCapital,purchases:renderPurchases,salaryAdvances:renderSalaryAdvances,profitLoss:renderProfitLoss,report:renderReport,settings:renderSettings,security:renderSecurity};
     if(r[page])r[page]();
     if(page==='home'){
         const secTile=$('#securityTile');if(secTile)secTile.style.display=isAdmin()?'':'none';
@@ -2727,8 +2727,10 @@ function renderSalaries(){
     if(!filtered.length){grid.innerHTML='<div class="empty-state"><i class="ri-inbox-line"></i><p>لا يوجد موظفين</p></div>';return;}
     grid.innerHTML=filtered.map(e=>{
         const isComm=e.salaryType==='commission';
+        const gLabel=e.gender==='female'?'أنثى':'ذكر';
+        const gColor=e.gender==='female'?'#e11d48':'#2563eb';
         return `<div class="emp-card" onclick="openEmployee('${e.id}')">
-        <div class="emp-top"><span class="emp-name">${e.name}</span><span class="emp-role">${e.role||'موظف'}</span></div>
+        <div class="emp-top"><span class="emp-name">${e.name}</span><span class="emp-role">${e.role||'موظف'}</span><span style="font-size:.7rem;padding:2px 6px;border-radius:6px;background:${gColor}15;color:${gColor};font-weight:700">${gLabel}</span></div>
         <div class="emp-stats">
             <div class="emp-stat"><div class="emp-stat-label">الراتب</div><div class="emp-stat-val">${fmtNum(e.salary)} ${cur}</div></div>
             <div class="emp-stat"><div class="emp-stat-label">${isComm?'العمولة':'النوع'}</div><div class="emp-stat-val" style="color:${isComm?'var(--clr-income)':'var(--text2)'}">${isComm?e.commRate+'%':'ثابت'}</div></div>
@@ -2745,8 +2747,15 @@ function openEmployee(id){
     if(!emp)return;
     const s=loadSettings();const cur=s.currency||'د.ع';
     const isComm=emp.salaryType==='commission';
+    const isMale=emp.gender!=='female';
     let html=`<div class="field"><label>الاسم</label><input type="text" id="empNameInput" class="input-field" value="${emp.name}"></div>
     <div class="field"><label>الوظيفة</label><input type="text" id="empRoleInput" class="input-field" value="${emp.role||''}"></div>
+    <div class="field"><label>الجنس</label>
+        <div style="display:flex;gap:12px;margin-top:4px">
+            <label style="display:flex;align-items:center;gap:4px"><input type="radio" name="empGender" value="male" ${isMale?'checked':''}> ذكر</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="radio" name="empGender" value="female" ${!isMale?'checked':''}> أنثى</label>
+        </div>
+    </div>
     <div class="field"><label>نوع الراتب</label>
         <div style="display:flex;gap:12px;margin-top:4px">
             <label style="display:flex;align-items:center;gap:4px"><input type="radio" name="salaryType" value="fixed" ${!isComm?'checked':''}> راتب ثابت</label>
@@ -2766,6 +2775,12 @@ function addEmployee(){
     openModal('إضافة موظف',`
     <div class="field"><label>الاسم</label><input type="text" id="empNameInput" class="input-field"></div>
     <div class="field"><label>الوظيفة</label><input type="text" id="empRoleInput" class="input-field"></div>
+    <div class="field"><label>الجنس</label>
+        <div style="display:flex;gap:12px;margin-top:4px">
+            <label style="display:flex;align-items:center;gap:4px"><input type="radio" name="empGender" value="male" checked> ذكر</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="radio" name="empGender" value="female"> أنثى</label>
+        </div>
+    </div>
     <div class="field"><label>نوع الراتب</label>
         <div style="display:flex;gap:12px;margin-top:4px">
             <label style="display:flex;align-items:center;gap:4px"><input type="radio" name="salaryType" value="fixed" checked> راتب ثابت</label>
@@ -2786,10 +2801,12 @@ function saveEmployee(id){
     if(!name)return toast('أدخل الاسم');
     const emps=loadData(KEYS.employees);
     const stEl=document.querySelector('input[name="salaryType"]:checked');
+    const gEl=document.querySelector('input[name="empGender"]:checked');
     const obj={
         id:id||uid(),
         name,
         role:$('#empRoleInput').value.trim(),
+        gender:gEl?gEl.value:'male',
         salary:parseK($('#empSalaryInput').value),
         salaryType:stEl?stEl.value:'fixed',
         commRate:parseFloat($('#empCommInput')?.value)||0
@@ -3056,8 +3073,8 @@ function showPayrollColumnPicker(mode){
     /* mode: 'blank' = كشف رواتب, 'history' = كشف صرف */
     if(!hasAction('print'))return toast('غير مصرح');
     const cols=mode==='blank'
-        ?[{key:'name',label:'الموظف',fixed:true},{key:'salary',label:'الراتب الاسمي',fixed:true},{key:'sales',label:'المبيعات'},{key:'tips',label:'الإكرامية'},{key:'comm',label:'النسبة'},{key:'debts',label:'الديون'},{key:'deduct',label:'الاستقطاع'}]
-        :[{key:'name',label:'الموظف',fixed:true},{key:'salary',label:'الراتب الاسمي',fixed:true},{key:'paid',label:'المدفوع',fixed:true},{key:'tips',label:'الإكرامية'},{key:'deductions',label:'الاستقطاعات'},{key:'net',label:'الصافي'},{key:'note',label:'ملاحظة'}];
+        ?[{key:'name',label:'الموظف',fixed:true},{key:'salary',label:'الراتب الاسمي',fixed:true},{key:'withdrawals',label:'السحوبات'},{key:'sales',label:'المبيعات'},{key:'tips',label:'الإكرامية'},{key:'comm',label:'النسبة'},{key:'debts',label:'الديون'},{key:'deduct',label:'الاستقطاع'}]
+        :[{key:'name',label:'الموظف',fixed:true},{key:'tips',label:'الإكرامية'},{key:'deductions',label:'الاستقطاعات'},{key:'net',label:'الصافي'},{key:'note',label:'ملاحظة'}];
     let body=`<div style="direction:rtl;text-align:right;padding:4px 0"><p style="margin-bottom:8px;font-weight:700;font-size:.95rem">اختر الأعمدة المطلوبة:</p>`;
     body+=`<label style="display:block;margin-bottom:6px;cursor:pointer"><input type="checkbox" id="pcolAll" checked onchange="document.querySelectorAll('.pcol-cb').forEach(c=>{if(!c.disabled)c.checked=this.checked})"> <strong>تحديد الكل</strong></label><hr style="margin:6px 0;border-color:rgba(0,0,0,.1)">`;
     cols.forEach(c=>{
@@ -3084,51 +3101,84 @@ function _buildPrintPayroll(cols){
     const emps=loadData(KEYS.employees);
     if(!emps.length)return toast('لا يوجد موظفين');
     const debts=loadData(KEYS.debts);
+    const ym=$('#payrollMonth')?.value||today().slice(0,7);
     const thSt='padding:9px 8px;border:1px solid rgba(180,160,210,0.3);font-weight:900;';
     const brd='border:1px solid rgba(180,160,210,0.25);';
     const hc='color:#1e3a8a';
-    let html=`<div class="print-page-border" style="background:linear-gradient(135deg,rgba(219,234,254,0.3),rgba(252,231,243,0.3));border:2px solid rgba(180,160,210,0.3);border-radius:10px;padding:14px 16px">`;
-    html+=`<div class="print-header" style="background:linear-gradient(90deg,rgba(219,234,254,0.4),rgba(252,231,243,0.4));border-radius:8px;padding:10px 12px;margin-bottom:10px;border:1px solid rgba(180,160,210,0.2)"><h2>كشف الرواتب</h2>`;
-    if(store)html+=`<p>${store}</p>`;
-    html+=`</div>`;
-    html+=`<table style="border-collapse:collapse;width:100%"><thead><tr style="background:linear-gradient(90deg,rgba(147,197,253,0.35),rgba(249,168,212,0.35))"><th style="${thSt}${hc}">#</th>`;
-    if(cols.includes('name'))html+=`<th style="${thSt}${hc}">الموظف</th>`;
-    if(cols.includes('salary'))html+=`<th style="${thSt}${hc}">الراتب الاسمي</th>`;
-    if(cols.includes('sales'))html+=`<th style="${thSt}${hc}">المبيعات</th>`;
-    if(cols.includes('tips'))html+=`<th style="${thSt}${hc}">الإكرامية</th>`;
-    if(cols.includes('comm'))html+=`<th style="${thSt}${hc}">النسبة</th>`;
-    if(cols.includes('debts'))html+=`<th style="${thSt}${hc}">الديون</th>`;
-    if(cols.includes('deduct'))html+=`<th style="${thSt}${hc}">الاستقطاع</th>`;
-    html+=`</tr></thead><tbody>`;
-    let totalSalary=0;
-    emps.forEach((e,i)=>{
-        const sal=e.salary||0;
-        totalSalary+=sal;
-        const bg=i%2===0?'rgba(219,234,254,0.3)':'rgba(252,231,243,0.22)';
-        const comm=e.salaryType==='commission'?(e.commRate||0)+'%':'ثابت';
-        const empDebts=debts.filter(d=>d.person===e.name&&d.type==='debt');
-        const empPaybacks=debts.filter(d=>d.person===e.name&&d.type==='payback');
-        const debtTotal=empDebts.reduce((s,d)=>s+d.amount,0)-empPaybacks.reduce((s,d)=>s+d.amount,0);
-        html+=`<tr style="background:${bg}"><td style="padding:6px;${brd}text-align:center">${i+1}</td>`;
-        if(cols.includes('name'))html+=`<td style="padding:6px;${brd}font-weight:800">${e.name}</td>`;
-        if(cols.includes('salary'))html+=`<td style="padding:6px;${brd}color:#2563eb;font-weight:700">${fmtNum(sal)} ${cur}</td>`;
-        if(cols.includes('sales'))html+=`<td style="padding:6px;${brd}"></td>`;
-        if(cols.includes('tips'))html+=`<td style="padding:6px;${brd}"></td>`;
-        if(cols.includes('comm'))html+=`<td style="padding:6px;${brd}text-align:center;color:#9333ea;font-weight:700">${comm}</td>`;
-        if(cols.includes('debts'))html+=`<td style="padding:6px;${brd}color:${debtTotal>0?'#dc2626':'#16a34a'};font-weight:700">${debtTotal!==0?fmtNum(debtTotal)+' '+cur:'-'}</td>`;
-        if(cols.includes('deduct'))html+=`<td style="padding:6px;${brd}"></td>`;
-        html+=`</tr>`;
-    });
-    /* totals */
-    const colCount=1+cols.length;
-    html+=`<tr style="font-weight:700;background:linear-gradient(90deg,rgba(147,197,253,0.3),rgba(249,168,212,0.3))">`;
-    const nameIdx=cols.includes('name')?2:1;
-    html+=`<td colspan="${nameIdx}" style="padding:9px;${brd}color:#1e3a8a">الإجمالي</td>`;
-    if(cols.includes('salary'))html+=`<td style="padding:9px;${brd}color:#b45309;font-weight:900">${fmtNum(totalSalary)} ${cur}</td>`;
-    for(let ci=cols.indexOf('salary')+1;ci<cols.length;ci++) html+=`<td style="padding:9px;${brd}"></td>`;
-    html+=`</tr>`;
-    html+=`</tbody></table></div>`;
-    showPrintDialog(html);
+    const dateStr=getPrintDateString();
+    const maleEmps=emps.filter(e=>e.gender!=='female');
+    const femaleEmps=emps.filter(e=>e.gender==='female');
+    function buildSection(sectionEmps,sectionTitle){
+        if(!sectionEmps.length)return '';
+        let sh='';
+        sh+=`<h3 style="margin:8px 0 4px;color:#1e3a8a;font-size:12pt;border-bottom:1.5px solid rgba(147,197,253,0.5);padding-bottom:3px">${sectionTitle}</h3>`;
+        sh+=`<table style="border-collapse:collapse;width:100%"><thead><tr style="background:linear-gradient(90deg,rgba(147,197,253,0.35),rgba(249,168,212,0.35))"><th style="${thSt}${hc}">#</th>`;
+        if(cols.includes('name'))sh+=`<th style="${thSt}${hc}">الموظف</th>`;
+        if(cols.includes('salary'))sh+=`<th style="${thSt}${hc}">الراتب الاسمي</th>`;
+        if(cols.includes('withdrawals'))sh+=`<th style="${thSt}${hc}">السحوبات</th>`;
+        if(cols.includes('sales'))sh+=`<th style="${thSt}${hc}">المبيعات</th>`;
+        if(cols.includes('tips'))sh+=`<th style="${thSt}${hc}">الإكرامية</th>`;
+        if(cols.includes('comm'))sh+=`<th style="${thSt}${hc}">النسبة</th>`;
+        if(cols.includes('debts'))sh+=`<th style="${thSt}${hc}">الديون</th>`;
+        if(cols.includes('deduct'))sh+=`<th style="${thSt}${hc}">الاستقطاع</th>`;
+        sh+=`</tr></thead><tbody>`;
+        let secSalary=0,secWd=0;
+        sectionEmps.forEach((e,i)=>{
+            const sal=e.salary||0;secSalary+=sal;
+            const bg=i%2===0?'rgba(219,234,254,0.3)':'rgba(252,231,243,0.22)';
+            const comm=e.salaryType==='commission'?(e.commRate||0)+'%':'ثابت';
+            const empDebtsOnly=debts.filter(d=>d.person===e.name&&d.type!=='withdraw'&&d.type!=='repayment');
+            const empRepayments=debts.filter(d=>d.person===e.name&&d.type==='repayment');
+            const debtTotal=empDebtsOnly.reduce((s,d)=>s+d.amount,0)+empRepayments.reduce((s,d)=>s+d.amount,0);
+            const empWithdraws=debts.filter(d=>d.person===e.name&&d.type==='withdraw'&&d.date&&d.date.startsWith(ym));
+            const wdTotal=empWithdraws.reduce((s,d)=>s+d.amount,0);secWd+=wdTotal;
+            sh+=`<tr style="background:${bg}"><td style="padding:6px;${brd}text-align:center">${i+1}</td>`;
+            if(cols.includes('name'))sh+=`<td style="padding:6px;${brd}font-weight:800">${e.name}</td>`;
+            if(cols.includes('salary'))sh+=`<td style="padding:6px;${brd}color:#2563eb;font-weight:700">${fmtNum(sal)} ${cur}</td>`;
+            if(cols.includes('withdrawals')){
+                let wdCell=wdTotal>0?`<span style="color:#dc2626;font-weight:700">${fmtNum(wdTotal)} ${cur}</span>`:'-';
+                sh+=`<td style="padding:6px;${brd}text-align:center">${wdCell}</td>`;
+            }
+            if(cols.includes('sales'))sh+=`<td style="padding:6px;${brd}"></td>`;
+            if(cols.includes('tips'))sh+=`<td style="padding:6px;${brd}"></td>`;
+            if(cols.includes('comm'))sh+=`<td style="padding:6px;${brd}text-align:center;color:#9333ea;font-weight:700">${comm}</td>`;
+            if(cols.includes('debts'))sh+=`<td style="padding:6px;${brd}color:${debtTotal>0?'#dc2626':'#16a34a'};font-weight:700">${debtTotal!==0?fmtNum(debtTotal)+' '+cur:'-'}</td>`;
+            if(cols.includes('deduct'))sh+=`<td style="padding:6px;${brd}"></td>`;
+            sh+=`</tr>`;
+        });
+        const nameIdx=cols.includes('name')?2:1;
+        sh+=`<tr style="font-weight:700;background:linear-gradient(90deg,rgba(147,197,253,0.3),rgba(249,168,212,0.3))">`;
+        sh+=`<td colspan="${nameIdx}" style="padding:9px;${brd}color:#1e3a8a">الإجمالي</td>`;
+        if(cols.includes('salary'))sh+=`<td style="padding:9px;${brd}color:#b45309;font-weight:900">${fmtNum(secSalary)} ${cur}</td>`;
+        if(cols.includes('withdrawals'))sh+=`<td style="padding:9px;${brd}color:#dc2626;font-weight:900">${secWd>0?fmtNum(secWd)+' '+cur:'-'}</td>`;
+        if(cols.includes('sales'))sh+=`<td style="padding:9px;${brd}"></td>`;
+        if(cols.includes('tips'))sh+=`<td style="padding:9px;${brd}"></td>`;
+        if(cols.includes('comm'))sh+=`<td style="padding:9px;${brd}"></td>`;
+        if(cols.includes('debts'))sh+=`<td style="padding:9px;${brd}"></td>`;
+        if(cols.includes('deduct'))sh+=`<td style="padding:9px;${brd}"></td>`;
+        sh+=`</tr></tbody></table>`;
+        return sh;
+    }
+    const pgStyle='background:linear-gradient(135deg,rgba(219,234,254,0.3),rgba(252,231,243,0.3));border:2px solid rgba(180,160,210,0.3);border-radius:0;padding:0;margin:0;width:100%';
+    const hdrStyle='display:flex;justify-content:space-between;align-items:center;background:linear-gradient(90deg,rgba(219,234,254,0.4),rgba(252,231,243,0.4));border-radius:0;padding:8px 12px;margin-bottom:0;border-bottom:2px solid rgba(180,160,210,0.3)';
+    function wrapPage(content,title){
+        if(!content)return '';
+        let p=`<div class="print-page-border" style="${pgStyle}">`;
+        p+=`<div class="print-header" style="${hdrStyle}">`;
+        p+=`<div style="font-size:11pt;font-weight:900;color:#1e3a8a">لافيش سنتر - قسم الملابس</div>`;
+        p+=`<div style="font-size:14pt;font-weight:900;color:#1e3a8a">كشف الرواتب - ${ym}</div>`;
+        p+=`<div style="font-size:10pt;font-weight:800;color:#333;direction:ltr">${dateStr}</div>`;
+        p+=`</div>`;
+        p+=content;
+        p+=`</div>`;
+        return p;
+    }
+    const maleContent=buildSection(maleEmps,'موظفين الرجالي');
+    const femaleContent=buildSection(femaleEmps,'موظفين النسائي');
+    let html=wrapPage(maleContent,'موظفين الرجالي');
+    if(maleContent&&femaleContent)html+=`<div style="page-break-before:always"></div>`;
+    html+=wrapPage(femaleContent,'موظفين النسائي');
+    showPrintDialog(html,true);
 }
 
 function printPayrollHistory(){ showPayrollColumnPicker('history'); }
@@ -3142,73 +3192,63 @@ function _buildPrintPayrollHistory(cols){
     const thSt='padding:9px 8px;border:1px solid rgba(180,160,210,0.3);font-weight:900;';
     const brd='border:1px solid rgba(180,160,210,0.25);';
     const hc='color:#1e3a8a';
-    let html=`<div class="print-page-border" style="background:linear-gradient(135deg,rgba(219,234,254,0.3),rgba(252,231,243,0.3));border:2px solid rgba(180,160,210,0.3);border-radius:10px;padding:14px 16px">`;
-    html+=`<div class="print-header" style="background:linear-gradient(90deg,rgba(219,234,254,0.4),rgba(252,231,243,0.4));border-radius:8px;padding:10px 12px;margin-bottom:10px;border:1px solid rgba(180,160,210,0.2)"><h2>كشف صرف الرواتب - ${ym}</h2>`;
-    if(store)html+=`<p>${store}</p>`;
-    html+=`</div>`;
-    /* summary table */
-    html+=`<table style="border-collapse:collapse;width:100%"><thead><tr style="background:linear-gradient(90deg,rgba(147,197,253,0.35),rgba(249,168,212,0.35))"><th style="${thSt}${hc}">#</th>`;
-    if(cols.includes('name'))html+=`<th style="${thSt}${hc}">الموظف</th>`;
-    if(cols.includes('salary'))html+=`<th style="${thSt}${hc}">الراتب الاسمي</th>`;
-    if(cols.includes('paid'))html+=`<th style="${thSt}${hc}">المدفوع</th>`;
-    if(cols.includes('tips'))html+=`<th style="${thSt}${hc}">الإكرامية</th>`;
-    html+=`</tr></thead><tbody>`;
-    let idx=0;
-    emps.forEach((e)=>{
-        const owed=e.salary||0;
-        const paidEntries=payroll.filter(p=>p.empId===e.id);
-        const paid=paidEntries.reduce((s,p)=>s+p.amount,0);
-        const tip=paidEntries.reduce((s,p)=>s+(p.tip||0),0);
-        if(paid===0&&tip===0)return;
-        idx++;
-        const bg=idx%2===1?'rgba(219,234,254,0.3)':'rgba(252,231,243,0.22)';
-        html+=`<tr style="background:${bg}"><td style="padding:6px;${brd}text-align:center">${idx}</td>`;
-        if(cols.includes('name'))html+=`<td style="padding:6px;${brd}font-weight:800">${e.name}</td>`;
-        if(cols.includes('salary'))html+=`<td style="padding:6px;${brd}color:#2563eb;font-weight:700">${fmtNum(owed)} ${cur}</td>`;
-        if(cols.includes('paid'))html+=`<td style="padding:6px;${brd}color:#16a34a;font-weight:700">${fmtNum(paid)} ${cur}</td>`;
-        if(cols.includes('tips'))html+=`<td style="padding:6px;${brd}color:#9333ea;font-weight:700">${tip>0?fmtNum(tip)+' '+cur:'-'}</td>`;
-        html+=`</tr>`;
-    });
-    const totalBase=payroll.reduce((s,p)=>s+p.amount,0);
-    const totalTips=payroll.reduce((s,p)=>s+(p.tip||0),0);
-    const totalNet=payroll.reduce((s,p)=>s+(p.netPay||p.amount),0);
-    const nameSpan=cols.includes('name')?2:1;
-    html+=`<tr style="font-weight:700;background:linear-gradient(90deg,rgba(147,197,253,0.3),rgba(249,168,212,0.3))"><td colspan="${nameSpan}" style="padding:9px;${brd}${hc}">الإجمالي</td>`;
-    if(cols.includes('salary'))html+=`<td style="padding:9px;${brd}"></td>`;
-    if(cols.includes('paid'))html+=`<td style="padding:9px;${brd}color:#16a34a;font-weight:900">${fmtNum(totalBase)} ${cur}</td>`;
-    if(cols.includes('tips'))html+=`<td style="padding:9px;${brd}color:#9333ea;font-weight:900">${totalTips>0?fmtNum(totalTips)+' '+cur:'-'}</td>`;
-    html+=`</tr></tbody></table>`;
-    /* تفاصيل الصرف */
-    if(cols.includes('deductions')||cols.includes('net')||cols.includes('note')){
-        html+=`<h3 style="margin-top:10px;color:#1e3a8a;border-bottom:2px solid rgba(147,197,253,0.5);padding-bottom:4px">تفاصيل الصرف</h3>`;
-        html+=`<table style="border-collapse:collapse;width:100%;margin-top:6px"><thead><tr style="background:linear-gradient(90deg,rgba(249,168,212,0.3),rgba(147,197,253,0.35))"><th style="${thSt}${hc}">#</th><th style="${thSt}${hc}">الموظف</th><th style="${thSt}${hc}">الراتب</th>`;
-        if(cols.includes('tips'))html+=`<th style="${thSt}${hc}">الإكرامية</th>`;
-        if(cols.includes('deductions'))html+=`<th style="${thSt}${hc}">الاستقطاعات</th>`;
-        if(cols.includes('net'))html+=`<th style="${thSt}${hc}">الصافي</th>`;
-        if(cols.includes('note'))html+=`<th style="${thSt}${hc}">ملاحظة</th>`;
-        html+=`</tr></thead><tbody>`;
-        payroll.forEach((p,i)=>{
+    const dateStr=getPrintDateString();
+    const maleEmps=emps.filter(e=>e.gender!=='female');
+    const femaleEmps=emps.filter(e=>e.gender==='female');
+    /* تفاصيل الصرف فقط - مفصولة حسب الجنس */
+    function buildDetailSection(sectionEmps,sectionTitle){
+        const sPayroll=payroll.filter(p=>sectionEmps.some(e=>e.id===p.empId));
+        if(!sPayroll.length)return '';
+        let sh='';
+        sh+=`<h3 style="margin:8px 0 4px;color:#1e3a8a;font-size:12pt;border-bottom:1.5px solid rgba(147,197,253,0.5);padding-bottom:3px">${sectionTitle}</h3>`;
+        sh+=`<table style="border-collapse:collapse;width:100%;margin-top:4px"><thead><tr style="background:linear-gradient(90deg,rgba(249,168,212,0.3),rgba(147,197,253,0.35))"><th style="${thSt}${hc}">#</th><th style="${thSt}${hc}">الموظف</th><th style="${thSt}${hc}">الراتب</th>`;
+        if(cols.includes('tips'))sh+=`<th style="${thSt}${hc}">الإكرامية</th>`;
+        if(cols.includes('deductions'))sh+=`<th style="${thSt}${hc}">الاستقطاعات</th>`;
+        if(cols.includes('net'))sh+=`<th style="${thSt}${hc}">الصافي</th>`;
+        if(cols.includes('note'))sh+=`<th style="${thSt}${hc}">ملاحظة</th>`;
+        sh+=`</tr></thead><tbody>`;
+        let secBase=0,secTips=0,secDed=0,secNet=0;
+        sPayroll.forEach((p,i)=>{
             const tip=p.tip||0;
             const ded=p.deductions?((p.deductions.debt||0)+(p.deductions.attendance||0)+(p.deductions.loan||0)):0;
             const net=p.netPay||p.amount;
+            secBase+=p.amount;secTips+=tip;secDed+=ded;secNet+=net;
             const bg=i%2===0?'rgba(219,234,254,0.3)':'rgba(252,231,243,0.22)';
-            html+=`<tr style="background:${bg}"><td style="padding:6px;${brd}text-align:center">${i+1}</td><td style="padding:6px;${brd}font-weight:800">${p.empName}</td><td style="padding:6px;${brd}color:#2563eb;font-weight:700">${fmtNum(p.amount)} ${cur}</td>`;
-            if(cols.includes('tips'))html+=`<td style="padding:6px;${brd}color:#9333ea;font-weight:700">${tip>0?fmtNum(tip)+' '+cur:'-'}</td>`;
-            if(cols.includes('deductions'))html+=`<td style="padding:6px;${brd}color:#dc2626;font-weight:700">${ded>0?fmtNum(ded)+' '+cur:'-'}</td>`;
-            if(cols.includes('net'))html+=`<td style="padding:6px;${brd}color:#16a34a;font-weight:900">${fmtNum(net)} ${cur}</td>`;
-            if(cols.includes('note'))html+=`<td style="padding:6px;${brd}font-size:11pt">${p.note||''}</td>`;
-            html+=`</tr>`;
+            sh+=`<tr style="background:${bg}"><td style="padding:6px;${brd}text-align:center">${i+1}</td><td style="padding:6px;${brd}font-weight:800">${p.empName}</td><td style="padding:6px;${brd}color:#2563eb;font-weight:700">${fmtNum(p.amount)} ${cur}</td>`;
+            if(cols.includes('tips'))sh+=`<td style="padding:6px;${brd}color:#9333ea;font-weight:700">${tip>0?fmtNum(tip)+' '+cur:'-'}</td>`;
+            if(cols.includes('deductions'))sh+=`<td style="padding:6px;${brd}color:#dc2626;font-weight:700">${ded>0?fmtNum(ded)+' '+cur:'-'}</td>`;
+            if(cols.includes('net'))sh+=`<td style="padding:6px;${brd}color:#16a34a;font-weight:900">${fmtNum(net)} ${cur}</td>`;
+            if(cols.includes('note'))sh+=`<td style="padding:6px;${brd}font-size:11pt">${p.note||''}</td>`;
+            sh+=`</tr>`;
         });
-        const totalDed=payroll.reduce((s,p)=>{const d=p.deductions;return s+(d?(d.debt||0)+(d.attendance||0)+(d.loan||0):0);},0);
-        html+=`<tr style="font-weight:700;background:linear-gradient(90deg,rgba(249,168,212,0.3),rgba(147,197,253,0.3))"><td colspan="2" style="padding:9px;${brd}${hc}">الإجمالي</td><td style="padding:9px;${brd}color:#2563eb;font-weight:900">${fmtNum(totalBase)} ${cur}</td>`;
-        if(cols.includes('tips'))html+=`<td style="padding:9px;${brd}color:#9333ea;font-weight:900">${totalTips>0?fmtNum(totalTips)+' '+cur:'-'}</td>`;
-        if(cols.includes('deductions'))html+=`<td style="padding:9px;${brd}color:#dc2626;font-weight:900">${totalDed>0?fmtNum(totalDed)+' '+cur:'-'}</td>`;
-        if(cols.includes('net'))html+=`<td style="padding:9px;${brd}color:#16a34a;font-weight:900">${fmtNum(totalNet)} ${cur}</td>`;
-        if(cols.includes('note'))html+=`<td style="padding:9px;${brd}"></td>`;
-        html+=`</tr></tbody></table>`;
+        sh+=`<tr style="font-weight:700;background:linear-gradient(90deg,rgba(249,168,212,0.3),rgba(147,197,253,0.3))"><td colspan="2" style="padding:9px;${brd}${hc}">الإجمالي</td><td style="padding:9px;${brd}color:#2563eb;font-weight:900">${fmtNum(secBase)} ${cur}</td>`;
+        if(cols.includes('tips'))sh+=`<td style="padding:9px;${brd}color:#9333ea;font-weight:900">${secTips>0?fmtNum(secTips)+' '+cur:'-'}</td>`;
+        if(cols.includes('deductions'))sh+=`<td style="padding:9px;${brd}color:#dc2626;font-weight:900">${secDed>0?fmtNum(secDed)+' '+cur:'-'}</td>`;
+        if(cols.includes('net'))sh+=`<td style="padding:9px;${brd}color:#16a34a;font-weight:900">${fmtNum(secNet)} ${cur}</td>`;
+        if(cols.includes('note'))sh+=`<td style="padding:9px;${brd}"></td>`;
+        sh+=`</tr></tbody></table>`;
+        return sh;
     }
-    html+=`</div>`;
-    showPrintDialog(html);
+    const pgStyle='background:linear-gradient(135deg,rgba(219,234,254,0.3),rgba(252,231,243,0.3));border:2px solid rgba(180,160,210,0.3);border-radius:0;padding:0;margin:0;width:100%';
+    const hdrStyle='display:flex;justify-content:space-between;align-items:center;background:linear-gradient(90deg,rgba(219,234,254,0.4),rgba(252,231,243,0.4));border-radius:0;padding:8px 12px;margin-bottom:0;border-bottom:2px solid rgba(180,160,210,0.3)';
+    function wrapPage(content){
+        if(!content)return '';
+        let p=`<div class="print-page-border" style="${pgStyle}">`;
+        p+=`<div class="print-header" style="${hdrStyle}">`;
+        p+=`<div style="font-size:11pt;font-weight:900;color:#1e3a8a">لافيش سنتر - قسم الملابس</div>`;
+        p+=`<div style="font-size:14pt;font-weight:900;color:#1e3a8a">كشف صرف الرواتب - ${ym}</div>`;
+        p+=`<div style="font-size:10pt;font-weight:800;color:#333;direction:ltr">${dateStr}</div>`;
+        p+=`</div>`;
+        p+=content;
+        p+=`</div>`;
+        return p;
+    }
+    const maleContent=buildDetailSection(maleEmps,'موظفين الرجالي');
+    const femaleContent=buildDetailSection(femaleEmps,'موظفين النسائي');
+    let html=wrapPage(maleContent);
+    if(maleContent&&femaleContent)html+=`<div style="page-break-before:always"></div>`;
+    html+=wrapPage(femaleContent);
+    showPrintDialog(html,true);
 }
 
 /* ========= CAPITAL (= SAFE) ========= */
@@ -4978,11 +5018,10 @@ function getPrintDateString(){
     const y=now.getFullYear();
     return days[now.getDay()]+' '+d+'/'+m+'/'+y;
 }
-function wrapPrintHtml(html){
+function wrapPrintHtml(html,noHeader){
     const dateStr=getPrintDateString();
-    const header=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding-bottom:6px;border-bottom:2.5px solid #333">
+    const header=noHeader?'':`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0;padding:4px 0 6px;border-bottom:2.5px solid #333">
         <div style="font-size:11pt;font-weight:900;color:#111;text-align:right">قسم الملابس<br>لافيش سنتر</div>
-        <div style="font-size:15pt;font-weight:900;color:#000;text-align:center">الهاشمية مول</div>
         <div style="font-size:10pt;font-weight:800;color:#111;text-align:left;direction:ltr">${dateStr}</div>
     </div>`;
     const footer=`<div style="margin-top:20px;padding-top:10px;border-top:1.5px solid #999">
@@ -4990,16 +5029,16 @@ function wrapPrintHtml(html){
             <div style="border-top:1.5px solid #333;width:160px;margin:40px auto 0;padding-top:4px;font-size:9pt;font-weight:700;color:#333">توقيع المدير</div>
         </div>
     </div>`;
-    return header + html + footer;
+    return `<div style="width:100%;margin:0;padding:0">${header}${html}${footer}</div>`;
 }
-function doPrint(html,landscape){
+function doPrint(html,landscape,noHeader){
     const area=$('#printArea');
-    area.innerHTML=wrapPrintHtml(html);
+    area.innerHTML=wrapPrintHtml(html,noHeader);
     let styleEl=document.getElementById('printOrientStyle');
     if(!styleEl){styleEl=document.createElement('style');styleEl.id='printOrientStyle';document.head.appendChild(styleEl);}
     if(landscape){
         styleEl.textContent=`@media print{
-            @page{size:A4 landscape;margin:4mm 2mm}
+            @page{size:A4 landscape;margin:2mm 0}
             #printArea{width:100%!important;max-width:100%!important}
             #printArea table{width:100%!important;table-layout:auto!important;font-size:15pt!important}
             #printArea th,#printArea td{font-size:15pt!important;padding:7px 10px!important}
@@ -5007,26 +5046,483 @@ function doPrint(html,landscape){
             #printArea .print-total{font-size:17pt!important}
         }`;
     } else {
-        styleEl.textContent='@media print{@page{size:A4;margin:4mm 2mm}}';
+        styleEl.textContent='@media print{@page{size:A4;margin:2mm 0}}';
     }
     setTimeout(()=>{
         window.print();
         setTimeout(()=>{area.innerHTML='';},500);
     },200);
 }
-function showPrintDialog(html){
+function showPrintDialog(html,noHeader){
     _pendingPrintHtml=html;
+    _pendingPrintNoHeader=!!noHeader;
     showCustomDialog({
         icon:'ri-printer-line',
         iconClass:'',
         title:'خيارات الطباعة',
         msg:'اختر اتجاه الورقة',
         buttons:[
-            {label:'<i class="ri-layout-top-line"></i> عمودي',cls:'btn-primary',action:'hideDialog();doPrint(_pendingPrintHtml,false)'},
-            {label:'<i class="ri-layout-left-line"></i> أفقي',cls:'btn-warning',action:'hideDialog();doPrint(_pendingPrintHtml,true)'},
+            {label:'<i class="ri-layout-top-line"></i> عمودي',cls:'btn-primary',action:'hideDialog();doPrint(_pendingPrintHtml,false,_pendingPrintNoHeader)'},
+            {label:'<i class="ri-layout-left-line"></i> أفقي',cls:'btn-warning',action:'hideDialog();doPrint(_pendingPrintHtml,true,_pendingPrintNoHeader)'},
             {label:'إلغاء',cls:'btn-ghost',action:'hideDialog()'}
         ]
     });
+}
+
+/* ========= SALARY ADVANCES (سحوبات الرواتب) ========= */
+function renderSalaryAdvances(){
+    const s=loadSettings();const cur=s.currency||'د.ع';
+    const monthInput=$('#advancesMonth');
+    if(!monthInput.value) monthInput.value=today().slice(0,7);
+    const ym=monthInput.value;
+    const searchVal=($('#advancesSearch')?.value||'').trim().toLowerCase();
+
+    const emps=loadData(KEYS.employees);
+    const debts=loadData(KEYS.debts);
+    const payroll=loadData(KEYS.payroll);
+
+    if(!emps.length){
+        $('#advancesTotalBar').innerHTML='';
+        $('#advancesList').innerHTML='<div class="empty-state"><i class="ri-inbox-line"></i><p>لا يوجد موظفين مسجلين</p></div>';
+        return;
+    }
+
+    /* filter employees by search */
+    let filteredEmps=emps;
+    if(searchVal) filteredEmps=emps.filter(e=>(e.name||'').toLowerCase().includes(searchVal)||(e.role||'').toLowerCase().includes(searchVal));
+
+    let grandTotalAdvances=0, grandTotalPaid=0, grandTotalDeductions=0, grandTotalFinal=0;
+
+    const cards=filteredEmps.map(emp=>{
+        const empName=emp.name;
+        const baseSalary=emp.salary||0;
+        const isComm=emp.salaryType==='commission';
+        const commRate=emp.commRate||0;
+
+        /* سحوبات هذا الموظف (withdrawals from debts) for this month */
+        const empWithdraws=debts.filter(d=>d.person===empName&&d.type==='withdraw'&&d.date&&d.date.startsWith(ym));
+        const totalWithdraws=empWithdraws.reduce((s,d)=>s+d.amount,0);
+
+        /* رواتب مصروفة لهذا الموظف هذا الشهر */
+        const empPayroll=payroll.filter(p=>p.empId===emp.id&&p.month===ym);
+        const totalPaid=empPayroll.reduce((s,p)=>s+(p.netPay||p.amount),0);
+        const totalBasePaid=empPayroll.reduce((s,p)=>s+p.amount,0);
+        const totalTips=empPayroll.reduce((s,p)=>s+(p.tip||0),0);
+        const totalDeductions=empPayroll.reduce((s,p)=>{
+            const ded=p.deductions||{};
+            return s+(ded.debt||0)+(ded.attendance||0)+(ded.loan||0);
+        },0);
+
+        /* الديون المتراكمة */
+        const empAllDebts=debts.filter(d=>d.person===empName);
+        const currentDebt=empAllDebts.reduce((s,d)=>s+d.amount,0);
+
+        /* حساب العمولة من المبيعات المحفوظة */
+        const salesKey='_advSales_'+emp.id+'_'+ym;
+        const savedSales=parseFloat(localStorage.getItem(salesKey))||0;
+        const commission=isComm?(savedSales*(commRate/100)):0;
+        const effectiveSalary=baseSalary+commission;
+
+        /* الراتب النهائي = الراتب الفعلي - السحوبات - المصروف سابقاً */
+        const finalSalary=effectiveSalary-totalWithdraws-totalPaid;
+
+        grandTotalAdvances+=totalWithdraws;
+        grandTotalPaid+=totalPaid;
+        grandTotalDeductions+=totalDeductions;
+        grandTotalFinal+=finalSalary;
+
+        /* بناء قائمة الحركات */
+        let transHtml='';
+        /* سحوبات */
+        empWithdraws.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).forEach(w=>{
+            transHtml+=`<div class="adv-trans-item">
+                <div class="adv-trans-icon withdraw"><i class="ri-arrow-up-circle-line"></i></div>
+                <div class="adv-trans-info"><div class="ati-note">${w.note||'سحب'}</div><div class="ati-date">${w.date}${w.by?' - '+w.by:''}</div></div>
+                <div class="adv-trans-amount" style="color:var(--clr-expense)">-${fmtNum(w.amount)} ${cur}</div>
+            </div>`;
+        });
+        /* رواتب مصروفة */
+        empPayroll.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).forEach(p=>{
+            const ded=p.deductions||{};
+            const totalDed=(ded.debt||0)+(ded.attendance||0)+(ded.loan||0);
+            let payNote='راتب مصروف';
+            if(p.tip>0) payNote+=' + إكرامية '+fmtNum(p.tip);
+            if(totalDed>0) payNote+=' | استقطاع '+fmtNum(totalDed);
+            transHtml+=`<div class="adv-trans-item">
+                <div class="adv-trans-icon paid"><i class="ri-hand-coin-line"></i></div>
+                <div class="adv-trans-info"><div class="ati-note">${payNote}</div><div class="ati-date">${p.date}${p.by?' - '+p.by:''}</div></div>
+                <div class="adv-trans-amount" style="color:var(--clr-income)">${fmtNum(p.netPay||p.amount)} ${cur}</div>
+            </div>`;
+        });
+
+        if(!transHtml&&!isComm){
+            transHtml='<div style="text-align:center;color:var(--text3);padding:10px;font-size:.85rem">لا توجد حركات هذا الشهر</div>';
+        }
+
+        /* commission sales input */
+        let salesRow='';
+        if(isComm){
+            salesRow=`<div class="adv-sales-row">
+                <label style="font-size:.8rem;font-weight:700;white-space:nowrap"><i class="ri-shopping-bag-line"></i> المبيعات (آلاف):</label>
+                <input type="number" class="input-field" id="advSales_${emp.id}" value="${savedSales?toK(savedSales):''}" inputmode="decimal" placeholder="0" onchange="saveAdvSales('${emp.id}','${ym}')">
+                <span class="adv-comm-badge">${commRate}% = ${fmtNum(commission)} ${cur}</span>
+            </div>`;
+        }
+
+        return `<div class="adv-emp-card">
+            <div class="adv-emp-header">
+                <div>
+                    <div class="adv-emp-name"><i class="ri-user-3-line" style="color:var(--primary)"></i> ${empName}</div>
+                    <div class="adv-emp-role">${emp.role||'موظف'} ${isComm?'<span style="color:var(--clr-income)">| عمولة '+commRate+'%</span>':'| ثابت'}</div>
+                </div>
+                ${currentDebt>0?'<span style="font-size:.78rem;font-weight:700;color:#dc2626;background:#fef2f2;padding:2px 8px;border-radius:6px"><i class="ri-error-warning-line"></i> ديون: '+fmtNum(currentDebt)+' '+cur+'</span>':''}
+            </div>
+            ${salesRow}
+            <div class="adv-emp-summary">
+                <div class="adv-emp-stat"><div class="aes-label">الراتب الأساسي</div><div class="aes-val">${fmtNum(baseSalary)} ${cur}</div></div>
+                ${isComm?'<div class="adv-emp-stat"><div class="aes-label">العمولة</div><div class="aes-val" style="color:var(--clr-income)">'+fmtNum(commission)+' '+cur+'</div></div>':''}
+                <div class="adv-emp-stat"><div class="aes-label">السحوبات</div><div class="aes-val" style="color:${totalWithdraws>0?'var(--clr-expense)':'var(--text3)'}">${fmtNum(totalWithdraws)} ${cur}</div></div>
+                <div class="adv-emp-stat"><div class="aes-label">المصروف</div><div class="aes-val" style="color:var(--clr-income)">${fmtNum(totalPaid)} ${cur}</div></div>
+                <div class="adv-emp-stat"><div class="aes-label">المتبقي</div><div class="aes-val" style="color:${finalSalary>0?'var(--clr-income)':finalSalary<0?'var(--clr-expense)':'var(--text3)'}">${fmtNum(finalSalary)} ${cur}</div></div>
+            </div>
+            ${transHtml?'<div class="adv-trans-list">'+transHtml+'</div>':''}
+            <div class="adv-final-bar">
+                <div class="adv-final-label"><i class="ri-wallet-3-line"></i> الراتب النهائي المتبقي</div>
+                <div class="adv-final-val" style="color:${finalSalary>=0?'var(--clr-income)':'var(--clr-expense)'}">${fmtNum(finalSalary)} ${cur}</div>
+            </div>
+        </div>`;
+    }).join('');
+
+    /* total bar */
+    $('#advancesTotalBar').innerHTML=`<div class="adv-total-bar">
+        <div class="adv-total-chip"><div class="atc-label">إجمالي السحوبات</div><div class="atc-val" style="color:var(--clr-expense)">${fmtNum(grandTotalAdvances)} ${cur}</div></div>
+        <div class="adv-total-chip"><div class="atc-label">إجمالي المصروف</div><div class="atc-val" style="color:var(--clr-income)">${fmtNum(grandTotalPaid)} ${cur}</div></div>
+        <div class="adv-total-chip"><div class="atc-label">إجمالي الاستقطاعات</div><div class="atc-val" style="color:#f59e0b">${fmtNum(grandTotalDeductions)} ${cur}</div></div>
+        <div class="adv-total-chip"><div class="atc-label">المتبقي الكلي</div><div class="atc-val" style="color:${grandTotalFinal>=0?'var(--clr-income)':'var(--clr-expense)'}">${fmtNum(grandTotalFinal)} ${cur}</div></div>
+    </div>`;
+
+    if(!cards.trim()){
+        $('#advancesList').innerHTML='<div class="empty-state"><i class="ri-search-line"></i><p>لا توجد نتائج</p></div>';
+    } else {
+        $('#advancesList').innerHTML=cards;
+    }
+}
+
+function saveAdvSales(empId,ym){
+    const el=$('#advSales_'+empId);
+    if(!el) return;
+    const val=parseK(el.value);
+    localStorage.setItem('_advSales_'+empId+'_'+ym,val);
+    renderSalaryAdvances();
+}
+
+function printSalaryAdvances(){
+    if(!hasAction('print'))return toast('غير مصرح');
+    const s=loadSettings();const cur=s.currency||'د.ع';
+    const monthInput=$('#advancesMonth');
+    if(!monthInput.value) monthInput.value=today().slice(0,7);
+    const ym=monthInput.value;
+    const store=s.storeName||'نظام الكاشير';
+
+    const emps=loadData(KEYS.employees);
+    const debts=loadData(KEYS.debts);
+    const payroll=loadData(KEYS.payroll);
+
+    let rows='';
+    let gAdv=0,gPaid=0,gFinal=0;
+
+    emps.forEach(emp=>{
+        const empName=emp.name;
+        const baseSalary=emp.salary||0;
+        const isComm=emp.salaryType==='commission';
+        const commRate=emp.commRate||0;
+
+        const empWithdraws=debts.filter(d=>d.person===empName&&d.type==='withdraw'&&d.date&&d.date.startsWith(ym));
+        const totalWithdraws=empWithdraws.reduce((s,d)=>s+d.amount,0);
+        const empPayroll=payroll.filter(p=>p.empId===emp.id&&p.month===ym);
+        const totalPaid=empPayroll.reduce((s,p)=>s+(p.netPay||p.amount),0);
+
+        const salesKey='_advSales_'+emp.id+'_'+ym;
+        const savedSales=parseFloat(localStorage.getItem(salesKey))||0;
+        const commission=isComm?(savedSales*(commRate/100)):0;
+        const effectiveSalary=baseSalary+commission;
+        const finalSalary=effectiveSalary-totalWithdraws-totalPaid;
+
+        gAdv+=totalWithdraws;gPaid+=totalPaid;gFinal+=finalSalary;
+
+        rows+=`<tr>
+            <td>${empName}</td>
+            <td>${emp.role||'موظف'}</td>
+            <td>${fmtNum(baseSalary)}</td>
+            ${isComm?'<td>'+fmtNum(commission)+'</td>':'<td>-</td>'}
+            <td style="color:#dc2626">${fmtNum(totalWithdraws)}</td>
+            <td style="color:#16a34a">${fmtNum(totalPaid)}</td>
+            <td style="font-weight:900;color:${finalSalary>=0?'#16a34a':'#dc2626'}">${fmtNum(finalSalary)}</td>
+        </tr>`;
+
+        /* detail rows for withdrawals */
+        empWithdraws.forEach(w=>{
+            rows+=`<tr style="font-size:10pt;color:#666"><td colspan="4" style="padding-right:20px">↳ ${w.note||'سحب'} (${w.date})</td><td style="color:#dc2626">-${fmtNum(w.amount)}</td><td colspan="2"></td></tr>`;
+        });
+    });
+
+    let html=`<div class="print-page-border">
+    <div class="print-header"><h2>${store}</h2><p>كشف سحوبات الرواتب - شهر ${ym}</p></div>
+    <div class="print-date">تاريخ الطباعة: ${today()}</div>
+    <table><thead><tr><th>الموظف</th><th>الوظيفة</th><th>الراتب</th><th>العمولة</th><th>السحوبات</th><th>المصروف</th><th>المتبقي</th></tr></thead>
+    <tbody>${rows}
+    <tr style="font-weight:900;border-top:3px solid #333"><td colspan="4">الإجمالي</td><td style="color:#dc2626">${fmtNum(gAdv)}</td><td style="color:#16a34a">${fmtNum(gPaid)}</td><td style="color:${gFinal>=0?'#16a34a':'#dc2626'}">${fmtNum(gFinal)}</td></tr>
+    </tbody></table>
+    <div class="print-footer">تم الإنشاء بواسطة ${store} - ${today()}</div>
+    </div>`;
+    showPrintDialog(html);
+}
+
+/* ========= PROFIT & LOSS ANALYSIS (تحليل الأرباح والخسائر) ========= */
+let _profitChart=null;
+
+function renderProfitLoss(){
+    const s=loadSettings();const cur=s.currency||'د.ع';
+    const monthInput=$('#profitMonth');
+    if(!monthInput.value) monthInput.value=today().slice(0,7);
+    const filterPrefix=monthInput.value;
+    const markup=parseFloat($('#profitMarkup').value)||50;
+    const markupFactor=markup/100;
+
+    /* ===== جلب بيانات الخزنة ===== */
+    const safeTrans=loadData(KEYS.safe).filter(t=>t.date&&t.date.startsWith(filterPrefix));
+    const safeDeposits=safeTrans.filter(t=>t.type==='deposit');
+    const safeWithdraws=safeTrans.filter(t=>t.type==='withdraw');
+
+    /* تصنيف الإيداعات */
+    const closingDeposits=safeDeposits.filter(t=>t.closingId);
+    const otherDeposits=safeDeposits.filter(t=>!t.closingId);
+
+    const totalClosingDeposits=closingDeposits.reduce((s,t)=>s+t.amount,0);
+    const totalOtherDeposits=otherDeposits.reduce((s,t)=>s+t.amount,0);
+    const totalDeposits=totalClosingDeposits+totalOtherDeposits;
+    const totalWithdraws=safeWithdraws.reduce((s,t)=>s+t.amount,0);
+
+    /* صافي حركة الخزنة هذا الشهر */
+    const netSafeMovement=totalDeposits-totalWithdraws;
+
+    /* الرصيد الكلي للخزنة */
+    const safeBalance=getSafeBalance();
+
+    /* ===== حساب الربح على أساس الخزنة ===== */
+    /* إيداعات التقفيلات = صافي المبيعات بعد خصم المصاريف والديون على مستوى الكاشير */
+    /* تكلفة البضاعة = إيداعات التقفيلات / (1 + نسبة الربح) */
+    const costOfGoods=totalClosingDeposits/(1+markupFactor);
+    const grossProfit=totalClosingDeposits-costOfGoods;
+
+    /* صافي الربح = الربح الإجمالي - سحوبات الخزنة */
+    const netProfit=grossProfit-totalWithdraws;
+
+    /* نسب */
+    const grossProfitPct=totalClosingDeposits>0?((grossProfit/totalClosingDeposits)*100):0;
+    const netProfitPct=totalClosingDeposits>0?((netProfit/totalClosingDeposits)*100):0;
+
+    /* ===== جلب بيانات إضافية للعرض ===== */
+    const closings=loadData(KEYS.closings).filter(c=>c.date&&c.date.startsWith(filterPrefix));
+    const debts=loadData(KEYS.debts).filter(d=>d.date&&d.date.startsWith(filterPrefix));
+    const debtAdded=debts.filter(d=>d.amount>0).reduce((s,d)=>s+d.amount,0);
+    const debtRepaid=debts.filter(d=>d.amount<0).reduce((s,d)=>s+Math.abs(d.amount),0);
+    const payrollData=loadData(KEYS.payroll).filter(p=>p.month===filterPrefix);
+    const totalPayroll=payrollData.reduce((s,p)=>s+(p.netPay||p.amount),0);
+
+    /* إجمالي المبيعات الأصلية من التقفيلات */
+    let totalSales=0,totalReturns=0;
+    closings.forEach(c=>{CASHIERS.forEach(cs=>{const d=c.cashiers[cs.key];if(!d)return;const r=calcCashierNet(d);totalSales+=r.gross;totalReturns+=r.returns;});});
+
+    /* ===== بطاقة النتيجة ===== */
+    const isProfit=netProfit>0;
+    const isZero=netProfit===0;
+    const resultClass=isZero?'profit-zero':isProfit?'profit-positive':'profit-negative';
+    const resultIcon=isZero?'ri-equal-line':isProfit?'ri-arrow-up-circle-fill':'ri-arrow-down-circle-fill';
+    const resultLabel=isZero?'لا ربح ولا خسارة':isProfit?'صافي الربح':'صافي الخسارة';
+
+    $('#profitResultCard').innerHTML=`
+    <div class="profit-result-card ${resultClass}">
+        <div class="profit-result-icon"><i class="${resultIcon}"></i></div>
+        <div class="profit-result-label">${resultLabel} - شهر ${filterPrefix}</div>
+        <div class="profit-result-amount">${fmtNum(Math.abs(netProfit))} ${cur}</div>
+        <div class="profit-result-pct">${netProfitPct.toFixed(1)}% من إيداعات التقفيلات</div>
+    </div>`;
+
+    /* ===== شبكة الملخص ===== */
+    $('#profitSummaryGrid').innerHTML=`
+    <div class="profit-summary-grid">
+        <div class="profit-summary-item"><div class="ps-icon" style="color:#22c55e"><i class="ri-safe-2-fill"></i></div><div class="ps-label">إيداعات التقفيلات</div><div class="ps-val" style="color:var(--clr-income)">${fmtNum(totalClosingDeposits)} ${cur}</div></div>
+        <div class="profit-summary-item"><div class="ps-icon" style="color:#0ea5e9"><i class="ri-add-circle-fill"></i></div><div class="ps-label">إيداعات أخرى</div><div class="ps-val">${fmtNum(totalOtherDeposits)} ${cur}</div></div>
+        <div class="profit-summary-item"><div class="ps-icon" style="color:#6366f1"><i class="ri-wallet-3-fill"></i></div><div class="ps-label">إجمالي الإيداعات</div><div class="ps-val">${fmtNum(totalDeposits)} ${cur}</div></div>
+        <div class="profit-summary-item"><div class="ps-icon" style="color:#ef4444"><i class="ri-arrow-down-circle-fill"></i></div><div class="ps-label">سحوبات الخزنة</div><div class="ps-val" style="color:var(--clr-expense)">${fmtNum(totalWithdraws)} ${cur}</div></div>
+        <div class="profit-summary-item"><div class="ps-icon" style="color:#f97316"><i class="ri-box-3-fill"></i></div><div class="ps-label">تكلفة البضاعة (${markup}%)</div><div class="ps-val">${fmtNum(costOfGoods)} ${cur}</div></div>
+        <div class="profit-summary-item"><div class="ps-icon" style="color:#22c55e"><i class="ri-funds-fill"></i></div><div class="ps-label">هامش الربح الإجمالي</div><div class="ps-val" style="color:var(--clr-income)">${fmtNum(grossProfit)} ${cur}</div></div>
+        <div class="profit-summary-item"><div class="ps-icon" style="color:#8b5cf6"><i class="ri-percent-fill"></i></div><div class="ps-label">نسبة الربح الإجمالي</div><div class="ps-val">${grossProfitPct.toFixed(1)}%</div></div>
+        <div class="profit-summary-item"><div class="ps-icon" style="color:#14b8a6"><i class="ri-safe-2-fill"></i></div><div class="ps-label">صافي حركة الخزنة</div><div class="ps-val" style="color:${netSafeMovement>=0?'var(--clr-income)':'var(--clr-expense)'}">${fmtNum(netSafeMovement)} ${cur}</div></div>
+        <div class="profit-summary-item"><div class="ps-icon" style="color:#d97706"><i class="ri-coin-fill"></i></div><div class="ps-label">رصيد الخزنة الحالي</div><div class="ps-val" style="font-weight:900">${fmtNum(safeBalance)} ${cur}</div></div>
+    </div>`;
+
+    /* ===== الرسم البياني ===== */
+    if(_profitChart){_profitChart.destroy();_profitChart=null;}
+    const ctx=document.getElementById('profitChart');
+    if(ctx){
+        _profitChart=new Chart(ctx,{
+            type:'doughnut',
+            data:{
+                labels:['تكلفة البضاعة','سحوبات الخزنة','صافي الربح/الخسارة'],
+                datasets:[{
+                    data:[
+                        Math.round(costOfGoods/1000),
+                        Math.round(totalWithdraws/1000),
+                        Math.round(Math.abs(netProfit)/1000)
+                    ],
+                    backgroundColor:['#f97316','#ef4444',netProfit>=0?'#22c55e':'#dc2626'],
+                    borderWidth:2,
+                    borderColor:'#fff'
+                }]
+            },
+            options:{
+                responsive:true,
+                plugins:{
+                    legend:{position:'bottom',labels:{font:{family:'Tajawal',size:12},padding:12}},
+                    tooltip:{callbacks:{label:function(c){return c.label+': '+Number(c.raw).toLocaleString('en-US')+' '+cur;}}}
+                }
+            }
+        });
+    }
+
+    /* ===== جدول التفاصيل ===== */
+    /* قائمة سحوبات الخزنة */
+    let withdrawRows='';
+    safeWithdraws.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).forEach(w=>{
+        withdrawRows+=`<tr><td style="padding-right:24px">${w.date} - ${w.note||'سحب'}</td><td>${fmtNum(w.amount)} ${cur}</td></tr>`;
+    });
+
+    $('#profitDetailsSection').innerHTML=`
+    <div class="profit-detail-section">
+        <h3><i class="ri-safe-2-fill"></i> تحليل الربح والخسارة من الخزنة</h3>
+        <table class="profit-detail-table">
+            <thead><tr><th>البند</th><th>المبلغ</th></tr></thead>
+            <tbody>
+                <tr><td><i class="ri-shopping-bag-line" style="color:#6366f1"></i> إجمالي المبيعات (من التقفيلات)</td><td>${fmtNum(totalSales)} ${cur}</td></tr>
+                <tr><td><i class="ri-arrow-go-back-line" style="color:#ef4444"></i> (-) التخفيضات والخصومات</td><td>${fmtNum(totalReturns)} ${cur}</td></tr>
+                <tr><td><i class="ri-safe-2-line" style="color:#22c55e"></i> <strong>ما دخل الخزنة من التقفيلات</strong></td><td style="color:var(--clr-income);font-weight:700">${fmtNum(totalClosingDeposits)} ${cur}</td></tr>
+                ${totalOtherDeposits?`<tr><td><i class="ri-add-circle-line" style="color:#0ea5e9"></i> إيداعات أخرى (يدوية)</td><td>${fmtNum(totalOtherDeposits)} ${cur}</td></tr>`:''}
+                <tr class="total-row"><td><strong>إجمالي الإيداعات في الخزنة</strong></td><td><strong>${fmtNum(totalDeposits)} ${cur}</strong></td></tr>
+                <tr><td><i class="ri-box-3-line" style="color:#f97316"></i> (-) تكلفة البضاعة المقدرة (نسبة ${markup}%)</td><td class="negative">${fmtNum(costOfGoods)} ${cur}</td></tr>
+                <tr class="total-row profit-row"><td><strong>هامش الربح الإجمالي</strong></td><td class="positive"><strong>${fmtNum(grossProfit)} ${cur}</strong></td></tr>
+                <tr><td colspan="2" style="font-weight:700;color:var(--text2);padding-top:12px"><i class="ri-arrow-down-circle-line"></i> سحوبات الخزنة (${safeWithdraws.length} عملية)</td></tr>
+                ${withdrawRows||'<tr><td colspan="2" style="text-align:center;color:var(--text3)">لا توجد سحوبات</td></tr>'}
+                <tr class="total-row"><td><strong>إجمالي السحوبات</strong></td><td class="negative"><strong>${fmtNum(totalWithdraws)} ${cur}</strong></td></tr>
+                <tr class="total-row profit-row"><td><strong style="font-size:1rem">${netProfit>=0?'صافي الربح':'صافي الخسارة'}</strong></td><td class="${netProfit>=0?'positive':'negative'}" style="font-size:1rem"><strong>${fmtNum(Math.abs(netProfit))} ${cur} ${netProfit>=0?'✓':'✗'}</strong></td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="profit-detail-section" style="margin-top:12px">
+        <h3><i class="ri-information-fill"></i> معلومات إضافية</h3>
+        <table class="profit-detail-table">
+            <thead><tr><th>البند</th><th>المبلغ</th></tr></thead>
+            <tbody>
+                <tr><td><i class="ri-safe-2-line" style="color:#14b8a6"></i> رصيد الخزنة الحالي (الكلي)</td><td style="font-weight:800">${fmtNum(safeBalance)} ${cur}</td></tr>
+                <tr><td><i class="ri-arrow-up-circle-line" style="color:#22c55e"></i> صافي حركة الخزنة (هذا الشهر)</td><td style="color:${netSafeMovement>=0?'var(--clr-income)':'var(--clr-expense)'}">${fmtNum(netSafeMovement)} ${cur}</td></tr>
+                <tr><td><i class="ri-file-list-3-line" style="color:#ef4444"></i> الديون الجديدة</td><td>${fmtNum(debtAdded)} ${cur}</td></tr>
+                <tr><td><i class="ri-checkbox-circle-line" style="color:#22c55e"></i> الديون المسددة</td><td>${fmtNum(debtRepaid)} ${cur}</td></tr>
+                <tr><td><i class="ri-team-line" style="color:#8b5cf6"></i> الرواتب المصروفة</td><td>${fmtNum(totalPayroll)} ${cur}</td></tr>
+                <tr><td><i class="ri-calculator-line" style="color:#6366f1"></i> عدد التقفيلات</td><td>${closings.length}</td></tr>
+                <tr><td><i class="ri-exchange-line" style="color:#0ea5e9"></i> عدد عمليات الخزنة</td><td>${safeTrans.length}</td></tr>
+            </tbody>
+        </table>
+    </div>`;
+}
+
+function printProfitLoss(){
+    const s=loadSettings();const cur=s.currency||'د.ع';
+    const monthInput=$('#profitMonth');
+    if(!monthInput.value) monthInput.value=today().slice(0,7);
+    const filterPrefix=monthInput.value;
+    const markup=parseFloat($('#profitMarkup').value)||50;
+    const markupFactor=markup/100;
+
+    const safeTrans=loadData(KEYS.safe).filter(t=>t.date&&t.date.startsWith(filterPrefix));
+    const safeDeposits=safeTrans.filter(t=>t.type==='deposit');
+    const safeWithdraws=safeTrans.filter(t=>t.type==='withdraw');
+    const closingDeposits=safeDeposits.filter(t=>t.closingId);
+    const otherDeposits=safeDeposits.filter(t=>!t.closingId);
+    const totalClosingDeposits=closingDeposits.reduce((s,t)=>s+t.amount,0);
+    const totalOtherDeposits=otherDeposits.reduce((s,t)=>s+t.amount,0);
+    const totalDeposits=totalClosingDeposits+totalOtherDeposits;
+    const totalWithdraws=safeWithdraws.reduce((s,t)=>s+t.amount,0);
+    const costOfGoods=totalClosingDeposits/(1+markupFactor);
+    const grossProfit=totalClosingDeposits-costOfGoods;
+    const netProfit=grossProfit-totalWithdraws;
+    const safeBalance=getSafeBalance();
+    const store=s.storeName||'نظام الكاشير';
+
+    let withdrawRows='';
+    safeWithdraws.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).forEach(w=>{
+        withdrawRows+=`<tr><td style="padding-right:16px">${w.date} - ${w.note||'سحب'}</td><td>${fmtNum(w.amount)} ${cur}</td></tr>`;
+    });
+
+    let html=`<div class="print-page-border">
+    <div class="print-header"><h2>${store}</h2><p>تقرير الأرباح والخسائر (من الخزنة) - شهر ${filterPrefix}</p></div>
+    <div class="print-date">نسبة الربح المستخدمة: ${markup}%</div>
+    <table><thead><tr><th>البند</th><th>المبلغ</th></tr></thead><tbody>
+    <tr><td>إيداعات التقفيلات</td><td>${fmtNum(totalClosingDeposits)} ${cur}</td></tr>
+    ${totalOtherDeposits?`<tr><td>إيداعات أخرى (يدوية)</td><td>${fmtNum(totalOtherDeposits)} ${cur}</td></tr>`:''}
+    <tr style="font-weight:900;border-top:2px solid #333"><td>إجمالي الإيداعات</td><td>${fmtNum(totalDeposits)} ${cur}</td></tr>
+    <tr><td>(-) تكلفة البضاعة المقدرة (${markup}%)</td><td>${fmtNum(costOfGoods)} ${cur}</td></tr>
+    <tr style="font-weight:900;border-top:2px solid #333"><td>هامش الربح الإجمالي</td><td>${fmtNum(grossProfit)} ${cur}</td></tr>
+    <tr><td colspan="2" style="font-weight:700;padding-top:8px">سحوبات الخزنة:</td></tr>
+    ${withdrawRows||'<tr><td colspan="2" style="text-align:center">لا توجد سحوبات</td></tr>'}
+    <tr style="font-weight:900;border-top:2px solid #333"><td>إجمالي السحوبات</td><td>${fmtNum(totalWithdraws)} ${cur}</td></tr>
+    </tbody></table>
+    <div class="print-total" style="margin-top:8px;${netProfit>=0?'color:#16a34a':'color:#dc2626'}">${netProfit>=0?'صافي الربح':'صافي الخسارة'}: ${fmtNum(Math.abs(netProfit))} ${cur}</div>
+    <div style="margin-top:4px;font-size:11px;color:#555">رصيد الخزنة الحالي: ${fmtNum(safeBalance)} ${cur}</div>
+    <div class="print-footer">تم الإنشاء بواسطة ${store} - ${today()}</div>
+    </div>`;
+    showPrintDialog(html);
+}
+
+function exportProfitLoss(){
+    const s=loadSettings();const cur=s.currency||'د.ع';
+    const monthInput=$('#profitMonth');
+    if(!monthInput.value) monthInput.value=today().slice(0,7);
+    const filterPrefix=monthInput.value;
+    const markup=parseFloat($('#profitMarkup').value)||50;
+    const markupFactor=markup/100;
+
+    const safeTrans=loadData(KEYS.safe).filter(t=>t.date&&t.date.startsWith(filterPrefix));
+    const safeDeposits=safeTrans.filter(t=>t.type==='deposit');
+    const safeWithdraws=safeTrans.filter(t=>t.type==='withdraw');
+    const closingDeposits=safeDeposits.filter(t=>t.closingId);
+    const otherDeposits=safeDeposits.filter(t=>!t.closingId);
+    const totalClosingDeposits=closingDeposits.reduce((s,t)=>s+t.amount,0);
+    const totalOtherDeposits=otherDeposits.reduce((s,t)=>s+t.amount,0);
+    const totalDeposits=totalClosingDeposits+totalOtherDeposits;
+    const totalWithdraws=safeWithdraws.reduce((s,t)=>s+t.amount,0);
+    const costOfGoods=totalClosingDeposits/(1+markupFactor);
+    const grossProfit=totalClosingDeposits-costOfGoods;
+    const netProfit=grossProfit-totalWithdraws;
+    const safeBalance=getSafeBalance();
+
+    const data={
+        month:filterPrefix,
+        markupPercent:markup,
+        totalClosingDeposits,totalOtherDeposits,totalDeposits,
+        totalWithdraws,
+        costOfGoods,grossProfit,netProfit,
+        safeBalance,
+        withdrawals:safeWithdraws.map(w=>({date:w.date,note:w.note||'سحب',amount:w.amount})),
+        currency:cur,
+        exportDate:today()
+    };
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`profit-loss-safe-${filterPrefix}.json`;
+    a.click();URL.revokeObjectURL(a.href);
+    toast('تم تصدير التقرير');
 }
 
 /* ========= INIT ========= */

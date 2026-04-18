@@ -67,6 +67,8 @@
                 <button class="sb-item" data-page="payroll"><i class="ri-hand-coin-line"></i>صرف الرواتب</button>
                 <button class="sb-item" data-page="capital"><i class="ri-funds-line"></i>رأس المال</button>
                 <button class="sb-item" data-page="purchases"><i class="ri-shopping-cart-2-line"></i>المشتريات</button>
+                <button class="sb-item" data-page="salaryAdvances"><i class="ri-exchange-funds-line"></i>سحوبات الرواتب</button>
+                <button class="sb-item" data-page="profitLoss"><i class="ri-line-chart-line"></i>تحليل الأرباح</button>
                 <button class="sb-item" data-page="generalExpenses"><i class="ri-building-line"></i>المصاريف العامة</button>
                 <button class="sb-item" data-page="closingSheet"><i class="ri-file-list-line"></i>كشف الحسابات</button>
                 <button class="sb-item" data-page="report"><i class="ri-bar-chart-box-line"></i>التقرير الشهري</button>
@@ -93,12 +95,14 @@
                     <div class="home-tile tile-safe" data-page="safe"><div class="tile-icon"><i class="ri-safe-2-fill"></i></div><div class="tile-label">الخزنة</div><div class="tile-desc">رصيد ومعاملات الخزنة</div></div>
                     <div class="home-tile tile-debts" data-page="debts"><div class="tile-icon"><i class="ri-file-list-3-fill"></i></div><div class="tile-label">الديون</div><div class="tile-desc">سجل ديون الموظفين والعملاء</div></div>
                     <div class="home-tile tile-expenses" data-page="expenses"><div class="tile-icon"><i class="ri-money-dollar-box-fill"></i></div><div class="tile-label">المصاريف</div><div class="tile-desc">جرد كامل المصاريف</div></div>
-                    <div class="home-tile tile-general-exp" data-page="generalExpenses" style="background:linear-gradient(135deg,#f97316 0%,#ea580c 100%);color:#fff"><div class="tile-icon"><i class="ri-building-line"></i></div><div class="tile-label">المصاريف العامة</div><div class="tile-desc">مصاريف الإدارة والمصاريف العامة</div></div>
-                    <div class="home-tile tile-closing-sheet" data-page="closingSheet" style="background:linear-gradient(135deg,#0ea5e9 0%,#0284c7 100%);color:#fff"><div class="tile-icon"><i class="ri-file-list-line"></i></div><div class="tile-label">كشف الحسابات</div><div class="tile-desc">معادلة المبلغ النهائي للتقفيلات</div></div>
+                    <div class="home-tile tile-general-exp" data-page="generalExpenses"><div class="tile-icon"><i class="ri-building-fill"></i></div><div class="tile-label">المصاريف العامة</div><div class="tile-desc">مصاريف الإدارة والمصاريف العامة</div></div>
+                    <div class="home-tile tile-closing-sheet" data-page="closingSheet"><div class="tile-icon"><i class="ri-file-list-fill"></i></div><div class="tile-label">كشف الحسابات</div><div class="tile-desc">معادلة المبلغ النهائي للتقفيلات</div></div>
                     <div class="home-tile tile-salaries" data-page="salaries"><div class="tile-icon"><i class="ri-team-fill"></i></div><div class="tile-label">الرواتب</div><div class="tile-desc">بيانات الموظفين</div></div>
                     <div class="home-tile tile-payroll" data-page="payroll"><div class="tile-icon"><i class="ri-hand-coin-fill"></i></div><div class="tile-label">صرف الرواتب</div><div class="tile-desc">تسليم رواتب الموظفين</div></div>
                     <div class="home-tile tile-capital" data-page="capital"><div class="tile-icon"><i class="ri-funds-fill"></i></div><div class="tile-label">رأس المال</div><div class="tile-desc">إدارة رأس المال</div></div>
                     <div class="home-tile tile-purchases" data-page="purchases"><div class="tile-icon"><i class="ri-shopping-cart-2-fill"></i></div><div class="tile-label">المشتريات</div><div class="tile-desc">سجل شراء البضاعة</div></div>
+                    <div class="home-tile tile-advances" data-page="salaryAdvances"><div class="tile-icon"><i class="ri-exchange-funds-fill"></i></div><div class="tile-label">سحوبات الرواتب</div><div class="tile-desc">حركات سحوبات الموظفين من الراتب</div></div>
+                    <div class="home-tile tile-profit" data-page="profitLoss"><div class="tile-icon"><i class="ri-line-chart-fill"></i></div><div class="tile-label">تحليل الأرباح</div><div class="tile-desc">تحليل الربح والخسارة</div></div>
                     <div class="home-tile tile-report" data-page="report"><div class="tile-icon"><i class="ri-bar-chart-box-fill"></i></div><div class="tile-label">التقرير الشهري</div><div class="tile-desc">تقرير شامل للطباعة</div></div>
                     <div class="home-tile tile-security" id="securityTile" data-page="security" style="display:none"><div class="tile-icon"><i class="ri-shield-keyhole-fill"></i></div><div class="tile-label">الحماية</div><div class="tile-desc">إدارة المستخدمين والصلاحيات</div></div>
                     <div class="home-tile tile-settings" data-page="settings"><div class="tile-icon"><i class="ri-settings-4-fill"></i></div><div class="tile-label">الإعدادات</div><div class="tile-desc">إعدادات النظام</div></div>
@@ -434,6 +438,69 @@
                     <button class="btn btn-primary btn-sm" onclick="renderClosingSheet()"><i class="ri-filter-line"></i> تطبيق</button>
                 </div>
                 <div id="closingSheetContent" style="margin-top:12px"></div>
+            </section>
+
+            <!-- SALARY ADVANCES (سحوبات الرواتب) -->
+            <section id="page-salaryAdvances" class="page">
+                <div class="section-head">
+                    <h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-exchange-funds-fill"></i> سحوبات الرواتب</h2>
+                    <div class="page-io-btns">
+                        <button class="btn btn-warning btn-sm" onclick="printSalaryAdvances()" title="طباعة"><i class="ri-printer-fill"></i></button>
+                    </div>
+                </div>
+                <div class="filter-bar" style="margin-bottom:10px">
+                    <input type="month" id="advancesMonth" class="input-field" style="flex:1" onchange="renderSalaryAdvances()">
+                    <input type="text" id="advancesSearch" class="input-field" placeholder="بحث بالاسم..." style="flex:1" oninput="renderSalaryAdvances()">
+                    <button class="btn btn-primary btn-sm" onclick="renderSalaryAdvances()"><i class="ri-search-line"></i></button>
+                </div>
+                <div id="advancesTotalBar"></div>
+                <div id="advancesList"></div>
+            </section>
+
+            <!-- PROFIT & LOSS ANALYSIS (تحليل الأرباح والخسائر) -->
+            <section id="page-profitLoss" class="page">
+                <div class="section-head">
+                    <h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-line-chart-fill"></i> تحليل الأرباح والخسائر</h2>
+                    <div class="page-io-btns">
+                        <button class="btn btn-warning btn-sm" onclick="printProfitLoss()" title="طباعة"><i class="ri-printer-fill"></i></button>
+                        <button class="btn btn-ghost btn-sm" onclick="exportProfitLoss()" title="تصدير"><i class="ri-download-2-line"></i></button>
+                    </div>
+                </div>
+
+                <!-- نسبة الربح وفلتر الشهر -->
+                <div class="card" style="margin-bottom:14px">
+                    <h3 class="card-h"><i class="ri-percent-line"></i> إعدادات التحليل</h3>
+                    <div class="field">
+                        <label>نسبة الربح (هامش الربح على تكلفة البضاعة)</label>
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <input type="number" id="profitMarkup" class="input-field" value="50" min="1" max="500" style="flex:1">
+                            <span style="font-weight:700;color:var(--primary)">%</span>
+                        </div>
+                        <p style="font-size:.75rem;color:var(--text3);margin-top:4px">مثال: إذا كان سعر الشراء 100 ونسبة الربح 50%، فسعر البيع = 150</p>
+                    </div>
+                    <div class="field">
+                        <label>الشهر</label>
+                        <div style="display:flex;gap:8px">
+                            <input type="month" id="profitMonth" class="input-field" style="flex:1">
+                            <button class="btn btn-primary btn-sm" onclick="renderProfitLoss()"><i class="ri-search-line"></i> تحليل</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- بطاقة النتيجة الرئيسية -->
+                <div id="profitResultCard"></div>
+
+                <!-- ملخص الأرقام -->
+                <div id="profitSummaryGrid"></div>
+
+                <!-- الرسم البياني -->
+                <div class="card" style="margin-top:14px">
+                    <h3 class="card-h"><i class="ri-pie-chart-2-fill"></i> توزيع المصاريف والأرباح</h3>
+                    <canvas id="profitChart" height="260"></canvas>
+                </div>
+
+                <!-- جدول التفاصيل -->
+                <div id="profitDetailsSection"></div>
             </section>
         </main>
 
