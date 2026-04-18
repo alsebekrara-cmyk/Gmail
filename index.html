@@ -67,6 +67,8 @@
                 <button class="sb-item" data-page="payroll"><i class="ri-hand-coin-line"></i>صرف الرواتب</button>
                 <button class="sb-item" data-page="capital"><i class="ri-funds-line"></i>رأس المال</button>
                 <button class="sb-item" data-page="purchases"><i class="ri-shopping-cart-2-line"></i>المشتريات</button>
+                <button class="sb-item" data-page="generalExpenses"><i class="ri-building-line"></i>المصاريف العامة</button>
+                <button class="sb-item" data-page="closingSheet"><i class="ri-file-list-line"></i>كشف الحسابات</button>
                 <button class="sb-item" data-page="report"><i class="ri-bar-chart-box-line"></i>التقرير الشهري</button>
                 <hr class="sb-hr">
                 <button class="sb-item sb-security" data-page="security"><i class="ri-shield-keyhole-line"></i>الحماية</button>
@@ -105,13 +107,12 @@
 
             <!-- CLOSING (التقفيلة) -->
             <section id="page-closing" class="page">
-                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-calculator-fill"></i> التقفيلة</h2><div class="page-io-btns"><button class="btn btn-ghost btn-sm" onclick="exportPage('closings','تقفيلات','التقفيلات')" title="تصدير"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('closings','التقفيلات',renderClosings)" title="استيراد"><i class="ri-upload-2-line"></i></button></div></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-calculator-fill"></i> التقفيلة</h2><div class="page-io-btns"><button class="btn btn-warning btn-sm" onclick="printAllClosings()" title="طباعة"><i class="ri-printer-fill"></i></button><button class="btn btn-ghost btn-sm" onclick="exportPage('closings','تقفيلات','التقفيلات')" title="تصدير"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('closings','التقفيلات',renderClosings)" title="استيراد"><i class="ri-upload-2-line"></i></button></div></div>
                 <div class="date-bar"><i class="ri-calendar-line"></i><span id="closingDateDisplay"></span></div>
                 <button class="btn btn-primary btn-block" id="newClosingBtn"><i class="ri-add-circle-line"></i> تقفيلة جديدة</button>
                 <div class="filter-bar" style="margin-top:12px"><input type="text" id="closingSearch" class="input-field" placeholder="بحث في التقفيلات..."><button class="btn btn-primary btn-sm" onclick="renderClosings()"><i class="ri-search-line"></i></button></div>
                 <h3 class="sub-title">التقفيلات السابقة</h3>
                 <div id="closingsList" class="records-list"></div>
-                <button class="btn btn-warning btn-block" style="margin-top:12px" onclick="printAllClosings()"><i class="ri-printer-fill"></i> طباعة جميع التقفيلات</button>
             </section>
 
             <!-- INDIVIDUAL CLOSINGS (التقفيلات المنفصلة) -->
@@ -160,7 +161,8 @@
                     <button class="btn btn-success btn-sm" id="safeDepositBtn"><i class="ri-add-line"></i> إيداع</button>
                     <button class="btn btn-danger btn-sm" id="safeWithdrawBtn"><i class="ri-subtract-line"></i> سحب</button>
                     <button class="btn btn-warning btn-sm" id="safePrintBtn"><i class="ri-printer-line"></i> طباعة</button>
-                    <button class="btn btn-ghost btn-sm" id="safeExportBtn"><i class="ri-download-cloud-line"></i> تصدير</button>
+                    <button class="btn btn-ghost btn-sm" id="safeExportBtn"><i class="ri-download-cloud-line"></i> تصدير JSON</button>
+                    <button class="btn btn-ghost btn-sm" id="safeImportBtn"><i class="ri-upload-cloud-line"></i> استيراد</button>
                 </div>
                 <div class="filter-bar" style="margin-top:12px"><input type="text" id="safeSearch" class="input-field" placeholder="بحث في المعاملات..."><button class="btn btn-primary btn-sm" onclick="renderSafe()"><i class="ri-search-line"></i></button></div>
                 <h3 class="sub-title">سجل المعاملات التفصيلي</h3>
@@ -169,26 +171,28 @@
 
             <!-- DEBTS -->
             <section id="page-debts" class="page">
-                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-file-list-3-fill"></i> الديون</h2><div class="page-io-btns"><button class="btn btn-ghost btn-sm" onclick="exportPage('debts','ديون','الديون')" title="تصدير"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('debts','الديون',renderDebts)" title="استيراد"><i class="ri-upload-2-line"></i></button></div></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-file-list-3-fill"></i> الديون</h2><div class="page-io-btns"><button class="btn btn-warning btn-sm" id="printDebtsBtn" title="طباعة"><i class="ri-printer-fill"></i></button><button class="btn btn-ghost btn-sm" onclick="exportPage('debts','ديون','الديون')" title="تصدير"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('debts','الديون',renderDebts)" title="استيراد"><i class="ri-upload-2-line"></i></button></div></div>
+                <!-- فلاتر الديون -->
+                <div class="debts-filter-bar" id="debtsFilterBar">
+                    <button class="debts-filter-btn active" data-dfilter="all"><i class="ri-list-check"></i> الكل <span class="debts-filter-count" id="debtsCountAll">0</span></button>
+                    <button class="debts-filter-btn" data-dfilter="employees"><i class="ri-user-line"></i> الموظفين <span class="debts-filter-count" id="debtsCountEmp">0</span></button>
+                    <button class="debts-filter-btn" data-dfilter="customers"><i class="ri-group-line"></i> العملاء <span class="debts-filter-count" id="debtsCountCust">0</span></button>
+                </div>
                 <div class="filter-bar" style="margin-bottom:10px"><input type="text" id="debtsSearch" class="input-field" placeholder="بحث في الديون..."><button class="btn btn-primary btn-sm" onclick="renderDebts()"><i class="ri-search-line"></i></button></div>
                 <div class="action-btns" style="margin-bottom:10px">
                     <button class="btn btn-danger" onclick="openAddDebtModal()"><i class="ri-add-circle-line"></i> إضافة دين</button>
                     <button class="btn btn-warning" onclick="openAddWithdrawDebtModal()"><i class="ri-hand-coin-line"></i> إضافة سحب</button>
                 </div>
-                <div class="tabs-row">
-                    <button class="tab active" data-dtab="employees"><i class="ri-user-line"></i> الموظفين</button>
-                    <button class="tab" data-dtab="customers"><i class="ri-group-line"></i> العملاء</button>
-                </div>
+                <div id="debtsSummaryCards" class="debts-summary-cards"></div>
                 <div id="debtsPersonsList" class="persons-grid"></div>
                 <h3 class="sub-title">جميع الديون والسحوبات</h3>
                 <div id="debtsAllList" class="records-list"></div>
                 <div class="total-bar"><span>إجمالي الديون المستحقة</span><strong id="debtsTotalDisp">0</strong></div>
-                <button class="btn btn-warning btn-block" id="printDebtsBtn" style="margin-top:12px"><i class="ri-printer-fill"></i> طباعة الديون</button>
             </section>
 
             <!-- EXPENSES -->
             <section id="page-expenses" class="page">
-                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-money-dollar-box-fill"></i> المصاريف</h2><div class="page-io-btns"><button class="btn btn-ghost btn-sm" onclick="exportPage('expenseEntries','مصاريف','المصاريف')" title="تصدير"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('expenseEntries','المصاريف',renderExpenses)" title="استيراد"><i class="ri-upload-2-line"></i></button></div></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-money-dollar-box-fill"></i> المصاريف</h2><div class="page-io-btns"><button class="btn btn-warning btn-sm" id="printExpBtn" title="طباعة"><i class="ri-printer-fill"></i></button><button class="btn btn-ghost btn-sm" onclick="exportPage('expenseEntries','مصاريف','المصاريف')" title="تصدير"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('expenseEntries','المصاريف',renderExpenses)" title="استيراد"><i class="ri-upload-2-line"></i></button></div></div>
                 <div class="filter-bar">
                     <input type="month" id="expFilterMonth" class="input-field">
                     <button class="btn btn-primary btn-sm" id="expFilterBtn"><i class="ri-search-line"></i></button>
@@ -199,15 +203,13 @@
                 <div class="filter-bar"><input type="text" id="expSearch" class="input-field" placeholder="بحث في المصاريف..."><button class="btn btn-primary btn-sm" onclick="renderExpenses()"><i class="ri-search-line"></i></button></div>
                 <div id="expensesList" class="records-list"></div>
                 <div class="total-bar"><span>إجمالي المصاريف</span><strong id="expTotalDisp">0</strong></div>
-                <button class="btn btn-warning btn-block" id="printExpBtn" style="margin-top:12px"><i class="ri-printer-fill"></i> طباعة المصاريف</button>
             </section>
 
             <!-- SALARIES -->
             <section id="page-salaries" class="page">
-                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-team-fill"></i> الرواتب والموظفين</h2><div class="page-io-btns"><button class="btn btn-ghost btn-sm" onclick="exportPage('employees','موظفين','الموظفين')" title="تصدير"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('employees','الموظفين',renderSalaries)" title="استيراد"><i class="ri-upload-2-line"></i></button></div></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-team-fill"></i> الرواتب والموظفين</h2><div class="page-io-btns"><button class="btn btn-warning btn-sm" id="printAllSalBtn" title="طباعة"><i class="ri-printer-fill"></i></button><button class="btn btn-ghost btn-sm" onclick="exportPage('employees','موظفين','الموظفين')" title="تصدير"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('employees','الموظفين',renderSalaries)" title="استيراد"><i class="ri-upload-2-line"></i></button></div></div>
                 <div class="action-btns">
                     <button class="btn btn-primary" id="addEmployeeBtn"><i class="ri-user-add-line"></i> إضافة موظف</button>
-                    <button class="btn btn-warning" id="printAllSalBtn"><i class="ri-printer-fill"></i> طباعة الجميع</button>
                 </div>
                 <div class="filter-bar"><input type="text" id="salSearch" class="input-field" placeholder="بحث في الموظفين..."><button class="btn btn-primary btn-sm" onclick="renderSalaries()"><i class="ri-search-line"></i></button></div>
                 <div id="employeesGrid" class="employees-grid"></div>
@@ -215,20 +217,23 @@
 
             <!-- PAYROLL (صرف الرواتب) -->
             <section id="page-payroll" class="page">
-                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-hand-coin-fill"></i> صرف الرواتب</h2><div class="page-io-btns"><button class="btn btn-ghost btn-sm" onclick="exportPage('payroll','صرف-رواتب','صرف الرواتب')" title="تصدير"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('payroll','صرف الرواتب',renderPayroll)" title="استيراد"><i class="ri-upload-2-line"></i></button></div></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-hand-coin-fill"></i> صرف الرواتب</h2><div class="page-io-btns"><button class="btn btn-warning btn-sm" id="printPayrollBtn" title="طباعة"><i class="ri-printer-fill"></i></button><button class="btn btn-ghost btn-sm" onclick="exportPage('payroll','صرف-رواتب','صرف الرواتب')" title="تصدير"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('payroll','صرف الرواتب',renderPayroll)" title="استيراد"><i class="ri-upload-2-line"></i></button></div></div>
                 <div class="filter-bar">
                     <input type="month" id="payrollMonth" class="input-field">
                     <button class="btn btn-primary btn-sm" id="payrollFilterBtn"><i class="ri-search-line"></i></button>
                 </div>
                 <div id="payrollList" class="employees-grid"></div>
                 <h3 class="sub-title">سجل الرواتب المسلّمة</h3>
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+                    <input type="month" id="payrollHistoryMonth" class="input-field" style="flex:1;min-width:140px">
+                    <button class="btn btn-warning btn-sm" id="printPayrollHistoryBtn" title="طباعة الرواتب المسلّمة"><i class="ri-printer-fill"></i> طباعة المسلّمة</button>
+                </div>
                 <div id="payrollHistory" class="records-list"></div>
-                <button class="btn btn-warning btn-block" id="printPayrollBtn" style="margin-top:12px"><i class="ri-printer-fill"></i> طباعة كشف الرواتب</button>
             </section>
 
             <!-- CAPITAL -->
             <section id="page-capital" class="page">
-                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-funds-fill"></i> رأس المال</h2><div class="page-io-btns"><button class="btn btn-ghost btn-sm" onclick="exportPage('safe','رأس-المال','رأس المال')" title="تصدير"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('safe','رأس المال',renderCapital)" title="استيراد"><i class="ri-upload-2-line"></i></button></div></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-funds-fill"></i> رأس المال</h2><div class="page-io-btns"><button class="btn btn-warning btn-sm" id="printCapitalBtn" title="طباعة"><i class="ri-printer-fill"></i></button><button class="btn btn-ghost btn-sm" onclick="exportPage('safe','رأس-المال','رأس المال')" title="تصدير"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('safe','رأس المال',renderCapital)" title="استيراد"><i class="ri-upload-2-line"></i></button></div></div>
                 <div class="balance-card capital-card">
                     <div class="bal-label">رأس المال الحالي</div>
                     <div class="bal-amount" id="capitalBalance">0</div>
@@ -239,22 +244,40 @@
                 </div>
                 <div class="filter-bar" style="margin-top:12px"><input type="text" id="capitalSearch" class="input-field" placeholder="بحث في رأس المال..."><button class="btn btn-primary btn-sm" onclick="renderCapital()"><i class="ri-search-line"></i></button></div>
                 <div id="capitalList" class="records-list"></div>
-                <button class="btn btn-warning btn-block" id="printCapitalBtn" style="margin-top:12px"><i class="ri-printer-fill"></i> طباعة رأس المال</button>
             </section>
 
             <!-- PURCHASES -->
             <section id="page-purchases" class="page">
-                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-shopping-cart-2-fill"></i> المشتريات</h2><div class="page-io-btns"><button class="btn btn-ghost btn-sm" onclick="exportPage('purchases','مشتريات','المشتريات')" title="تصدير"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('purchases','المشتريات',renderPurchases)" title="استيراد"><i class="ri-upload-2-line"></i></button></div></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-shopping-cart-2-fill"></i> المشتريات</h2><div class="page-io-btns"><button class="btn btn-warning btn-sm" id="printPurchBtn" title="طباعة"><i class="ri-printer-fill"></i></button><button class="btn btn-ghost btn-sm" onclick="exportPage('purchases','مشتريات','المشتريات')" title="تصدير"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('purchases','المشتريات',renderPurchases)" title="استيراد"><i class="ri-upload-2-line"></i></button></div></div>
                 <button class="btn btn-primary btn-block" id="addPurchaseBtn"><i class="ri-add-circle-line"></i> إضافة عملية شراء</button>
                 <div class="filter-bar" style="margin-top:12px"><input type="text" id="purchSearch" class="input-field" placeholder="بحث في المشتريات..."><button class="btn btn-primary btn-sm" onclick="renderPurchases()"><i class="ri-search-line"></i></button></div>
                 <div id="purchasesList" class="records-list"></div>
                 <div class="total-bar"><span>إجمالي المشتريات</span><strong id="purchTotalDisp">0</strong></div>
-                <button class="btn btn-warning btn-block" id="printPurchBtn" style="margin-top:12px"><i class="ri-printer-fill"></i> طباعة المشتريات</button>
             </section>
 
             <!-- MONTHLY REPORT -->
             <section id="page-report" class="page">
-                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-bar-chart-box-fill"></i> التقارير</h2><div class="page-io-btns"><button class="btn btn-ghost btn-sm" onclick="exportPage('closings','تقارير-تقفيلات','التقفيلات')" title="تصدير التقفيلات"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('closings','التقفيلات',renderReport)" title="استيراد التقفيلات"><i class="ri-upload-2-line"></i></button></div></div>
+                <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-bar-chart-box-fill"></i> التقارير</h2><div class="page-io-btns"><button class="btn btn-warning btn-sm" id="printReportBtn" title="طباعة التقرير"><i class="ri-printer-fill"></i></button><button class="btn btn-ghost btn-sm" onclick="exportPage('closings','تقارير-تقفيلات','التقفيلات')" title="تصدير التقفيلات"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('closings','التقفيلات',renderReport)" title="استيراد التقفيلات"><i class="ri-upload-2-line"></i></button></div></div>
+
+                <!-- طباعة مخصصة بالتحديد -->
+                <div class="card" style="margin-top:8px">
+                    <h3 class="card-h"><i class="ri-printer-line"></i> طباعة مخصصة</h3>
+                    <p style="font-size:.8rem;color:var(--text2);margin-bottom:10px">حدد الأقسام التي تريد طباعتها:</p>
+                    <div class="print-checkboxes" id="printCheckboxes">
+                        <label class="print-cb"><input type="checkbox" value="closing" checked> <i class="ri-calculator-line"></i> التقفيلات</label>
+                        <label class="print-cb"><input type="checkbox" value="safe" checked> <i class="ri-safe-2-line"></i> الخزنة</label>
+                        <label class="print-cb"><input type="checkbox" value="debts" checked> <i class="ri-file-list-3-line"></i> الديون</label>
+                        <label class="print-cb"><input type="checkbox" value="expenses" checked> <i class="ri-money-dollar-box-line"></i> المصاريف</label>
+                        <label class="print-cb"><input type="checkbox" value="payroll" checked> <i class="ri-hand-coin-line"></i> الرواتب</label>
+                        <label class="print-cb"><input type="checkbox" value="purchases" checked> <i class="ri-shopping-cart-2-line"></i> المشتريات</label>
+                        <label class="print-cb"><input type="checkbox" value="generalExpenses" checked> <i class="ri-building-line"></i> المصاريف العامة</label>
+                        <label class="print-cb"><input type="checkbox" value="closingSheet" checked> <i class="ri-file-list-line"></i> كشف الحساب</label>
+                    </div>
+                    <div style="display:flex;gap:8px;margin-top:10px">
+                        <button class="btn btn-sm btn-ghost" onclick="document.querySelectorAll('#printCheckboxes input').forEach(c=>c.checked=true)">تحديد الكل</button>
+                        <button class="btn btn-sm btn-ghost" onclick="document.querySelectorAll('#printCheckboxes input').forEach(c=>c.checked=false)">إلغاء الكل</button>
+                    </div>
+                </div>
 
                 <!-- نوع الفترة: يومي / شهري -->
                 <div class="report-period-tabs">
@@ -278,12 +301,11 @@
                     <button class="rs-tab" data-rsec="expenses"><i class="ri-money-dollar-box-line"></i> المصاريف</button>
                     <button class="rs-tab" data-rsec="payroll"> <i class="ri-hand-coin-line"></i> الرواتب</button>
                     <button class="rs-tab" data-rsec="purchases"><i class="ri-shopping-cart-2-line"></i> المشتريات</button>
+                    <button class="rs-tab" data-rsec="generalExpenses"><i class="ri-building-line"></i> مصاريف عامة</button>
+                    <button class="rs-tab" data-rsec="closingSheet"><i class="ri-file-list-line"></i> كشف الحساب</button>
                 </div>
 
                 <div id="reportContent" class="report-content"></div>
-                <div class="action-btns" style="margin-top:12px">
-                    <button class="btn btn-warning" id="printReportBtn"><i class="ri-printer-fill"></i> طباعة التقرير</button>
-                </div>
             </section>
 
             <!-- SECURITY -->
@@ -330,8 +352,11 @@
                 </div>
                 <div class="card">
                     <h3 class="card-h"><i class="ri-cloud-line"></i> مزامنة قاعدة البيانات</h3>
-                    <p style="font-size:.82rem;color:var(--text2);margin-bottom:10px;line-height:1.6">رفع جميع البيانات المحلية إلى Firebase يدوياً. استخدم هذا الزر إذا لاحظت فقدان بيانات أو عدم تطابق.</p>
-                    <button class="btn btn-primary btn-block" id="manualUploadBtn"><i class="ri-upload-cloud-2-line"></i> رفع جميع البيانات الآن</button>
+                    <p style="font-size:.82rem;color:var(--text2);margin-bottom:10px;line-height:1.6">رفع أو تنزيل جميع البيانات من/إلى Firebase يدوياً.</p>
+                    <div class="stacked-btns">
+                        <button class="btn btn-primary" id="manualUploadBtn"><i class="ri-upload-cloud-2-line"></i> رفع جميع البيانات الآن</button>
+                        <button class="btn btn-success" id="manualDownloadBtn"><i class="ri-download-cloud-2-line"></i> تنزيل جميع البيانات من السيرفر</button>
+                    </div>
                     <div id="firebaseStatus" style="margin-top:10px;font-size:.78rem;display:flex;align-items:center;gap:6px"></div>
                 </div>
                 <div class="card">
