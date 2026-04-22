@@ -236,17 +236,17 @@
             </section>
 
             <!-- CAPITAL -->
-            <section id="page-capital" class="page">
+            <section id="page-capital" class="page capital-page">
                 <div class="section-head"><h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-funds-fill"></i> رأس المال</h2><div class="page-io-btns"><button class="btn btn-warning btn-sm" id="printCapitalBtn" title="طباعة"><i class="ri-printer-fill"></i></button><button class="btn btn-ghost btn-sm" onclick="exportPage('safe','رأس-المال','رأس المال')" title="تصدير"><i class="ri-download-2-line"></i></button><button class="btn btn-ghost btn-sm" onclick="importPage('safe','رأس المال',renderCapital)" title="استيراد"><i class="ri-upload-2-line"></i></button></div></div>
                 <div class="balance-card capital-card">
                     <div class="bal-label">رأس المال الحالي</div>
                     <div class="bal-amount" id="capitalBalance">0</div>
                 </div>
-                <div class="action-btns">
+                <div class="action-btns capital-actions">
                     <button class="btn btn-success" id="capitalAddBtn"><i class="ri-add-line"></i> إضافة</button>
                     <button class="btn btn-danger" id="capitalWithdrawBtn"><i class="ri-subtract-line"></i> سحب</button>
                 </div>
-                <div class="filter-bar" style="margin-top:12px"><input type="text" id="capitalSearch" class="input-field" placeholder="بحث في رأس المال..."><button class="btn btn-primary btn-sm" onclick="renderCapital()"><i class="ri-search-line"></i></button></div>
+                <div class="filter-bar capital-search-bar" style="margin-top:12px"><input type="text" id="capitalSearch" class="input-field" placeholder="بحث في رأس المال..."><button class="btn btn-primary btn-sm" onclick="renderCapital()"><i class="ri-search-line"></i></button></div>
                 <div id="capitalList" class="records-list"></div>
             </section>
 
@@ -509,11 +509,63 @@
             <button class="bn-item" data-page="closing"><i class="ri-calculator-line"></i><span>التقفيلة</span></button>
             <button class="bn-item" data-page="safe"><i class="ri-safe-2-line"></i><span>الخزنة</span></button>
             <button class="bn-item" data-page="debts"><i class="ri-file-list-3-line"></i><span>الديون</span></button>
-            <button class="bn-item" data-page="expenses"><i class="ri-money-dollar-box-line"></i><span>المصاريف</span></button>
             <button class="bn-item" data-page="salaries"><i class="ri-team-line"></i><span>الرواتب</span></button>
             <button class="bn-item" data-page="payroll"><i class="ri-hand-coin-line"></i><span>صرف الرواتب</span></button>
             <button class="bn-item" data-page="report"><i class="ri-bar-chart-box-line"></i><span>التقرير</span></button>
         </nav>
+
+        <button id="floatingCalcBtn" class="floating-calc-btn" title="فتح الحاسبة" aria-label="فتح الحاسبة">
+            <i class="ri-calculator-line"></i>
+        </button>
+
+        <div id="calculatorPanel" class="calculator-panel hidden" aria-hidden="true">
+            <div class="calculator-head">
+                <div class="calculator-title"><i class="ri-calculator-line"></i> الحاسبة</div>
+                <div class="calculator-head-actions">
+                    <button id="calcCopyBtn" class="calculator-head-btn" aria-label="نسخ الناتج" title="نسخ"><i class="ri-file-copy-line"></i></button>
+                    <button id="calcPasteBtn" class="calculator-head-btn" aria-label="لصق داخل الحاسبة" title="لصق"><i class="ri-clipboard-line"></i></button>
+                    <button id="calculatorClose" class="calculator-close" aria-label="إغلاق الحاسبة"><i class="ri-close-line"></i></button>
+                </div>
+            </div>
+            <div class="calculator-screen-wrap">
+                <div id="calculatorHistory" class="calculator-history"></div>
+                <div id="calculatorScreen" class="calculator-screen">0</div>
+            </div>
+            <div class="calculator-grid">
+                <button class="calculator-key function" data-calc-action="clear">C</button>
+                <button class="calculator-key function" data-calc-action="backspace"><i class="ri-delete-back-2-line"></i></button>
+                <button class="calculator-key function" data-calc-action="percent">%</button>
+                <button class="calculator-key operator" data-calc-value="/">÷</button>
+
+                <button class="calculator-key" data-calc-value="7">7</button>
+                <button class="calculator-key" data-calc-value="8">8</button>
+                <button class="calculator-key" data-calc-value="9">9</button>
+                <button class="calculator-key operator" data-calc-value="*">×</button>
+
+                <button class="calculator-key" data-calc-value="4">4</button>
+                <button class="calculator-key" data-calc-value="5">5</button>
+                <button class="calculator-key" data-calc-value="6">6</button>
+                <button class="calculator-key operator" data-calc-value="-">−</button>
+
+                <button class="calculator-key" data-calc-value="1">1</button>
+                <button class="calculator-key" data-calc-value="2">2</button>
+                <button class="calculator-key" data-calc-value="3">3</button>
+                <button class="calculator-key operator" data-calc-value="+">+</button>
+
+                <button class="calculator-key function" data-calc-action="sign">±</button>
+                <button class="calculator-key wide" data-calc-value="0">0</button>
+                <button class="calculator-key" data-calc-value=".">.</button>
+                <button class="calculator-key equals" data-calc-action="equals">=</button>
+            </div>
+            <div class="calc-resize-handle n" data-resize="n"></div>
+            <div class="calc-resize-handle s" data-resize="s"></div>
+            <div class="calc-resize-handle e" data-resize="e"></div>
+            <div class="calc-resize-handle w" data-resize="w"></div>
+            <div class="calc-resize-handle ne" data-resize="ne"></div>
+            <div class="calc-resize-handle nw" data-resize="nw"></div>
+            <div class="calc-resize-handle se" data-resize="se"></div>
+            <div class="calc-resize-handle sw" data-resize="sw"></div>
+        </div>
     </div>
 
     <div id="modal" class="modal hidden">
