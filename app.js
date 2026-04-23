@@ -1651,7 +1651,8 @@ function removeWizDebtPayment(ck,i){
 function buildExpenseEntryUI(ck){
     const list=wizData.cashiers[ck].expensesList||[];
     const typeLabel=t=>t==='admin'?'<span style="color:#7c3aed;font-size:.7rem">[إدارة]</span>':t==='general'?'<span style="color:#0891b2;font-size:.7rem">[عامة]</span>':t==='purchase'?'<span style="color:#d97706;font-size:.7rem">[مشتريات]</span>':'<span style="color:var(--text2);font-size:.7rem">[قسم]</span>';
-    let items=list.map((e,i)=>`<div class="debt-item"><span>${typeLabel(e.type||'dept')} ${e.desc||'مصروف'}: ${fmtNum(e.amount)}</span><button onclick="removeWizExpense('${ck}',${i})"><i class="ri-close-circle-line"></i></button></div>`).join('');
+    const paymentLabel=e=>{if(e.type==='general'||e.type==='admin'){return e.fromSafe?' (من الخزنة)':' (مدفوع سابقاً)';}return '';};
+    let items=list.map((e,i)=>`<div class="debt-item"><span>${typeLabel(e.type||'dept')} ${e.desc||'مصروف'}: ${fmtNum(e.amount)}${paymentLabel(e)}</span><button onclick="removeWizExpense('${ck}',${i})"><i class="ri-close-circle-line"></i></button></div>`).join('');
     return `<div class="wiz-debt-entry"><h4><i class="ri-money-dollar-box-line"></i> تفاصيل المصاريف</h4>
     <input type="number" class="input-field" id="expEntryAmountInput" placeholder="المبلغ (بالآلاف)" inputmode="decimal">
     <input type="text" class="input-field" id="expEntryDescInput" placeholder="وصف المصروف (مثال: مواد تنظيف)" style="margin-top:6px">
@@ -1662,6 +1663,13 @@ function buildExpenseEntryUI(ck){
         <label class="exp-type-opt" data-type="purchase" style="flex:1;text-align:center;padding:6px 8px;cursor:pointer;border-radius:6px;color:var(--text);font-size:.78rem;font-weight:700" onclick="selectExpType('${ck}','purchase')"><i class="ri-shopping-cart-2-line"></i> مشتريات</label>
     </div>
     <div style="font-size:.72rem;color:var(--text2);margin-top:4px"><i class="ri-information-line"></i> "عامة/إدارة" لا تُخصم من الصافي وتُسجّل في <strong>المصاريف العامة</strong>، و"مشتريات" تُسجّل في <strong>المشتريات</strong></div>
+    <div id="expPaymentTypeBox_${ck}" style="display:none;margin-top:8px;background:var(--surface2);border-radius:8px;padding:8px">
+        <label style="font-size:.75rem;color:var(--text2);display:block;margin-bottom:6px">طريقة الدفع:</label>
+        <div style="display:flex;gap:4px">
+            <label class="exp-payment-opt active" data-payment="safe" style="flex:1;text-align:center;padding:6px 8px;cursor:pointer;border-radius:6px;background:var(--primary);color:#fff;font-size:.75rem;font-weight:700" onclick="selectExpPayment('${ck}','safe')"><i class="ri-safe-2-line"></i> من الخزنة</label>
+            <label class="exp-payment-opt" data-payment="prepaid" style="flex:1;text-align:center;padding:6px 8px;cursor:pointer;border-radius:6px;color:var(--text);font-size:.75rem;font-weight:700" onclick="selectExpPayment('${ck}','prepaid')"><i class="ri-bank-card-line"></i> مدفوع سابقاً</label>
+        </div>
+    </div>
     <button class="btn btn-primary btn-sm btn-block" onclick="addWizExpense('${ck}')" style="margin-top:8px"><i class="ri-add-line"></i> إضافة مصروف</button>
     <div class="debt-list">${items}</div></div>`;
 }
@@ -1674,6 +1682,20 @@ function selectExpType(ck,type){
         el.style.color=isActive?'#fff':'var(--text)';
     });
     box.dataset.selected=type;
+    const paymentBox=document.getElementById('expPaymentTypeBox_'+ck);
+    if(paymentBox){
+        paymentBox.style.display=(type==='general'||type==='admin')?'block':'none';
+    }
+}
+function selectExpPayment(ck,payment){
+    const box=document.getElementById('expPaymentTypeBox_'+ck);if(!box)return;
+    box.querySelectorAll('.exp-payment-opt').forEach(el=>{
+        const isActive=el.dataset.payment===payment;
+        el.classList.toggle('active',isActive);
+        el.style.background=isActive?'var(--primary)':'transparent';
+        el.style.color=isActive?'#fff':'var(--text)';
+    });
+    box.dataset.selected=payment;
 }
 function addWizExpense(ck){
     const amount=parseK($('#expEntryAmountInput')?.value);
@@ -1681,7 +1703,16 @@ function addWizExpense(ck){
     if(!amount)return toast('أدخل المبلغ');
     const box=document.getElementById('expTypeBox_'+ck);
     const type=(box&&box.dataset.selected)||'dept';
-    wizData.cashiers[ck].expensesList.push({amount,desc,type});
+    
+    // تحديد نوع الدفع للمصاريف العامة والإدارية
+    let fromSafe=true; // القيمة الافتراضية
+    if(type==='general'||type==='admin'){
+        const paymentBox=document.getElementById('expPaymentTypeBox_'+ck);
+        const paymentType=(paymentBox&&paymentBox.dataset.selected)||'safe';
+        fromSafe=(paymentType==='safe');
+    }
+    
+    wizData.cashiers[ck].expensesList.push({amount,desc,type,fromSafe});
     /* expenses field = only dept expenses (these deduct from cashier net) */
     const deptTotal=wizData.cashiers[ck].expensesList.filter(e=>(e.type||'dept')==='dept').reduce((s,e)=>s+e.amount,0);
     wizData.cashiers[ck].expenses=deptTotal;
@@ -1844,6 +1875,12 @@ function saveClosing(){
             if(expType==='purchase'){
                 purchases.push({id:uid(),date,desc:exp.desc||'شراء',amount:exp.amount,currency:cur,note:'من التقفيلة - '+c.label,by});
                 safe.push({id:uid(),date,type:'withdraw',amount:exp.amount,note:'مشتريات من التقفيلة - '+c.label+(exp.desc?' - '+exp.desc:''),by});
+            }else if(expType==='general'||expType==='admin'){
+                expEntries.push({id:uid(),amount:exp.amount,desc:exp.desc||'',type:expType,cashier:c.label,date,by,fromSafe:exp.fromSafe!==false});
+                // إذا كانت من الخزنة، سحب المبلغ من الخزنة
+                if(exp.fromSafe!==false){
+                    safe.push({id:uid(),date,type:'withdraw',amount:exp.amount,note:(expType==='general'?'مصروف عام':'مصروف إداري')+' من التقفيلة - '+c.label+(exp.desc?' - '+exp.desc:''),by});
+                }
             }else{
                 expEntries.push({id:uid(),amount:exp.amount,desc:exp.desc||'',type:expType,cashier:c.label,date,by});
             }
@@ -4600,6 +4637,12 @@ function addGeneralExpense(){
             <button type="button" class="btn btn-ghost" onclick="selectGenExpType('admin')" id="newGenTypeBtn_admin" style="flex:1"><i class="ri-user-star-line"></i> إدارة</button>
         </div>
     </div>
+    <div class="field"><label>طريقة الدفع</label>
+        <div style="display:flex;gap:6px;margin-top:6px" id="newGenExpPaymentBox" data-selected="safe">
+            <button type="button" class="btn" onclick="selectGenExpPayment('safe')" id="newGenPaymentBtn_safe" style="flex:1;background:var(--primary);color:#fff"><i class="ri-safe-2-line"></i> من الخزنة</button>
+            <button type="button" class="btn btn-ghost" onclick="selectGenExpPayment('prepaid')" id="newGenPaymentBtn_prepaid" style="flex:1"><i class="ri-bank-card-line"></i> مدفوع سابقاً</button>
+        </div>
+    </div>
     <div class="field"><label>التاريخ</label><input type="date" id="newGenExpDate" class="input-field" value="${today()}"></div>
     <div class="field"><label>القسم المرتبط (اختياري)</label>
         <select id="newGenExpCashier" class="input-field">
@@ -4618,6 +4661,14 @@ function selectGenExpType(type){
     if(btnG){btnG.className='btn '+(type==='general'?'':'btn-ghost');btnG.style.background=type==='general'?'#0891b2':'';btnG.style.color=type==='general'?'#fff':'';}
     if(btnA){btnA.className='btn '+(type==='admin'?'':'btn-ghost');btnA.style.background=type==='admin'?'#7c3aed':'';btnA.style.color=type==='admin'?'#fff':'';}
 }
+function selectGenExpPayment(payment){
+    const box=document.getElementById('newGenExpPaymentBox');if(!box)return;
+    box.dataset.selected=payment;
+    const btnS=document.getElementById('newGenPaymentBtn_safe');
+    const btnP=document.getElementById('newGenPaymentBtn_prepaid');
+    if(btnS){btnS.className='btn '+(payment==='safe'?'':'btn-ghost');btnS.style.background=payment==='safe'?'var(--primary)':'';btnS.style.color=payment==='safe'?'#fff':'';}
+    if(btnP){btnP.className='btn '+(payment==='prepaid'?'':'btn-ghost');btnP.style.background=payment==='prepaid'?'#10b981':'';btnP.style.color=payment==='prepaid'?'#fff':'';}
+}
 function saveGeneralExpense(){
     const desc=$('#newGenExpDesc').value.trim();
     const amount=parseK($('#newGenExpAmount').value);
@@ -4625,11 +4676,21 @@ function saveGeneralExpense(){
     const date=$('#newGenExpDate').value||today();
     const cashier=$('#newGenExpCashier').value||'';
     const type=document.getElementById('newGenExpTypeBox').dataset.selected||'general';
+    const paymentBox=document.getElementById('newGenExpPaymentBox');
+    const fromSafe=(paymentBox&&paymentBox.dataset.selected!=='prepaid')?true:false;
     if(!desc)return toast('أدخل الوصف');
     if(!amount)return toast('أدخل المبلغ');
     const entries=loadData(KEYS.expenseEntries);
-    entries.push({id:uid(),amount,desc,type,cashier,currency,date,by:getByTag()});
+    entries.push({id:uid(),amount,desc,type,cashier,currency,date,by:getByTag(),fromSafe});
     saveData(KEYS.expenseEntries,entries);
+    
+    // إذا كانت من الخزنة، أضفها كسحب من الخزنة
+    if(fromSafe){
+        const safe=loadData(KEYS.safe);
+        safe.push({id:uid(),date,type:'withdraw',amount,note:(type==='general'?'مصروف عام':'مصروف إداري')+': '+desc,by:getByTag()});
+        saveData(KEYS.safe,safe);
+    }
+    
     closeModal();
     toast('✅ تم حفظ المصروف');
     renderGeneralExpenses();
@@ -4833,6 +4894,7 @@ function editGenExpense(id){
     const e=entries.find(x=>x.id===id);if(!e)return;
     const curType=e.type||'general';
     const cur=getEntryCurrency(e,loadSettings().currency||'د.ع');
+    const fromSafe=e.fromSafe!==false;
     openModal('تعديل المصروف العام',`
     <div class="field"><label>الوصف</label><input type="text" id="editGenExpDesc" class="input-field" value="${e.desc||''}"></div>
     <div class="field"><label>المبلغ (بالآلاف)</label><input type="number" id="editGenExpAmount" class="input-field" value="${toK(e.amount)}" inputmode="decimal"></div>
@@ -4844,19 +4906,57 @@ function editGenExpense(id){
             <option value="dept" ${curType==='dept'?'selected':''}>قسم (ينقل لصفحة المصاريف)</option>
         </select>
     </div>
+    <div class="field"><label>طريقة الدفع</label>
+        <div style="display:flex;gap:6px;margin-top:6px" id="editGenExpPaymentBox" data-selected="${fromSafe?'safe':'prepaid'}">
+            <button type="button" class="btn ${fromSafe?'':'btn-ghost'}" onclick="selectEditGenExpPayment('safe')" id="editGenPaymentBtn_safe" style="flex:1;background:${fromSafe?'var(--primary)':''}; color:${fromSafe?'#fff':''}"><i class="ri-safe-2-line"></i> من الخزنة</button>
+            <button type="button" class="btn ${!fromSafe?'':'btn-ghost'}" onclick="selectEditGenExpPayment('prepaid')" id="editGenPaymentBtn_prepaid" style="flex:1;background:${!fromSafe?'#10b981':''}; color:${!fromSafe?'#fff':''}"><i class="ri-bank-card-line"></i> مدفوع سابقاً</button>
+        </div>
+    </div>
     <div class="field"><label>التاريخ</label><input type="date" id="editGenExpDate" class="input-field" value="${e.date}"></div>`,
     `<button class="btn btn-success" onclick="saveEditGenExpense('${id}')">حفظ</button><button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>`);
+}
+function selectEditGenExpPayment(payment){
+    const box=document.getElementById('editGenExpPaymentBox');if(!box)return;
+    box.dataset.selected=payment;
+    const btnS=document.getElementById('editGenPaymentBtn_safe');
+    const btnP=document.getElementById('editGenPaymentBtn_prepaid');
+    if(btnS){btnS.className='btn '+(payment==='safe'?'':'btn-ghost');btnS.style.background=payment==='safe'?'var(--primary)':'';btnS.style.color=payment==='safe'?'#fff':'';}
+    if(btnP){btnP.className='btn '+(payment==='prepaid'?'':'btn-ghost');btnP.style.background=payment==='prepaid'?'#10b981':'';btnP.style.color=payment==='prepaid'?'#fff':'';}
 }
 function saveEditGenExpense(id){
     const entries=loadData(KEYS.expenseEntries);
     const idx=entries.findIndex(x=>x.id===id);if(idx<0)return;
+    const oldAmount=entries[idx].amount;
+    const oldFromSafe=entries[idx].fromSafe!==false;
     entries[idx].desc=$('#editGenExpDesc').value.trim();
     entries[idx].amount=parseK($('#editGenExpAmount').value);
     entries[idx].currency=$('#editGenExpCurrency').value||entries[idx].currency;
     entries[idx].type=$('#editGenExpType').value;
     entries[idx].date=$('#editGenExpDate').value||entries[idx].date;
+    const paymentBox=document.getElementById('editGenExpPaymentBox');
+    const fromSafe=(paymentBox&&paymentBox.dataset.selected!=='prepaid')?true:false;
+    entries[idx].fromSafe=fromSafe;
     entries[idx].by=getByTag();
     saveData(KEYS.expenseEntries,entries);
+    
+    // تحديث الخزنة إذا تغير نوع الدفع أو المبلغ
+    const safe=loadData(KEYS.safe);
+    if(oldFromSafe && !fromSafe){
+        // تم التغيير من "من الخزنة" إلى "مدفوع سابقاً" - حذف من الخزنة
+        const safeIdx=safe.findIndex(s=>s.note&&s.note.includes(id));
+        if(safeIdx>=0) safe.splice(safeIdx,1);
+    }else if(!oldFromSafe && fromSafe){
+        // تم التغيير من "مدفوع سابقاً" إلى "من الخزنة" - إضافة للخزنة
+        safe.push({id:uid(),date:entries[idx].date,type:'withdraw',amount:entries[idx].amount,note:'مصروف '+(entries[idx].type==='admin'?'إداري':'عام')+': '+entries[idx].desc+' (تعديل '+id+')',by:getByTag()});
+    }else if(oldFromSafe && fromSafe && oldAmount!==entries[idx].amount){
+        // المبلغ تغيّر والدفع من الخزنة - تحديث المبلغ
+        const safeIdx=safe.findIndex(s=>s.note&&s.note.includes(id));
+        if(safeIdx>=0){
+            safe[safeIdx].amount=entries[idx].amount;
+        }
+    }
+    saveData(KEYS.safe,safe);
+    
     closeModal();toast('تم التحديث');renderGeneralExpenses();
 }
 function deleteGenExpense(id){

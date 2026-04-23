@@ -1,0 +1,3155 @@
+{
+  "closings": [
+    {
+      "by": "كرار",
+      "cashiers": {
+        "cosmetics": {
+          "debts": 16000,
+          "debtsList": [
+            {
+              "amount": 16000,
+              "note": "ديون زهراء حمزه كوزمتك",
+              "person": "زهراء حمزه"
+            }
+          ],
+          "expenses": 0,
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 179000,
+          "network": 179000,
+          "returns": 15000,
+          "sales": 210000,
+          "withdrawals": 0
+        },
+        "men": {
+          "debts": 0,
+          "expenses": 0,
+          "lunch": 10000,
+          "manager": "كرار يوسف",
+          "net": 626000,
+          "network": 626000,
+          "returns": 22000,
+          "sales": 658000,
+          "withdrawals": 0
+        },
+        "women": {
+          "debts": 0,
+          "expenses": 9000,
+          "expensesList": [
+            {
+              "amount": 8000,
+              "desc": "مصاريف جود ماء زائد ادوات تنظيف + عشاء",
+              "type": "dept"
+            },
+            {
+              "amount": 1000,
+              "desc": "سجل حركه",
+              "type": "dept"
+            }
+          ],
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 354000,
+          "network": 354000,
+          "returns": 18000,
+          "sales": 381000,
+          "withdrawals": 0
+        }
+      },
+      "date": "2026-04-10",
+      "id": "mobjt4wlbblq",
+      "manager": "كرار يوسف",
+      "safeLinkId": "mobjt4wl8kpf",
+      "totalNet": 1159000
+    },
+    {
+      "by": "كرار",
+      "cashiers": {
+        "cosmetics": {
+          "debts": 29000,
+          "debtsList": [
+            {
+              "amount": 20000,
+              "note": "ديون عباس قحطان كوزمتك",
+              "person": "عباس قحطان سيراميك"
+            },
+            {
+              "amount": 9000,
+              "note": "ديون كوزمتك ملاحظه لقد تم التسديد",
+              "person": "سما"
+            }
+          ],
+          "expenses": 0,
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 228000,
+          "network": 228000,
+          "returns": 11000,
+          "sales": 268000,
+          "withdrawals": 0
+        },
+        "men": {
+          "debts": 0,
+          "expenses": 0,
+          "lunch": 10000,
+          "manager": "كرار يوسف",
+          "net": 143000,
+          "network": 143000,
+          "returns": 20000,
+          "sales": 173000,
+          "withdrawals": 0
+        },
+        "women": {
+          "debts": 0,
+          "expenses": 18000,
+          "expensesList": [
+            {
+              "amount": 500000,
+              "desc": "سيف استعلامات مصاريف عامه",
+              "type": "general"
+            },
+            {
+              "amount": 8000,
+              "desc": "مصاريف جود ما زاد عشاء زاد اكياس نفايات",
+              "type": "dept"
+            },
+            {
+              "amount": 10000,
+              "desc": "نقليات حيدر جريان",
+              "type": "dept"
+            }
+          ],
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 274000,
+          "network": 274000,
+          "returns": 10000,
+          "sales": 302000,
+          "withdrawals": 0
+        }
+      },
+      "date": "2026-04-11",
+      "id": "mobk18gnr2rv",
+      "manager": "كرار يوسف",
+      "safeLinkId": "mobk18gn2nze",
+      "totalNet": 645000
+    },
+    {
+      "by": "كرار",
+      "cashiers": {
+        "cosmetics": {
+          "debts": 0,
+          "expenses": 0,
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 246000,
+          "network": 246000,
+          "returns": 5000,
+          "sales": 251000,
+          "withdrawals": 0
+        },
+        "men": {
+          "debts": 100000,
+          "debtsList": [
+            {
+              "amount": 100000,
+              "note": "جنون دعاء هاشم قاط من الرجال من الرجال",
+              "person": "دعاء هاشم"
+            }
+          ],
+          "expenses": 0,
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 273000,
+          "network": 263000,
+          "returns": 44000,
+          "sales": 417000,
+          "withdrawals": 0
+        },
+        "women": {
+          "debts": 0,
+          "expenses": 50000,
+          "expensesList": [
+            {
+              "amount": 50000,
+              "desc": "اكراميه دعاء زائد زينب رعد تنظيف المخزن",
+              "type": "dept"
+            }
+          ],
+          "lunch": 10000,
+          "manager": "كرار يوسف",
+          "net": 343000,
+          "network": 358000,
+          "returns": 20000,
+          "sales": 438000,
+          "withdrawList": [
+            {
+              "amount": 15000,
+              "note": "",
+              "person": "زينب رعد"
+            }
+          ],
+          "withdrawals": 15000
+        }
+      },
+      "date": "2026-04-12",
+      "id": "mobk8y0izgdm",
+      "manager": "كرار يوسف",
+      "safeLinkId": "mobk8y0iejte",
+      "totalNet": 862000
+    },
+    {
+      "by": "كرار",
+      "cashiers": {
+        "cosmetics": {
+          "debts": 0,
+          "expenses": 0,
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 234000,
+          "network": 234000,
+          "returns": 5000,
+          "sales": 239000,
+          "withdrawals": 0
+        },
+        "men": {
+          "debts": 0,
+          "expenses": 0,
+          "lunch": 10000,
+          "manager": "كرار يوسف",
+          "net": 212000,
+          "network": 212000,
+          "returns": 10000,
+          "sales": 232000,
+          "withdrawals": 0
+        },
+        "women": {
+          "debts": 0,
+          "expenses": 285000,
+          "expensesList": [
+            {
+              "amount": 235000,
+              "desc": "مصاريف البيج علي فؤاد صيانه وترويج",
+              "type": "dept"
+            },
+            {
+              "amount": 50000,
+              "desc": "راتب سما راتب البيج",
+              "type": "dept"
+            }
+          ],
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 21000,
+          "network": 21000,
+          "returns": 19000,
+          "sales": 325000,
+          "withdrawals": 0
+        }
+      },
+      "date": "2026-04-13",
+      "id": "mobnenwn7pyj",
+      "manager": "كرار يوسف",
+      "safeLinkId": "mobnenwn1mpl",
+      "totalNet": 467000
+    },
+    {
+      "by": "كرار",
+      "cashiers": {
+        "cosmetics": {
+          "debts": 0,
+          "expenses": 0,
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 296000,
+          "network": 296000,
+          "returns": 7000,
+          "sales": 303000,
+          "withdrawals": 0
+        },
+        "men": {
+          "debts": 0,
+          "expenses": 0,
+          "lunch": 10000,
+          "manager": "كرار يوسف",
+          "net": 108000,
+          "network": 108000,
+          "returns": 5000,
+          "sales": 123000,
+          "withdrawals": 0
+        },
+        "women": {
+          "debts": 10000,
+          "debtsList": [
+            {
+              "amount": 10000,
+              "note": "ديون ملابس",
+              "person": "كرار يوسف"
+            }
+          ],
+          "expenses": 22000,
+          "expensesList": [
+            {
+              "amount": 12000,
+              "desc": "مصاريف جود عشاء زائد ماء واكياس نفايات",
+              "type": "dept"
+            },
+            {
+              "amount": 10000,
+              "desc": "نقليات حيدر جريان",
+              "type": "dept"
+            }
+          ],
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 241000,
+          "network": 241000,
+          "returns": 19000,
+          "sales": 317000,
+          "withdrawList": [
+            {
+              "amount": 25000,
+              "note": "سحب من الراتب زهراء حمزه",
+              "person": "زهراء حمزه"
+            }
+          ],
+          "withdrawals": 25000
+        }
+      },
+      "date": "2026-04-14",
+      "id": "mobnnn2lfoqs",
+      "manager": "كرار يوسف",
+      "safeLinkId": "mobnnn2ll5sf",
+      "totalNet": 645000
+    },
+    {
+      "by": "كرار",
+      "cashiers": {
+        "cosmetics": {
+          "debts": 0,
+          "expenses": 0,
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 227000,
+          "network": 227000,
+          "returns": 7000,
+          "sales": 234000,
+          "withdrawals": 0
+        },
+        "men": {
+          "debts": 65000,
+          "debtsList": [
+            {
+              "amount": 65000,
+              "note": "ملابس رجالي بعلم محمد رحيم",
+              "person": "سيد محمد شوملي"
+            }
+          ],
+          "expenses": 0,
+          "lunch": 10000,
+          "manager": "كرار يوسف",
+          "net": 95000,
+          "network": 96000,
+          "returns": 20000,
+          "sales": 240000,
+          "withdrawList": [
+            {
+              "amount": 50000,
+              "note": "سحب من الرجالي من الراتب",
+              "person": "محمد فرج"
+            }
+          ],
+          "withdrawals": 50000
+        },
+        "women": {
+          "debts": 15000,
+          "debtsList": [
+            {
+              "amount": 15000,
+              "note": "ديون كوزمتك",
+              "person": "زهراء حمزه"
+            }
+          ],
+          "expenses": 3000,
+          "expensesList": [
+            {
+              "amount": 275000,
+              "desc": "راجع قرضه للاداره لمحمد رحيم",
+              "type": "admin"
+            },
+            {
+              "amount": 3000,
+              "desc": "عشاء جود",
+              "type": "dept"
+            }
+          ],
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 167000,
+          "network": 167000,
+          "returns": 20000,
+          "sales": 355000,
+          "withdrawList": [
+            {
+              "amount": 75000,
+              "note": "سحب من الراتب",
+              "person": "زهراء حمزه"
+            },
+            {
+              "amount": 75000,
+              "note": "سحب من راتب عمار",
+              "person": "عمار المصور"
+            }
+          ],
+          "withdrawals": 150000
+        }
+      },
+      "date": "2026-04-15",
+      "id": "mobou2jbr5ei",
+      "manager": "كرار يوسف",
+      "safeLinkId": "mobou2jbn890",
+      "totalNet": 489000
+    },
+    {
+      "by": "كرار",
+      "cashiers": {
+        "cosmetics": {
+          "debts": 0,
+          "expenses": 0,
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 424000,
+          "network": 424000,
+          "returns": 35000,
+          "sales": 459000,
+          "withdrawals": 0
+        },
+        "men": {
+          "debts": 0,
+          "expenses": 0,
+          "lunch": 10000,
+          "manager": "كرار يوسف",
+          "net": 466000,
+          "network": 466000,
+          "returns": 16000,
+          "sales": 492000,
+          "withdrawals": 0
+        },
+        "women": {
+          "debts": 122000,
+          "debtsList": [
+            {
+              "amount": 122000,
+              "note": "ملابس نسائي",
+              "person": "زيدون زاهد"
+            }
+          ],
+          "expenses": 7000,
+          "expensesList": [
+            {
+              "amount": 7000,
+              "desc": "مصاريف عشاء يجوز زائد مواد تنظيف",
+              "type": "dept"
+            },
+            {
+              "amount": 500000,
+              "desc": "سيف استعلامات مصاريف عامه",
+              "type": "general"
+            }
+          ],
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 366000,
+          "network": 366000,
+          "returns": 7000,
+          "sales": 527000,
+          "withdrawList": [
+            {
+              "amount": 25000,
+              "note": "سحب من الراتب",
+              "person": "زينب رعد"
+            }
+          ],
+          "withdrawals": 25000
+        }
+      },
+      "date": "2026-04-16",
+      "id": "mobp7c6y9zor",
+      "manager": "كرار يوسف",
+      "safeLinkId": "mobp7c6ycihz",
+      "totalNet": 1256000
+    },
+    {
+      "by": "كرار",
+      "cashiers": {
+        "cosmetics": {
+          "debts": 0,
+          "expenses": 0,
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 200000,
+          "network": 200000,
+          "returns": 8000,
+          "sales": 208000,
+          "withdrawals": 0
+        },
+        "men": {
+          "debts": 0,
+          "expenses": 0,
+          "lunch": 10000,
+          "manager": "كرار يوسف",
+          "net": 288000,
+          "network": 288000,
+          "returns": 36000,
+          "sales": 334000,
+          "withdrawals": 0
+        },
+        "women": {
+          "debts": 0,
+          "expenses": 6000,
+          "expensesList": [
+            {
+              "amount": 6000,
+              "desc": "عشاء يجوز زائد ماء",
+              "type": "dept"
+            }
+          ],
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 684000,
+          "network": 684000,
+          "returns": 85000,
+          "sales": 775000,
+          "withdrawals": 0
+        }
+      },
+      "date": "2026-04-17",
+      "id": "mobpyct1qa9x",
+      "manager": "كرار يوسف",
+      "safeLinkId": "mobpyct1o4o8",
+      "totalNet": 1172000
+    },
+    {
+      "by": "كرار",
+      "cashiers": {
+        "cosmetics": {
+          "debts": 7000,
+          "debtsList": [
+            {
+              "amount": 7000,
+              "note": "ديوان كاظمتك ",
+              "person": "كرار يوسف"
+            }
+          ],
+          "expenses": 0,
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 0,
+          "network": 70000,
+          "returns": 70000,
+          "sales": 77000,
+          "withdrawals": 0
+        },
+        "men": {
+          "debts": 0,
+          "expenses": 0,
+          "lunch": 10000,
+          "manager": "كرار يوسف",
+          "net": 60000,
+          "network": 60000,
+          "returns": 2000,
+          "sales": 72000,
+          "withdrawals": 0
+        },
+        "women": {
+          "debts": 0,
+          "expenses": 0,
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 272000,
+          "network": 272000,
+          "returns": 18000,
+          "sales": 290000,
+          "withdrawals": 0
+        }
+      },
+      "date": "2026-04-18",
+      "id": "mobq6xsd1ums",
+      "manager": "كرار يوسف",
+      "safeLinkId": "mobq6xsdbhwq",
+      "totalNet": 332000
+    },
+    {
+      "by": "كرار",
+      "cashiers": {
+        "cosmetics": {
+          "debts": 10000,
+          "debtsList": [
+            {
+              "amount": 10000,
+              "note": "كوزمتك",
+              "person": "زينب سلمان"
+            }
+          ],
+          "expenses": 0,
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 117000,
+          "network": 117000,
+          "returns": 11000,
+          "sales": 138000,
+          "withdrawals": 0
+        },
+        "men": {
+          "debts": 0,
+          "expenses": 0,
+          "lunch": 10000,
+          "manager": "كرار يوسف",
+          "net": 445000,
+          "network": 445000,
+          "returns": 16000,
+          "sales": 471000,
+          "withdrawals": 0
+        },
+        "women": {
+          "debts": 0,
+          "expenses": 19000,
+          "expensesList": [
+            {
+              "amount": 6000,
+              "desc": "جود مواد تنظيف اكياس نفايات زائد عشاء",
+              "type": "dept"
+            },
+            {
+              "amount": 2525000,
+              "desc": "مسواقه احذيه",
+              "type": "purchase"
+            },
+            {
+              "amount": 13000,
+              "desc": "تحويل المبلغ عموله تحويل المبلغ",
+              "type": "dept"
+            }
+          ],
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 120000,
+          "network": 120000,
+          "returns": 6000,
+          "sales": 145000,
+          "withdrawals": 0
+        }
+      },
+      "date": "2026-04-19",
+      "id": "mobqltgn5d1l",
+      "manager": "كرار يوسف",
+      "safeLinkId": "mobqltgnedp9",
+      "totalNet": 682000
+    },
+    {
+      "by": "كرار",
+      "cashiers": {
+        "cosmetics": {
+          "debts": 4000,
+          "debtsList": [
+            {
+              "amount": 4000,
+              "note": "كوزمتك",
+              "person": "زينب سلمان"
+            }
+          ],
+          "expenses": 0,
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 205000,
+          "network": 205000,
+          "returns": 19000,
+          "sales": 228000,
+          "withdrawals": 0
+        },
+        "men": {
+          "debts": 0,
+          "expenses": 0,
+          "lunch": 10000,
+          "manager": "كرار يوسف",
+          "net": 216000,
+          "network": 216000,
+          "returns": 15000,
+          "sales": 241000,
+          "withdrawals": 0
+        },
+        "women": {
+          "debtPaymentsList": [
+            {
+              "amount": 60000,
+              "note": "ديون قديمه",
+              "person": "الموظف الزبيده ديون سابقه او قديمه"
+            }
+          ],
+          "debts": -60000,
+          "expenses": 0,
+          "expensesList": [
+            {
+              "amount": 321000,
+              "desc": "مسواق علاليك ",
+              "type": "purchase"
+            },
+            {
+              "amount": 500000,
+              "desc": "سيف استعلامات مصاريف عامه",
+              "type": "general"
+            }
+          ],
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 732000,
+          "network": 610000,
+          "returns": 17000,
+          "sales": 629000,
+          "withdrawals": 0
+        }
+      },
+      "date": "2026-04-20",
+      "id": "mobrax9uu4s4",
+      "manager": "كرار يوسف",
+      "safeLinkId": "mobrax9u9gmi",
+      "totalNet": 1153000
+    },
+    {
+      "by": "كرار",
+      "cashiers": {
+        "cosmetics": {
+          "debts": 0,
+          "expenses": 0,
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 160000,
+          "network": 160000,
+          "returns": 8000,
+          "sales": 168000,
+          "withdrawals": 0
+        },
+        "men": {
+          "debts": 0,
+          "expenses": 0,
+          "lunch": 10000,
+          "manager": "كرار يوسف",
+          "net": 386000,
+          "network": 386000,
+          "returns": 22000,
+          "sales": 418000,
+          "withdrawals": 0
+        },
+        "women": {
+          "debts": 0,
+          "expenses": 83000,
+          "expensesList": [
+            {
+              "amount": 75000,
+              "desc": "نقليات حيدر جريان",
+              "type": "dept"
+            },
+            {
+              "amount": 901000,
+              "desc": "مسواك احذيه",
+              "type": "purchase"
+            },
+            {
+              "amount": 8000,
+              "desc": "مصاريف جود عشان زائد مواد تنظيف",
+              "type": "dept"
+            }
+          ],
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 442000,
+          "network": 442000,
+          "returns": 15000,
+          "sales": 540000,
+          "withdrawals": 0
+        }
+      },
+      "date": "2026-04-22",
+      "id": "mobs7tpgk2fz",
+      "manager": "كرار يوسف",
+      "safeLinkId": "mobs7tpgtay7",
+      "totalNet": 988000
+    },
+    {
+      "by": "كرار",
+      "cashiers": {
+        "cosmetics": {
+          "debts": 0,
+          "expenses": 0,
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 251000,
+          "network": 251000,
+          "returns": 10000,
+          "sales": 261000,
+          "withdrawals": 0
+        },
+        "men": {
+          "debts": 0,
+          "expenses": 6000,
+          "expensesList": [
+            {
+              "amount": 6000,
+              "desc": "تعاليك قوط",
+              "type": "dept"
+            }
+          ],
+          "lunch": 10000,
+          "manager": "كرار يوسف",
+          "net": 138000,
+          "network": 138000,
+          "returns": 7000,
+          "sales": 161000,
+          "withdrawals": 0
+        },
+        "women": {
+          "debts": 0,
+          "expenses": 32000,
+          "expensesList": [
+            {
+              "amount": 21000,
+              "desc": "نقليات حيدر جريان ",
+              "type": "dept"
+            },
+            {
+              "amount": 500000,
+              "desc": "سيف استعلامات مصاريف عامه ",
+              "type": "general"
+            },
+            {
+              "amount": 6000,
+              "desc": "عشاء جود لمده يومين",
+              "type": "dept"
+            },
+            {
+              "amount": 5000,
+              "desc": "جهاز حمايه للعاكسه",
+              "type": "dept"
+            }
+          ],
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 393000,
+          "network": 393000,
+          "returns": 12000,
+          "sales": 437000,
+          "withdrawals": 0
+        }
+      },
+      "date": "2026-04-21",
+      "id": "mobsgt18gswq",
+      "manager": "كرار يوسف",
+      "safeLinkId": "mobsgt184av2",
+      "totalNet": 782000
+    },
+    {
+      "by": "كرار",
+      "cashiers": {
+        "cosmetics": {
+          "debts": 0,
+          "expenses": 0,
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 0,
+          "network": 0,
+          "returns": 0,
+          "sales": 0,
+          "withdrawals": 0
+        },
+        "men": {
+          "debts": 200000,
+          "debtsList": [
+            {
+              "amount": 200000,
+              "note": "ديون في ذمة محمد رحيم ",
+              "person": "محمد رحيم"
+            }
+          ],
+          "expenses": 244000,
+          "expensesList": [
+            {
+              "amount": 68000,
+              "desc": "خلل من تقفيلات سابقة بعلم محمد رحيم  ",
+              "type": "dept"
+            },
+            {
+              "amount": 176000,
+              "desc": "في ذمة امير محمد من خلل في تقفيلة 2026/3/30",
+              "type": "dept"
+            }
+          ],
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 4943000,
+          "network": 4943000,
+          "returns": 0,
+          "sales": 5387000,
+          "withdrawals": 0
+        },
+        "women": {
+          "debts": 0,
+          "expenses": 0,
+          "lunch": 0,
+          "manager": "كرار يوسف",
+          "net": 0,
+          "network": 0,
+          "returns": 0,
+          "sales": 0,
+          "withdrawals": 0
+        }
+      },
+      "date": "2026-04-23",
+      "id": "mobsxbhn73lx",
+      "manager": "كرار يوسف",
+      "safeLinkId": "mobsxbhnohmz",
+      "totalNet": 4943000
+    }
+  ],
+  "safe": [
+    {
+      "amount": 1159000,
+      "by": "كرار",
+      "closingId": "mobjt4wlbblq",
+      "date": "2026-04-10",
+      "id": "mobjt4wl8kpf",
+      "note": "تقفيلة 2026-04-10 - المدير: كرار يوسف",
+      "type": "deposit"
+    },
+    {
+      "amount": 645000,
+      "by": "كرار",
+      "closingId": "mobk18gnr2rv",
+      "date": "2026-04-11",
+      "id": "mobk18gn2nze",
+      "note": "تقفيلة 2026-04-11 - المدير: كرار يوسف",
+      "type": "deposit"
+    },
+    {
+      "amount": 862000,
+      "by": "كرار",
+      "closingId": "mobk8y0izgdm",
+      "date": "2026-04-12",
+      "id": "mobk8y0iejte",
+      "note": "تقفيلة 2026-04-12 - المدير: كرار يوسف",
+      "type": "deposit"
+    },
+    {
+      "amount": 467000,
+      "by": "كرار",
+      "closingId": "mobnenwn7pyj",
+      "date": "2026-04-13",
+      "id": "mobnenwn1mpl",
+      "note": "تقفيلة 2026-04-13 - المدير: كرار يوسف",
+      "type": "deposit"
+    },
+    {
+      "amount": 645000,
+      "by": "كرار",
+      "closingId": "mobnnn2lfoqs",
+      "date": "2026-04-14",
+      "id": "mobnnn2ll5sf",
+      "note": "تقفيلة 2026-04-14 - المدير: كرار يوسف",
+      "type": "deposit"
+    },
+    {
+      "amount": 489000,
+      "by": "كرار",
+      "closingId": "mobou2jbr5ei",
+      "date": "2026-04-15",
+      "id": "mobou2jbn890",
+      "note": "تقفيلة 2026-04-15 - المدير: كرار يوسف",
+      "type": "deposit"
+    },
+    {
+      "amount": 1256000,
+      "by": "كرار",
+      "closingId": "mobp7c6y9zor",
+      "date": "2026-04-16",
+      "id": "mobp7c6ycihz",
+      "note": "تقفيلة 2026-04-16 - المدير: كرار يوسف",
+      "type": "deposit"
+    },
+    {
+      "amount": 1172000,
+      "by": "كرار",
+      "closingId": "mobpyct1qa9x",
+      "date": "2026-04-17",
+      "id": "mobpyct1o4o8",
+      "note": "تقفيلة 2026-04-17 - المدير: كرار يوسف",
+      "type": "deposit"
+    },
+    {
+      "amount": 332000,
+      "by": "كرار",
+      "closingId": "mobq6xsd1ums",
+      "date": "2026-04-18",
+      "id": "mobq6xsdbhwq",
+      "note": "تقفيلة 2026-04-18 - المدير: كرار يوسف",
+      "type": "deposit"
+    },
+    {
+      "amount": 2525000,
+      "by": "كرار",
+      "date": "2026-04-23",
+      "id": "mobqltgnwq4v",
+      "note": "مشتريات من التقفيلة - كاشير النساء - مسواقه احذيه",
+      "type": "withdraw"
+    },
+    {
+      "amount": 682000,
+      "by": "كرار",
+      "closingId": "mobqltgn5d1l",
+      "date": "2026-04-19",
+      "id": "mobqltgnedp9",
+      "note": "تقفيلة 2026-04-19 - المدير: كرار يوسف",
+      "type": "deposit"
+    },
+    {
+      "amount": 60000,
+      "by": "كرار",
+      "date": "2026-04-23",
+      "id": "mobrax9up34n",
+      "note": "تسديد دين من التقفيلة - كاشير النساء - ديون قديمه",
+      "type": "deposit"
+    },
+    {
+      "amount": 321000,
+      "by": "كرار",
+      "date": "2026-04-23",
+      "id": "mobrax9uj5sd",
+      "note": "مشتريات من التقفيلة - كاشير النساء - مسواق علاليك ",
+      "type": "withdraw"
+    },
+    {
+      "amount": 1153000,
+      "by": "كرار",
+      "closingId": "mobrax9uu4s4",
+      "date": "2026-04-20",
+      "id": "mobrax9u9gmi",
+      "note": "تقفيلة 2026-04-20 - المدير: كرار يوسف",
+      "type": "deposit"
+    },
+    {
+      "amount": 901000,
+      "by": "كرار",
+      "date": "2026-04-23",
+      "id": "mobs7tpgnizo",
+      "note": "مشتريات من التقفيلة - كاشير النساء - مسواك احذيه",
+      "type": "withdraw"
+    },
+    {
+      "amount": 988000,
+      "by": "كرار",
+      "closingId": "mobs7tpgk2fz",
+      "date": "2026-04-22",
+      "id": "mobs7tpgtay7",
+      "note": "تقفيلة 2026-04-22 - المدير: كرار يوسف",
+      "type": "deposit"
+    },
+    {
+      "amount": 782000,
+      "by": "كرار",
+      "closingId": "mobsgt18gswq",
+      "date": "2026-04-21",
+      "id": "mobsgt184av2",
+      "note": "تقفيلة 2026-04-21 - المدير: كرار يوسف",
+      "type": "deposit"
+    },
+    {
+      "amount": 4943000,
+      "by": "كرار",
+      "closingId": "mobsxbhn73lx",
+      "date": "2026-04-23",
+      "id": "mobsxbhnohmz",
+      "note": "تقفيلة 2026-04-23 - المدير: كرار يوسف",
+      "type": "deposit"
+    }
+  ],
+  "debts": [
+    {
+      "amount": 16000,
+      "by": "كرار",
+      "cashier": "كاشير التجميل",
+      "date": "2026-04-23",
+      "id": "mobjt4wlldn8",
+      "note": "ديون زهراء حمزه كوزمتك",
+      "person": "زهراء حمزه",
+      "type": "debt"
+    },
+    {
+      "amount": 20000,
+      "by": "كرار",
+      "cashier": "كاشير التجميل",
+      "date": "2026-04-23",
+      "id": "mobk18gnp56u",
+      "note": "ديون عباس قحطان كوزمتك",
+      "person": "عباس قحطان سيراميك",
+      "type": "debt"
+    },
+    {
+      "amount": 9000,
+      "by": "كرار",
+      "cashier": "كاشير التجميل",
+      "date": "2026-04-23",
+      "id": "mobk18gndv67",
+      "note": "ديون كوزمتك ملاحظه لقد تم التسديد",
+      "person": "سما",
+      "type": "debt"
+    },
+    {
+      "amount": 100000,
+      "by": "كرار",
+      "cashier": "كاشير الرجال",
+      "date": "2026-04-23",
+      "id": "mobk8y0icuo0",
+      "note": "جنون دعاء هاشم قاط من الرجال من الرجال",
+      "person": "دعاء هاشم",
+      "type": "debt"
+    },
+    {
+      "amount": 15000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "id": "mobk8y0ixf3t",
+      "note": "سحب: ",
+      "person": "زينب رعد",
+      "type": "withdraw"
+    },
+    {
+      "amount": 10000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "id": "mobnnn2k8cwe",
+      "note": "ديون ملابس",
+      "person": "كرار يوسف",
+      "type": "debt"
+    },
+    {
+      "amount": 25000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "id": "mobnnn2kqqmz",
+      "note": "سحب: سحب من الراتب زهراء حمزه",
+      "person": "زهراء حمزه",
+      "type": "withdraw"
+    },
+    {
+      "amount": 65000,
+      "by": "كرار",
+      "cashier": "كاشير الرجال",
+      "date": "2026-04-23",
+      "id": "mobou2jbnrux",
+      "note": "ملابس رجالي بعلم محمد رحيم",
+      "person": "سيد محمد شوملي",
+      "type": "debt"
+    },
+    {
+      "amount": 50000,
+      "by": "كرار",
+      "cashier": "كاشير الرجال",
+      "date": "2026-04-23",
+      "id": "mobou2jbhj2c",
+      "note": "سحب: سحب من الرجالي من الراتب",
+      "person": "محمد فرج",
+      "type": "withdraw"
+    },
+    {
+      "amount": 15000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "id": "mobou2jbcjly",
+      "note": "ديون كوزمتك",
+      "person": "زهراء حمزه",
+      "type": "debt"
+    },
+    {
+      "amount": 75000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "id": "mobou2jbwyq7",
+      "note": "سحب: سحب من الراتب",
+      "person": "زهراء حمزه",
+      "type": "withdraw"
+    },
+    {
+      "amount": 75000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "id": "mobou2jbp9z1",
+      "note": "سحب: سحب من راتب عمار",
+      "person": "عمار المصور",
+      "type": "withdraw"
+    },
+    {
+      "amount": 122000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "id": "mobp7c6y0ucc",
+      "note": "ملابس نسائي",
+      "person": "زيدون زاهد",
+      "type": "debt"
+    },
+    {
+      "amount": 25000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "id": "mobp7c6yw4cx",
+      "note": "سحب: سحب من الراتب",
+      "person": "زينب رعد",
+      "type": "withdraw"
+    },
+    {
+      "amount": 7000,
+      "by": "كرار",
+      "cashier": "كاشير التجميل",
+      "date": "2026-04-23",
+      "id": "mobq6xsd9h44",
+      "note": "ديوان كاظمتك ",
+      "person": "كرار يوسف",
+      "type": "debt"
+    },
+    {
+      "amount": 10000,
+      "by": "كرار",
+      "cashier": "كاشير التجميل",
+      "date": "2026-04-23",
+      "id": "mobqltgnb5h9",
+      "note": "كوزمتك",
+      "person": "زينب سلمان",
+      "type": "debt"
+    },
+    {
+      "amount": -60000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "id": "mobrax9u3zmo",
+      "note": "تسديد: ديون قديمه",
+      "person": "الموظف الزبيده ديون سابقه او قديمه",
+      "type": "payment"
+    },
+    {
+      "amount": 4000,
+      "by": "كرار",
+      "cashier": "كاشير التجميل",
+      "date": "2026-04-23",
+      "id": "mobrax9udumu",
+      "note": "كوزمتك",
+      "person": "زينب سلمان",
+      "type": "debt"
+    },
+    {
+      "amount": 200000,
+      "by": "كرار",
+      "cashier": "كاشير الرجال",
+      "date": "2026-04-23",
+      "id": "mobsxbhm0yph",
+      "note": "ديون في ذمة محمد رحيم ",
+      "person": "محمد رحيم",
+      "type": "debt"
+    }
+  ],
+  "employees": [
+    {
+      "commRate": 5,
+      "id": "mnu2uvsntwch",
+      "name": "كرار يوسف يحيى",
+      "role": "كاشير نسائي",
+      "salary": 250000,
+      "salaryType": "commission"
+    },
+    {
+      "commRate": 5,
+      "id": "mnu2w3hmk07t",
+      "name": "حسين رحيم",
+      "role": "كاشير رجالي",
+      "salary": 350000,
+      "salaryType": "commission"
+    },
+    {
+      "commRate": 5,
+      "id": "mnu2wqke5fkv",
+      "name": "محمد فرج",
+      "role": "موظف مبيعات",
+      "salary": 200000,
+      "salaryType": "commission"
+    },
+    {
+      "commRate": 0,
+      "id": "mnu2x4d79385",
+      "name": "زيدون زاهر",
+      "role": "موظف مبيعات",
+      "salary": 350000,
+      "salaryType": "fixed"
+    },
+    {
+      "commRate": 0,
+      "id": "mnu2xkoy99np",
+      "name": "سيف حسين",
+      "role": "سائق",
+      "salary": 200000,
+      "salaryType": "fixed"
+    },
+    {
+      "commRate": 5,
+      "gender": "female",
+      "id": "mnu2yd82ulvx",
+      "name": "امنه محمد",
+      "role": "كاشير نسائي",
+      "salary": 200000,
+      "salaryType": "commission"
+    },
+    {
+      "commRate": 4,
+      "gender": "female",
+      "id": "mnu2zog37sxn",
+      "name": "دعاء هاشم",
+      "role": "موظفه مبيعات نسائي",
+      "salary": 200000,
+      "salaryType": "commission"
+    },
+    {
+      "commRate": 5,
+      "gender": "female",
+      "id": "mnu30o9o8wwg",
+      "name": "بنين احمد",
+      "role": "كاشير نسائي صباحي",
+      "salary": 150000,
+      "salaryType": "commission"
+    },
+    {
+      "commRate": 4,
+      "gender": "female",
+      "id": "mnu316otxk41",
+      "name": "زينب رعد",
+      "role": "موظفه مبيعات",
+      "salary": 150000,
+      "salaryType": "commission"
+    },
+    {
+      "commRate": 4,
+      "gender": "female",
+      "id": "mnu31r38ecd5",
+      "name": "زهراء حمزه",
+      "role": "موظفه مبيعات احذيه",
+      "salary": 150000,
+      "salaryType": "commission"
+    },
+    {
+      "commRate": 4.25,
+      "gender": "female",
+      "id": "mnu32pkppfh1",
+      "name": "تبارك محسن",
+      "role": "موظفه مبيعات نسائي صباح",
+      "salary": 150000,
+      "salaryType": "commission"
+    },
+    {
+      "commRate": 4.25,
+      "gender": "female",
+      "id": "mnu33ta9byvw",
+      "name": "سما",
+      "role": "موظفه مبيعات نساء صباحي",
+      "salary": 150000,
+      "salaryType": "commission"
+    },
+    {
+      "commRate": 5,
+      "gender": "female",
+      "id": "mnu34u4zqeqe",
+      "name": "زينب سلمان",
+      "role": "موظفه كوزمتك مسائي",
+      "salary": 150000,
+      "salaryType": "commission"
+    }
+  ],
+  "capital": [],
+  "purchases": [
+    {
+      "amount": 2525000,
+      "by": "كرار",
+      "currency": "د.ع",
+      "date": "2026-04-19",
+      "desc": "مسواقه احذيه",
+      "id": "mobqltgnjx2e",
+      "note": "من التقفيلة - كاشير النساء"
+    },
+    {
+      "amount": 321000,
+      "by": "كرار",
+      "currency": "د.ع",
+      "date": "2026-04-23",
+      "desc": "مسواق علاليك ",
+      "id": "mobrax9uyhsz",
+      "note": "من التقفيلة - كاشير النساء"
+    },
+    {
+      "amount": 901000,
+      "by": "كرار",
+      "currency": "د.ع",
+      "date": "2026-04-21",
+      "desc": "مسواك احذيه",
+      "id": "mobs7tpgor0g",
+      "note": "من التقفيلة - كاشير النساء"
+    }
+  ],
+  "withdrawals": [
+    {
+      "amount": 15000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "id": "mobk8y0iniog",
+      "note": "",
+      "person": "زينب رعد"
+    },
+    {
+      "amount": 25000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "id": "mobnnn2kke7f",
+      "note": "سحب من الراتب زهراء حمزه",
+      "person": "زهراء حمزه"
+    },
+    {
+      "amount": 50000,
+      "by": "كرار",
+      "cashier": "كاشير الرجال",
+      "date": "2026-04-23",
+      "id": "mobou2jb6pjg",
+      "note": "سحب من الرجالي من الراتب",
+      "person": "محمد فرج"
+    },
+    {
+      "amount": 75000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "id": "mobou2jbyaz7",
+      "note": "سحب من الراتب",
+      "person": "زهراء حمزه"
+    },
+    {
+      "amount": 75000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "id": "mobou2jb6mt3",
+      "note": "سحب من راتب عمار",
+      "person": "عمار المصور"
+    },
+    {
+      "amount": 25000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "id": "mobp7c6y2w4d",
+      "note": "سحب من الراتب",
+      "person": "زينب رعد"
+    }
+  ],
+  "settings": {
+    "managers": [
+      "كرار يوسف"
+    ]
+  },
+  "payroll": [
+    {
+      "amount": 359100,
+      "by": "كرار",
+      "date": "2026-04-11",
+      "deductions": {
+        "attendance": 0,
+        "debt": 0,
+        "loan": 100000
+      },
+      "empId": "mnu2uvsntwch",
+      "empName": "كرار يوسف يحيى",
+      "id": "mnu43zj58q6f",
+      "month": "2026-04",
+      "netPay": 300100,
+      "note": "إكرامية: 41,000 | استقطاع قرض/سلفة: 100,000",
+      "tip": 41000
+    },
+    {
+      "amount": 367850,
+      "by": "كرار",
+      "date": "2026-04-11",
+      "deductions": {
+        "attendance": 0,
+        "debt": 0,
+        "loan": 78000
+      },
+      "empId": "mnu2wqke5fkv",
+      "empName": "محمد فرج",
+      "id": "mnu4bh5td1av",
+      "month": "2026-04",
+      "netPay": 289850,
+      "note": "استقطاع قرض/سلفة: 78,000",
+      "tip": 0
+    },
+    {
+      "amount": 500800,
+      "by": "كرار",
+      "date": "2026-04-11",
+      "deductions": {
+        "attendance": 0,
+        "debt": 0,
+        "loan": 55000
+      },
+      "empId": "mnu2w3hmk07t",
+      "empName": "حسين رحيم",
+      "id": "mnu7kc0k6amt",
+      "month": "2026-04",
+      "netPay": 445800,
+      "note": "استقطاع قرض/سلفة: 55,000",
+      "tip": 0
+    },
+    {
+      "amount": 350000,
+      "by": "كرار",
+      "date": "2026-04-11",
+      "deductions": {
+        "attendance": 0,
+        "debt": 0,
+        "loan": 0
+      },
+      "empId": "mnu2x4d79385",
+      "empName": "زيدون زاهر",
+      "id": "mnu7lcvgjkcj",
+      "month": "2026-04",
+      "netPay": 350000,
+      "note": "",
+      "tip": 0
+    },
+    {
+      "amount": 200000,
+      "by": "كرار",
+      "date": "2026-04-11",
+      "deductions": {
+        "attendance": 0,
+        "debt": 0,
+        "loan": 0
+      },
+      "empId": "mnu2xkoy99np",
+      "empName": "سيف حسين",
+      "id": "mnu7lu5w5fyd",
+      "month": "2026-04",
+      "netPay": 200000,
+      "note": "",
+      "tip": 0
+    },
+    {
+      "amount": 457450,
+      "by": "كرار",
+      "date": "2026-04-11",
+      "deductions": {
+        "attendance": 0,
+        "debt": 0,
+        "loan": 100000
+      },
+      "empId": "mnu2yd82ulvx",
+      "empName": "امنه محمد",
+      "id": "mnu7nkpw11np",
+      "month": "2026-04",
+      "netPay": 357450,
+      "note": "استقطاع قرض/سلفة: 100,000",
+      "tip": 0
+    },
+    {
+      "amount": 593160,
+      "by": "كرار",
+      "date": "2026-04-11",
+      "deductions": {
+        "attendance": 0,
+        "debt": 0,
+        "loan": 100000
+      },
+      "empId": "mnu2zog37sxn",
+      "empName": "دعاء هاشم",
+      "id": "mnu7ojjoi67i",
+      "month": "2026-04",
+      "netPay": 493160,
+      "note": "استقطاع قرض/سلفة: 100,000",
+      "tip": 0
+    },
+    {
+      "amount": 265200,
+      "by": "كرار",
+      "date": "2026-04-11",
+      "deductions": {
+        "attendance": 0,
+        "debt": 0,
+        "loan": 0
+      },
+      "empId": "mnu30o9o8wwg",
+      "empName": "بنين احمد",
+      "id": "mnu7qkqoqkby",
+      "month": "2026-04",
+      "netPay": 350200,
+      "note": "إكرامية: 85,000",
+      "tip": 85000
+    },
+    {
+      "amount": 368080,
+      "by": "كرار",
+      "date": "2026-04-11",
+      "deductions": {
+        "attendance": 0,
+        "debt": 0,
+        "loan": 130000
+      },
+      "empId": "mnu316otxk41",
+      "empName": "زينب رعد",
+      "id": "mnu7tuqskmsl",
+      "month": "2026-04",
+      "netPay": 238080,
+      "note": "استقطاع قرض/سلفة: 130,000",
+      "tip": 0
+    },
+    {
+      "amount": 423080,
+      "by": "كرار",
+      "date": "2026-04-11",
+      "deductions": {
+        "attendance": 0,
+        "debt": 0,
+        "loan": 100000
+      },
+      "empId": "mnu31r38ecd5",
+      "empName": "زهراء حمزه",
+      "id": "mnu7waccp92i",
+      "month": "2026-04",
+      "netPay": 323080,
+      "note": "استقطاع قرض/سلفة: 100,000",
+      "tip": 0
+    },
+    {
+      "amount": 372402.5,
+      "by": "كرار",
+      "date": "2026-04-11",
+      "deductions": {
+        "attendance": 0,
+        "debt": 0,
+        "loan": 0
+      },
+      "empId": "mnu32pkppfh1",
+      "empName": "تبارك محسن",
+      "id": "mnu8012wn3g6",
+      "month": "2026-04",
+      "netPay": 400402.5,
+      "note": "إكرامية: 28,000",
+      "tip": 28000
+    },
+    {
+      "amount": 371127.5,
+      "by": "كرار",
+      "date": "2026-04-11",
+      "deductions": {
+        "attendance": 0,
+        "debt": 0,
+        "loan": 0
+      },
+      "empId": "mnu33ta9byvw",
+      "empName": "سما",
+      "id": "mnu81auw8nu7",
+      "month": "2026-04",
+      "netPay": 421127.5,
+      "note": "إكرامية: 50,000",
+      "tip": 50000
+    },
+    {
+      "amount": 407450,
+      "by": "كرار",
+      "date": "2026-04-11",
+      "deductions": {
+        "attendance": 0,
+        "debt": 0,
+        "loan": 100000
+      },
+      "empId": "mnu34u4zqeqe",
+      "empName": "زينب سلمان",
+      "id": "mnu83qqcvdhj",
+      "month": "2026-04",
+      "netPay": 307450,
+      "note": "استقطاع قرض/سلفة: 100,000",
+      "tip": 0
+    }
+  ],
+  "expenseEntries": [
+    {
+      "amount": 8000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "desc": "مصاريف جود ماء زائد ادوات تنظيف + عشاء",
+      "id": "mobjt4wlir2p",
+      "type": "dept"
+    },
+    {
+      "amount": 1000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "desc": "سجل حركه",
+      "id": "mobjt4wldq7i",
+      "type": "dept"
+    },
+    {
+      "amount": 500000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-11",
+      "desc": "سيف استعلامات مصاريف عامه",
+      "id": "mobk18gn4b7v",
+      "type": "general",
+      "currency": "د.ع"
+    },
+    {
+      "amount": 8000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "desc": "مصاريف جود ما زاد عشاء زاد اكياس نفايات",
+      "id": "mobk18gn4io8",
+      "type": "dept"
+    },
+    {
+      "amount": 10000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "desc": "نقليات حيدر جريان",
+      "id": "mobk18gnysne",
+      "type": "dept"
+    },
+    {
+      "amount": 50000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "desc": "اكراميه دعاء زائد زينب رعد تنظيف المخزن",
+      "id": "mobk8y0ilakw",
+      "type": "dept"
+    },
+    {
+      "amount": 235000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "desc": "مصاريف البيج علي فؤاد صيانه وترويج",
+      "id": "mobnenwnu1cm",
+      "type": "dept"
+    },
+    {
+      "amount": 50000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "desc": "راتب سما راتب البيج",
+      "id": "mobnenwn84k8",
+      "type": "dept"
+    },
+    {
+      "amount": 12000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "desc": "مصاريف جود عشاء زائد ماء واكياس نفايات",
+      "id": "mobnnn2karp9",
+      "type": "dept"
+    },
+    {
+      "amount": 10000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "desc": "نقليات حيدر جريان",
+      "id": "mobnnn2lx7tt",
+      "type": "dept"
+    },
+    {
+      "amount": 275000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-15",
+      "desc": "راجع قرضه للاداره لمحمد رحيم",
+      "id": "mobou2jbwah4",
+      "type": "admin",
+      "currency": "د.ع"
+    },
+    {
+      "amount": 3000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "desc": "عشاء جود",
+      "id": "mobou2jbp4i6",
+      "type": "dept"
+    },
+    {
+      "amount": 7000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "desc": "مصاريف عشاء يجوز زائد مواد تنظيف",
+      "id": "mobp7c6y2prf",
+      "type": "dept"
+    },
+    {
+      "amount": 500000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-16",
+      "desc": "سيف استعلامات مصاريف عامه",
+      "id": "mobp7c6y7q4m",
+      "type": "general",
+      "currency": "د.ع"
+    },
+    {
+      "amount": 6000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "desc": "عشاء يجوز زائد ماء",
+      "id": "mobpyct062xy",
+      "type": "dept"
+    },
+    {
+      "amount": 6000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "desc": "جود مواد تنظيف اكياس نفايات زائد عشاء",
+      "id": "mobqltgnkwbp",
+      "type": "dept"
+    },
+    {
+      "amount": 13000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "desc": "تحويل المبلغ عموله تحويل المبلغ",
+      "id": "mobqltgnqwze",
+      "type": "dept"
+    },
+    {
+      "amount": 500000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-20",
+      "desc": "سيف استعلامات مصاريف عامه",
+      "id": "mobrax9ul4l8",
+      "type": "general",
+      "currency": "د.ع"
+    },
+    {
+      "amount": 75000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "desc": "نقليات حيدر جريان",
+      "id": "mobs7tpga5jx",
+      "type": "dept"
+    },
+    {
+      "amount": 8000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "desc": "مصاريف جود عشان زائد مواد تنظيف",
+      "id": "mobs7tpg78wt",
+      "type": "dept"
+    },
+    {
+      "amount": 6000,
+      "by": "كرار",
+      "cashier": "كاشير الرجال",
+      "date": "2026-04-23",
+      "desc": "تعاليك قوط",
+      "id": "mobsgt18q858",
+      "type": "dept"
+    },
+    {
+      "amount": 21000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "desc": "نقليات حيدر جريان ",
+      "id": "mobsgt18f9xa",
+      "type": "dept"
+    },
+    {
+      "amount": 500000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-22",
+      "desc": "سيف استعلامات مصاريف عامه",
+      "id": "mobsgt18ztc4",
+      "type": "general",
+      "currency": "د.ع"
+    },
+    {
+      "amount": 6000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "desc": "عشاء جود لمده يومين",
+      "id": "mobsgt18broi",
+      "type": "dept"
+    },
+    {
+      "amount": 5000,
+      "by": "كرار",
+      "cashier": "كاشير النساء",
+      "date": "2026-04-23",
+      "desc": "جهاز حمايه للعاكسه",
+      "id": "mobsgt18w0q4",
+      "type": "dept"
+    },
+    {
+      "amount": 68000,
+      "by": "كرار",
+      "cashier": "كاشير الرجال",
+      "date": "2026-04-23",
+      "desc": "خلل من تقفيلات سابقة بعلم محمد رحيم  ",
+      "id": "mobsxbhnraz6",
+      "type": "dept"
+    },
+    {
+      "amount": 176000,
+      "by": "كرار",
+      "cashier": "كاشير الرجال",
+      "date": "2026-04-23",
+      "desc": "في ذمة امير محمد من خلل في تقفيلة 2026/3/30",
+      "id": "mobsxbhntf7f",
+      "type": "dept"
+    },
+    {
+      "id": "mobu8778ervn",
+      "amount": 500000,
+      "desc": "سيف استعلامات مصاريف عامه",
+      "type": "general",
+      "cashier": "",
+      "currency": "د.ع",
+      "date": "2026-04-08",
+      "by": "كرار"
+    },
+    {
+      "id": "mobu8r52upbe",
+      "amount": 500000,
+      "desc": "سيوف استعلامات مصاريف عامه",
+      "type": "general",
+      "cashier": "",
+      "currency": "د.ع",
+      "date": "2026-04-23",
+      "by": "كرار"
+    }
+  ],
+  "individualClosings": [
+    {
+      "by": "كرار",
+      "cashierKey": "men",
+      "cashierLabel": "كاشير الرجال",
+      "closingId": "mobjt4wlbblq",
+      "data": {
+        "debts": 0,
+        "expenses": 0,
+        "lunch": 10000,
+        "network": 626000,
+        "returns": 22000,
+        "sales": 658000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "id": "mobjt4wte5sv",
+      "manager": "كرار يوسف",
+      "net": 626000,
+      "source": "main-app",
+      "timestamp": 1776952786205
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "women",
+      "cashierLabel": "كاشير النساء",
+      "closingId": "mobjt4wlbblq",
+      "data": {
+        "debts": 0,
+        "expenses": 9000,
+        "lunch": 0,
+        "network": 354000,
+        "returns": 18000,
+        "sales": 381000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "expensesList": [
+        {
+          "amount": 8000,
+          "desc": "مصاريف جود ماء زائد ادوات تنظيف + عشاء",
+          "type": "dept"
+        },
+        {
+          "amount": 1000,
+          "desc": "سجل حركه",
+          "type": "dept"
+        }
+      ],
+      "id": "mobjt4wtk4u2",
+      "manager": "كرار يوسف",
+      "net": 354000,
+      "source": "main-app",
+      "timestamp": 1776952786205
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "cosmetics",
+      "cashierLabel": "كاشير التجميل",
+      "closingId": "mobjt4wlbblq",
+      "data": {
+        "debts": 16000,
+        "expenses": 0,
+        "lunch": 0,
+        "network": 179000,
+        "returns": 15000,
+        "sales": 210000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "debtsList": [
+        {
+          "amount": 16000,
+          "note": "ديون زهراء حمزه كوزمتك",
+          "person": "زهراء حمزه"
+        }
+      ],
+      "id": "mobjt4wtw3cg",
+      "manager": "كرار يوسف",
+      "net": 179000,
+      "source": "main-app",
+      "timestamp": 1776952786205
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "men",
+      "cashierLabel": "كاشير الرجال",
+      "closingId": "mobk18gnr2rv",
+      "data": {
+        "debts": 0,
+        "expenses": 0,
+        "lunch": 10000,
+        "network": 143000,
+        "returns": 20000,
+        "sales": 173000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "id": "mobk18gtfsta",
+      "manager": "كرار يوسف",
+      "net": 143000,
+      "source": "main-app",
+      "timestamp": 1776953164061
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "women",
+      "cashierLabel": "كاشير النساء",
+      "closingId": "mobk18gnr2rv",
+      "data": {
+        "debts": 0,
+        "expenses": 18000,
+        "lunch": 0,
+        "network": 274000,
+        "returns": 10000,
+        "sales": 302000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "expensesList": [
+        {
+          "amount": 500000,
+          "desc": "سيف استعلامات مصاريف عامه",
+          "type": "general"
+        },
+        {
+          "amount": 8000,
+          "desc": "مصاريف جود ما زاد عشاء زاد اكياس نفايات",
+          "type": "dept"
+        },
+        {
+          "amount": 10000,
+          "desc": "نقليات حيدر جريان",
+          "type": "dept"
+        }
+      ],
+      "id": "mobk18gtmhlv",
+      "manager": "كرار يوسف",
+      "net": 274000,
+      "source": "main-app",
+      "timestamp": 1776953164061
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "cosmetics",
+      "cashierLabel": "كاشير التجميل",
+      "closingId": "mobk18gnr2rv",
+      "data": {
+        "debts": 29000,
+        "expenses": 0,
+        "lunch": 0,
+        "network": 228000,
+        "returns": 11000,
+        "sales": 268000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "debtsList": [
+        {
+          "amount": 20000,
+          "note": "ديون عباس قحطان كوزمتك",
+          "person": "عباس قحطان سيراميك"
+        },
+        {
+          "amount": 9000,
+          "note": "ديون كوزمتك ملاحظه لقد تم التسديد",
+          "person": "سما"
+        }
+      ],
+      "id": "mobk18gtc49m",
+      "manager": "كرار يوسف",
+      "net": 228000,
+      "source": "main-app",
+      "timestamp": 1776953164061
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "men",
+      "cashierLabel": "كاشير الرجال",
+      "closingId": "mobk8y0izgdm",
+      "data": {
+        "debts": 100000,
+        "expenses": 0,
+        "lunch": 0,
+        "network": 263000,
+        "returns": 44000,
+        "sales": 417000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "debtsList": [
+        {
+          "amount": 100000,
+          "note": "جنون دعاء هاشم قاط من الرجال من الرجال",
+          "person": "دعاء هاشم"
+        }
+      ],
+      "id": "mobk8y0qccxz",
+      "manager": "كرار يوسف",
+      "net": 273000,
+      "source": "main-app",
+      "timestamp": 1776953523770
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "women",
+      "cashierLabel": "كاشير النساء",
+      "closingId": "mobk8y0izgdm",
+      "data": {
+        "debts": 0,
+        "expenses": 50000,
+        "lunch": 10000,
+        "network": 358000,
+        "returns": 20000,
+        "sales": 438000,
+        "withdrawals": 15000
+      },
+      "date": "2026-04-23",
+      "expensesList": [
+        {
+          "amount": 50000,
+          "desc": "اكراميه دعاء زائد زينب رعد تنظيف المخزن",
+          "type": "dept"
+        }
+      ],
+      "id": "mobk8y0qe1ft",
+      "manager": "كرار يوسف",
+      "net": 343000,
+      "source": "main-app",
+      "timestamp": 1776953523770,
+      "withdrawList": [
+        {
+          "amount": 15000,
+          "note": "",
+          "person": "زينب رعد"
+        }
+      ]
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "cosmetics",
+      "cashierLabel": "كاشير التجميل",
+      "closingId": "mobk8y0izgdm",
+      "data": {
+        "debts": 0,
+        "expenses": 0,
+        "lunch": 0,
+        "network": 246000,
+        "returns": 5000,
+        "sales": 251000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "id": "mobk8y0qqjrh",
+      "manager": "كرار يوسف",
+      "net": 246000,
+      "source": "main-app",
+      "timestamp": 1776953523770
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "men",
+      "cashierLabel": "كاشير الرجال",
+      "closingId": "mobnenwn7pyj",
+      "data": {
+        "debts": 0,
+        "expenses": 0,
+        "lunch": 10000,
+        "network": 212000,
+        "returns": 10000,
+        "sales": 232000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "id": "mobnenwyge3o",
+      "manager": "كرار يوسف",
+      "net": 212000,
+      "source": "main-app",
+      "timestamp": 1776958829458
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "women",
+      "cashierLabel": "كاشير النساء",
+      "closingId": "mobnenwn7pyj",
+      "data": {
+        "debts": 0,
+        "expenses": 285000,
+        "lunch": 0,
+        "network": 21000,
+        "returns": 19000,
+        "sales": 325000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "expensesList": [
+        {
+          "amount": 235000,
+          "desc": "مصاريف البيج علي فؤاد صيانه وترويج",
+          "type": "dept"
+        },
+        {
+          "amount": 50000,
+          "desc": "راتب سما راتب البيج",
+          "type": "dept"
+        }
+      ],
+      "id": "mobnenwyu3ul",
+      "manager": "كرار يوسف",
+      "net": 21000,
+      "source": "main-app",
+      "timestamp": 1776958829458
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "cosmetics",
+      "cashierLabel": "كاشير التجميل",
+      "closingId": "mobnenwn7pyj",
+      "data": {
+        "debts": 0,
+        "expenses": 0,
+        "lunch": 0,
+        "network": 234000,
+        "returns": 5000,
+        "sales": 239000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "id": "mobnenwy0pmt",
+      "manager": "كرار يوسف",
+      "net": 234000,
+      "source": "main-app",
+      "timestamp": 1776958829458
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "men",
+      "cashierLabel": "كاشير الرجال",
+      "closingId": "mobnnn2lfoqs",
+      "data": {
+        "debts": 0,
+        "expenses": 0,
+        "lunch": 10000,
+        "network": 108000,
+        "returns": 5000,
+        "sales": 123000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "id": "mobnnn2rvus2",
+      "manager": "كرار يوسف",
+      "net": 108000,
+      "source": "main-app",
+      "timestamp": 1776959248276
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "women",
+      "cashierLabel": "كاشير النساء",
+      "closingId": "mobnnn2lfoqs",
+      "data": {
+        "debts": 10000,
+        "expenses": 22000,
+        "lunch": 0,
+        "network": 241000,
+        "returns": 19000,
+        "sales": 317000,
+        "withdrawals": 25000
+      },
+      "date": "2026-04-23",
+      "debtsList": [
+        {
+          "amount": 10000,
+          "note": "ديون ملابس",
+          "person": "كرار يوسف"
+        }
+      ],
+      "expensesList": [
+        {
+          "amount": 12000,
+          "desc": "مصاريف جود عشاء زائد ماء واكياس نفايات",
+          "type": "dept"
+        },
+        {
+          "amount": 10000,
+          "desc": "نقليات حيدر جريان",
+          "type": "dept"
+        }
+      ],
+      "id": "mobnnn2sxk1x",
+      "manager": "كرار يوسف",
+      "net": 241000,
+      "source": "main-app",
+      "timestamp": 1776959248276,
+      "withdrawList": [
+        {
+          "amount": 25000,
+          "note": "سحب من الراتب زهراء حمزه",
+          "person": "زهراء حمزه"
+        }
+      ]
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "cosmetics",
+      "cashierLabel": "كاشير التجميل",
+      "closingId": "mobnnn2lfoqs",
+      "data": {
+        "debts": 0,
+        "expenses": 0,
+        "lunch": 0,
+        "network": 296000,
+        "returns": 7000,
+        "sales": 303000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "id": "mobnnn2srfgs",
+      "manager": "كرار يوسف",
+      "net": 296000,
+      "source": "main-app",
+      "timestamp": 1776959248276
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "men",
+      "cashierLabel": "كاشير الرجال",
+      "closingId": "mobou2jbr5ei",
+      "data": {
+        "debts": 65000,
+        "expenses": 0,
+        "lunch": 10000,
+        "network": 96000,
+        "returns": 20000,
+        "sales": 240000,
+        "withdrawals": 50000
+      },
+      "date": "2026-04-23",
+      "debtsList": [
+        {
+          "amount": 65000,
+          "note": "ملابس رجالي بعلم محمد رحيم",
+          "person": "سيد محمد شوملي"
+        }
+      ],
+      "id": "mobou2jnlj2h",
+      "manager": "كرار يوسف",
+      "net": 95000,
+      "source": "main-app",
+      "timestamp": 1776961227875,
+      "withdrawList": [
+        {
+          "amount": 50000,
+          "note": "سحب من الرجالي من الراتب",
+          "person": "محمد فرج"
+        }
+      ]
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "women",
+      "cashierLabel": "كاشير النساء",
+      "closingId": "mobou2jbr5ei",
+      "data": {
+        "debts": 15000,
+        "expenses": 3000,
+        "lunch": 0,
+        "network": 167000,
+        "returns": 20000,
+        "sales": 355000,
+        "withdrawals": 150000
+      },
+      "date": "2026-04-23",
+      "debtsList": [
+        {
+          "amount": 15000,
+          "note": "ديون كوزمتك",
+          "person": "زهراء حمزه"
+        }
+      ],
+      "expensesList": [
+        {
+          "amount": 275000,
+          "desc": "راجع قرضه للاداره لمحمد رحيم",
+          "type": "admin"
+        },
+        {
+          "amount": 3000,
+          "desc": "عشاء جود",
+          "type": "dept"
+        }
+      ],
+      "id": "mobou2jn1xg4",
+      "manager": "كرار يوسف",
+      "net": 167000,
+      "source": "main-app",
+      "timestamp": 1776961227875,
+      "withdrawList": [
+        {
+          "amount": 75000,
+          "note": "سحب من الراتب",
+          "person": "زهراء حمزه"
+        },
+        {
+          "amount": 75000,
+          "note": "سحب من راتب عمار",
+          "person": "عمار المصور"
+        }
+      ]
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "cosmetics",
+      "cashierLabel": "كاشير التجميل",
+      "closingId": "mobou2jbr5ei",
+      "data": {
+        "debts": 0,
+        "expenses": 0,
+        "lunch": 0,
+        "network": 227000,
+        "returns": 7000,
+        "sales": 234000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "id": "mobou2jnbn4b",
+      "manager": "كرار يوسف",
+      "net": 227000,
+      "source": "main-app",
+      "timestamp": 1776961227875
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "men",
+      "cashierLabel": "كاشير الرجال",
+      "closingId": "mobp7c6y9zor",
+      "data": {
+        "debts": 0,
+        "expenses": 0,
+        "lunch": 10000,
+        "network": 466000,
+        "returns": 16000,
+        "sales": 492000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "id": "mobp7c76c5g3",
+      "manager": "كرار يوسف",
+      "net": 466000,
+      "source": "main-app",
+      "timestamp": 1776961846915
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "women",
+      "cashierLabel": "كاشير النساء",
+      "closingId": "mobp7c6y9zor",
+      "data": {
+        "debts": 122000,
+        "expenses": 7000,
+        "lunch": 0,
+        "network": 366000,
+        "returns": 7000,
+        "sales": 527000,
+        "withdrawals": 25000
+      },
+      "date": "2026-04-23",
+      "debtsList": [
+        {
+          "amount": 122000,
+          "note": "ملابس نسائي",
+          "person": "زيدون زاهد"
+        }
+      ],
+      "expensesList": [
+        {
+          "amount": 7000,
+          "desc": "مصاريف عشاء يجوز زائد مواد تنظيف",
+          "type": "dept"
+        },
+        {
+          "amount": 500000,
+          "desc": "سيف استعلامات مصاريف عامه",
+          "type": "general"
+        }
+      ],
+      "id": "mobp7c77jlje",
+      "manager": "كرار يوسف",
+      "net": 366000,
+      "source": "main-app",
+      "timestamp": 1776961846915,
+      "withdrawList": [
+        {
+          "amount": 25000,
+          "note": "سحب من الراتب",
+          "person": "زينب رعد"
+        }
+      ]
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "cosmetics",
+      "cashierLabel": "كاشير التجميل",
+      "closingId": "mobp7c6y9zor",
+      "data": {
+        "debts": 0,
+        "expenses": 0,
+        "lunch": 0,
+        "network": 424000,
+        "returns": 35000,
+        "sales": 459000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "id": "mobp7c77jkak",
+      "manager": "كرار يوسف",
+      "net": 424000,
+      "source": "main-app",
+      "timestamp": 1776961846915
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "men",
+      "cashierLabel": "كاشير الرجال",
+      "closingId": "mobpyct1qa9x",
+      "data": {
+        "debts": 0,
+        "expenses": 0,
+        "lunch": 10000,
+        "network": 288000,
+        "returns": 36000,
+        "sales": 334000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "id": "mobpyctfo0zo",
+      "manager": "كرار يوسف",
+      "net": 288000,
+      "source": "main-app",
+      "timestamp": 1776963107427
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "women",
+      "cashierLabel": "كاشير النساء",
+      "closingId": "mobpyct1qa9x",
+      "data": {
+        "debts": 0,
+        "expenses": 6000,
+        "lunch": 0,
+        "network": 684000,
+        "returns": 85000,
+        "sales": 775000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "expensesList": [
+        {
+          "amount": 6000,
+          "desc": "عشاء يجوز زائد ماء",
+          "type": "dept"
+        }
+      ],
+      "id": "mobpyctf7xds",
+      "manager": "كرار يوسف",
+      "net": 684000,
+      "source": "main-app",
+      "timestamp": 1776963107427
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "cosmetics",
+      "cashierLabel": "كاشير التجميل",
+      "closingId": "mobpyct1qa9x",
+      "data": {
+        "debts": 0,
+        "expenses": 0,
+        "lunch": 0,
+        "network": 200000,
+        "returns": 8000,
+        "sales": 208000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "id": "mobpyctfp87x",
+      "manager": "كرار يوسف",
+      "net": 200000,
+      "source": "main-app",
+      "timestamp": 1776963107427
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "men",
+      "cashierLabel": "كاشير الرجال",
+      "closingId": "mobq6xsd1ums",
+      "data": {
+        "debts": 0,
+        "expenses": 0,
+        "lunch": 10000,
+        "network": 60000,
+        "returns": 2000,
+        "sales": 72000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "id": "mobq6xsljzx9",
+      "manager": "كرار يوسف",
+      "net": 60000,
+      "source": "main-app",
+      "timestamp": 1776963507861
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "women",
+      "cashierLabel": "كاشير النساء",
+      "closingId": "mobq6xsd1ums",
+      "data": {
+        "debts": 0,
+        "expenses": 0,
+        "lunch": 0,
+        "network": 272000,
+        "returns": 18000,
+        "sales": 290000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "id": "mobq6xslrox1",
+      "manager": "كرار يوسف",
+      "net": 272000,
+      "source": "main-app",
+      "timestamp": 1776963507861
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "cosmetics",
+      "cashierLabel": "كاشير التجميل",
+      "closingId": "mobq6xsd1ums",
+      "data": {
+        "debts": 7000,
+        "expenses": 0,
+        "lunch": 0,
+        "network": 70000,
+        "returns": 70000,
+        "sales": 77000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "debtsList": [
+        {
+          "amount": 7000,
+          "note": "ديوان كاظمتك ",
+          "person": "كرار يوسف"
+        }
+      ],
+      "id": "mobq6xsl0dqk",
+      "manager": "كرار يوسف",
+      "net": 0,
+      "source": "main-app",
+      "timestamp": 1776963507861
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "men",
+      "cashierLabel": "كاشير الرجال",
+      "closingId": "mobqltgn5d1l",
+      "data": {
+        "debts": 0,
+        "expenses": 0,
+        "lunch": 10000,
+        "network": 445000,
+        "returns": 16000,
+        "sales": 471000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "id": "mobqlth0o6ol",
+      "manager": "كرار يوسف",
+      "net": 445000,
+      "source": "main-app",
+      "timestamp": 1776964202100
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "women",
+      "cashierLabel": "كاشير النساء",
+      "closingId": "mobqltgn5d1l",
+      "data": {
+        "debts": 0,
+        "expenses": 19000,
+        "lunch": 0,
+        "network": 120000,
+        "returns": 6000,
+        "sales": 145000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "expensesList": [
+        {
+          "amount": 6000,
+          "desc": "جود مواد تنظيف اكياس نفايات زائد عشاء",
+          "type": "dept"
+        },
+        {
+          "amount": 2525000,
+          "desc": "مسواقه احذيه",
+          "type": "purchase"
+        },
+        {
+          "amount": 13000,
+          "desc": "تحويل المبلغ عموله تحويل المبلغ",
+          "type": "dept"
+        }
+      ],
+      "id": "mobqlth0cjm4",
+      "manager": "كرار يوسف",
+      "net": 120000,
+      "source": "main-app",
+      "timestamp": 1776964202100
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "cosmetics",
+      "cashierLabel": "كاشير التجميل",
+      "closingId": "mobqltgn5d1l",
+      "data": {
+        "debts": 10000,
+        "expenses": 0,
+        "lunch": 0,
+        "network": 117000,
+        "returns": 11000,
+        "sales": 138000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "debtsList": [
+        {
+          "amount": 10000,
+          "note": "كوزمتك",
+          "person": "زينب سلمان"
+        }
+      ],
+      "id": "mobqlth0xpvu",
+      "manager": "كرار يوسف",
+      "net": 117000,
+      "source": "main-app",
+      "timestamp": 1776964202100
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "men",
+      "cashierLabel": "كاشير الرجال",
+      "closingId": "mobrax9uu4s4",
+      "data": {
+        "debts": 0,
+        "expenses": 0,
+        "lunch": 10000,
+        "network": 216000,
+        "returns": 15000,
+        "sales": 241000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "id": "mobraxa49t44",
+      "manager": "كرار يوسف",
+      "net": 216000,
+      "source": "main-app",
+      "timestamp": 1776965373436
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "women",
+      "cashierLabel": "كاشير النساء",
+      "closingId": "mobrax9uu4s4",
+      "data": {
+        "debts": -60000,
+        "expenses": 0,
+        "lunch": 0,
+        "network": 610000,
+        "returns": 17000,
+        "sales": 629000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "debtPaymentsList": [
+        {
+          "amount": 60000,
+          "note": "ديون قديمه",
+          "person": "الموظف الزبيده ديون سابقه او قديمه"
+        }
+      ],
+      "expensesList": [
+        {
+          "amount": 321000,
+          "desc": "مسواق علاليك ",
+          "type": "purchase"
+        },
+        {
+          "amount": 500000,
+          "desc": "سيف استعلامات مصاريف عامه",
+          "type": "general"
+        }
+      ],
+      "id": "mobraxa43o76",
+      "manager": "كرار يوسف",
+      "net": 732000,
+      "source": "main-app",
+      "timestamp": 1776965373436
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "cosmetics",
+      "cashierLabel": "كاشير التجميل",
+      "closingId": "mobrax9uu4s4",
+      "data": {
+        "debts": 4000,
+        "expenses": 0,
+        "lunch": 0,
+        "network": 205000,
+        "returns": 19000,
+        "sales": 228000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "debtsList": [
+        {
+          "amount": 4000,
+          "note": "كوزمتك",
+          "person": "زينب سلمان"
+        }
+      ],
+      "id": "mobraxa4qoht",
+      "manager": "كرار يوسف",
+      "net": 205000,
+      "source": "main-app",
+      "timestamp": 1776965373436
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "men",
+      "cashierLabel": "كاشير الرجال",
+      "closingId": "mobs7tpgk2fz",
+      "data": {
+        "debts": 0,
+        "expenses": 0,
+        "lunch": 10000,
+        "network": 386000,
+        "returns": 22000,
+        "sales": 418000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "id": "mobs7tpqy8vk",
+      "manager": "كرار يوسف",
+      "net": 386000,
+      "source": "main-app",
+      "timestamp": 1776966908462
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "women",
+      "cashierLabel": "كاشير النساء",
+      "closingId": "mobs7tpgk2fz",
+      "data": {
+        "debts": 0,
+        "expenses": 83000,
+        "lunch": 0,
+        "network": 442000,
+        "returns": 15000,
+        "sales": 540000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "expensesList": [
+        {
+          "amount": 75000,
+          "desc": "نقليات حيدر جريان",
+          "type": "dept"
+        },
+        {
+          "amount": 901000,
+          "desc": "مسواك احذيه",
+          "type": "purchase"
+        },
+        {
+          "amount": 8000,
+          "desc": "مصاريف جود عشان زائد مواد تنظيف",
+          "type": "dept"
+        }
+      ],
+      "id": "mobs7tpqfeq8",
+      "manager": "كرار يوسف",
+      "net": 442000,
+      "source": "main-app",
+      "timestamp": 1776966908462
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "cosmetics",
+      "cashierLabel": "كاشير التجميل",
+      "closingId": "mobs7tpgk2fz",
+      "data": {
+        "debts": 0,
+        "expenses": 0,
+        "lunch": 0,
+        "network": 160000,
+        "returns": 8000,
+        "sales": 168000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "id": "mobs7tpqxi8z",
+      "manager": "كرار يوسف",
+      "net": 160000,
+      "source": "main-app",
+      "timestamp": 1776966908462
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "men",
+      "cashierLabel": "كاشير الرجال",
+      "closingId": "mobsgt18gswq",
+      "data": {
+        "debts": 0,
+        "expenses": 6000,
+        "lunch": 10000,
+        "network": 138000,
+        "returns": 7000,
+        "sales": 161000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "expensesList": [
+        {
+          "amount": 6000,
+          "desc": "تعاليك قوط",
+          "type": "dept"
+        }
+      ],
+      "id": "mobsgt1k83m3",
+      "manager": "كرار يوسف",
+      "net": 138000,
+      "source": "main-app",
+      "timestamp": 1776967327496
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "women",
+      "cashierLabel": "كاشير النساء",
+      "closingId": "mobsgt18gswq",
+      "data": {
+        "debts": 0,
+        "expenses": 32000,
+        "lunch": 0,
+        "network": 393000,
+        "returns": 12000,
+        "sales": 437000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "expensesList": [
+        {
+          "amount": 21000,
+          "desc": "نقليات حيدر جريان ",
+          "type": "dept"
+        },
+        {
+          "amount": 500000,
+          "desc": "سيف استعلامات مصاريف عامه ",
+          "type": "general"
+        },
+        {
+          "amount": 6000,
+          "desc": "عشاء جود لمده يومين",
+          "type": "dept"
+        },
+        {
+          "amount": 5000,
+          "desc": "جهاز حمايه للعاكسه",
+          "type": "dept"
+        }
+      ],
+      "id": "mobsgt1krte4",
+      "manager": "كرار يوسف",
+      "net": 393000,
+      "source": "main-app",
+      "timestamp": 1776967327496
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "cosmetics",
+      "cashierLabel": "كاشير التجميل",
+      "closingId": "mobsgt18gswq",
+      "data": {
+        "debts": 0,
+        "expenses": 0,
+        "lunch": 0,
+        "network": 251000,
+        "returns": 10000,
+        "sales": 261000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "id": "mobsgt1k5w2a",
+      "manager": "كرار يوسف",
+      "net": 251000,
+      "source": "main-app",
+      "timestamp": 1776967327496
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "men",
+      "cashierLabel": "كاشير الرجال",
+      "closingId": "mobsxbhn73lx",
+      "data": {
+        "debts": 200000,
+        "expenses": 244000,
+        "lunch": 0,
+        "network": 4943000,
+        "returns": 0,
+        "sales": 5387000,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "debtsList": [
+        {
+          "amount": 200000,
+          "note": "ديون في ذمة محمد رحيم ",
+          "person": "محمد رحيم"
+        }
+      ],
+      "expensesList": [
+        {
+          "amount": 68000,
+          "desc": "خلل من تقفيلات سابقة بعلم محمد رحيم  ",
+          "type": "dept"
+        },
+        {
+          "amount": 176000,
+          "desc": "في ذمة امير محمد من خلل في تقفيلة 2026/3/30",
+          "type": "dept"
+        }
+      ],
+      "id": "mobsxbizocth",
+      "manager": "كرار يوسف",
+      "net": 4943000,
+      "source": "main-app",
+      "timestamp": 1776968097947
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "women",
+      "cashierLabel": "كاشير النساء",
+      "closingId": "mobsxbhn73lx",
+      "data": {
+        "debts": 0,
+        "expenses": 0,
+        "lunch": 0,
+        "network": 0,
+        "returns": 0,
+        "sales": 0,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "id": "mobsxbiz56dn",
+      "manager": "كرار يوسف",
+      "net": 0,
+      "source": "main-app",
+      "timestamp": 1776968097947
+    },
+    {
+      "by": "كرار",
+      "cashierKey": "cosmetics",
+      "cashierLabel": "كاشير التجميل",
+      "closingId": "mobsxbhn73lx",
+      "data": {
+        "debts": 0,
+        "expenses": 0,
+        "lunch": 0,
+        "network": 0,
+        "returns": 0,
+        "sales": 0,
+        "withdrawals": 0
+      },
+      "date": "2026-04-23",
+      "id": "mobsxbize7ou",
+      "manager": "كرار يوسف",
+      "net": 0,
+      "source": "main-app",
+      "timestamp": 1776968097947
+    }
+  ],
+  "cashierAccounts": []
+}
