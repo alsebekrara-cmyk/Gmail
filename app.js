@@ -136,6 +136,270 @@ let calcResizeState=null;
 const CALC_MIN_WIDTH=260;
 const CALC_MIN_HEIGHT=430;
 const CALC_RATIO=34/52; // width / height
+
+/* ========= unit price calculator settings ========= */
+let unitPriceSettings={
+    exchangeRate:1.53,
+    quantityType:'قطع',
+    itemsPerDosen:12
+};
+let unitPriceInput='';
+let unitPriceCurrentField='unitTotalPrice';
+let unitPricePanelInited=false;
+let unitPriceDragState=null;
+let unitPriceResizeState=null;
+const UNIT_PRICE_MIN_WIDTH=320;
+const UNIT_PRICE_MIN_HEIGHT=600;
+const UNIT_PRICE_RATIO=320/600; // width / height
+
+function getUnitPriceSettings(){
+    try{
+        const saved=localStorage.getItem('unitPriceSettings');
+        return saved?JSON.parse(saved):unitPriceSettings;
+    }catch(e){
+        return unitPriceSettings;
+    }
+}
+function saveUnitPriceSettings(settings){
+    unitPriceSettings=settings;
+    localStorage.setItem('unitPriceSettings',JSON.stringify(settings));
+}
+function calculateUnitPrice(){
+    const totalPrice=parseFloat($('#unitTotalPrice')?.value)||0;
+    const quantity=parseFloat($('#unitQuantity')?.value)||1;
+    const quantityType=$('#unitQuantityType')?.value||'قطع';
+    const exchangeRate=parseFloat($('#unitExchangeRate')?.value)||1.53;
+    
+    if(totalPrice<=0 || quantity<=0){
+        $('#unitPriceScreen').textContent='0 د.ع';
+        return;
+    }
+    
+    let totalItems=quantity;
+    if(quantityType==='درزن'){
+        const itemsPerDosen=parseFloat($('#unitItemsPerDosen')?.value)||12;
+        totalItems=quantity*itemsPerDosen;
+    }
+    
+    const pricePerItem=(totalPrice/totalItems)*exchangeRate;
+    const formatted=calcFormat(pricePerItem);
+    $('#unitPriceScreen').textContent=formatted+' د.ع';
+}
+function openUnitPriceCalculator(){
+    const panel=$('#unitPricePanel');
+    if(!panel)return;
+    
+    const settings=getUnitPriceSettings();
+    $('#unitExchangeRate').value=settings.exchangeRate;
+    $('#unitQuantityType').value=settings.quantityType;
+    $('#unitItemsPerDosen').value=settings.itemsPerDosen;
+    
+    unitPriceInput='';
+    unitPriceCurrentField='unitTotalPrice';
+    
+    panel.classList.remove('hidden');
+    panel.setAttribute('aria-hidden','false');
+    initUnitPricePanelPosition();
+    calculateUnitPrice();
+}
+function closeUnitPriceCalculator(){
+    const panel=$('#unitPricePanel');
+    if(!panel)return;
+    panel.classList.add('hidden');
+    panel.setAttribute('aria-hidden','true');
+}
+function toggleUnitPriceCalculator(){
+    const panel=$('#unitPricePanel');
+    if(!panel)return;
+    if(panel.classList.contains('hidden'))openUnitPriceCalculator();
+    else closeUnitPriceCalculator();
+}
+function initUnitPricePanelPosition(){
+    const panel=$('#unitPricePanel');
+    if(!panel || unitPricePanelInited)return;
+    const rect=panel.getBoundingClientRect();
+    panel.style.left=rect.left+'px';
+    panel.style.top=rect.top+'px';
+    panel.style.width=rect.width+'px';
+    panel.style.height=rect.height+'px';
+    panel.style.right='auto';
+    panel.style.bottom='auto';
+    unitPricePanelInited=true;
+    constrainUnitPricePanel();
+}
+function constrainUnitPricePanel(){
+    const panel=$('#unitPricePanel');
+    if(!panel || panel.classList.contains('hidden'))return;
+    const pad=8;
+    const maxW=Math.max(200,window.innerWidth-pad*2);
+    const maxH=Math.max(300,window.innerHeight-pad*2);
+    const minW=Math.min(UNIT_PRICE_MIN_WIDTH,maxW);
+    const minH=Math.min(UNIT_PRICE_MIN_HEIGHT,maxH);
+
+    let width=Math.max(minW,panel.offsetWidth||minW);
+    let height=width/UNIT_PRICE_RATIO;
+
+    if(height>maxH){
+        height=maxH;
+        width=height*UNIT_PRICE_RATIO;
+    }
+    if(width>maxW){
+        width=maxW;
+        height=width/UNIT_PRICE_RATIO;
+    }
+    if(height<minH){
+        height=minH;
+        width=height*UNIT_PRICE_RATIO;
+    }
+    if(width<minW){
+        width=minW;
+        height=width/UNIT_PRICE_RATIO;
+    }
+
+    width=Math.min(maxW,Math.max(minW,width));
+    height=Math.min(maxH,Math.max(minH,height));
+
+    const left=Math.min(window.innerWidth-width-pad,Math.max(pad,parseFloat(panel.style.left)||pad+60));
+    const top=Math.min(window.innerHeight-height-pad,Math.max(pad,parseFloat(panel.style.top)||pad+100));
+    panel.style.width=width+'px';
+    panel.style.height=height+'px';
+    panel.style.left=left+'px';
+    panel.style.top=top+'px';
+}
+function startUnitPriceDrag(e){
+    const panel=$('#unitPricePanel');
+    if(!panel || panel.classList.contains('hidden'))return;
+    if(e.target.closest('button') || e.target.closest('input') || e.target.closest('select'))return;
+    initUnitPricePanelPosition();
+    unitPriceDragState={
+        pointerId:e.pointerId,
+        startX:e.clientX,
+        startY:e.clientY,
+        startLeft:parseFloat(panel.style.left)||panel.getBoundingClientRect().left,
+        startTop:parseFloat(panel.style.top)||panel.getBoundingClientRect().top
+    };
+    panel.setPointerCapture?.(e.pointerId);
+    e.preventDefault();
+}
+function onUnitPriceDragMove(e){
+    const panel=$('#unitPricePanel');
+    if(!panel || !unitPriceDragState)return;
+    const dx=e.clientX-unitPriceDragState.startX;
+    const dy=e.clientY-unitPriceDragState.startY;
+    panel.style.left=(unitPriceDragState.startLeft+dx)+'px';
+    panel.style.top=(unitPriceDragState.startTop+dy)+'px';
+    constrainUnitPricePanel();
+}
+function endUnitPriceDrag(){
+    unitPriceDragState=null;
+}
+function startUnitPriceResize(e){
+    const panel=$('#unitPricePanel');
+    const dir=e.target.dataset.resize;
+    if(!panel || !dir)return;
+    initUnitPricePanelPosition();
+    const rect=panel.getBoundingClientRect();
+    unitPriceResizeState={
+        pointerId:e.pointerId,dir,
+        startX:e.clientX,startY:e.clientY,
+        startLeft:rect.left,startTop:rect.top,
+        startWidth:rect.width,startHeight:rect.height
+    };
+    panel.setPointerCapture?.(e.pointerId);
+    e.preventDefault();
+}
+function onUnitPriceResizeMove(e){
+    const panel=$('#unitPricePanel');
+    if(!panel || !unitPriceResizeState)return;
+    const {dir,startX,startY,startLeft,startTop,startWidth,startHeight}=unitPriceResizeState;
+    const dx=e.clientX-startX;
+    const dy=e.clientY-startY;
+    let left=startLeft,top=startTop,width=startWidth,height=startHeight;
+
+    if(dir==='e')width=startWidth+dx;
+    else if(dir==='w')width=startWidth-dx;
+    else if(dir==='s')height=startHeight+dy;
+    else if(dir==='n')height=startHeight-dy;
+    else if(dir.includes('e'))width=startWidth+dx;
+    else if(dir.includes('w'))width=startWidth-dx;
+    else if(dir.includes('s'))height=startHeight+dy;
+    else if(dir.includes('n'))height=startHeight-dy;
+
+    width=Math.max(UNIT_PRICE_MIN_WIDTH,width);
+    height=Math.max(UNIT_PRICE_MIN_HEIGHT,height);
+    if(dir.includes('w'))left=startLeft+(startWidth-width);
+    if(dir.includes('n'))top=startTop+(startHeight-height);
+
+    panel.style.width=width+'px';
+    panel.style.height=height+'px';
+    panel.style.left=left+'px';
+    panel.style.top=top+'px';
+    constrainUnitPricePanel();
+}
+function endUnitPriceResize(){
+    unitPriceResizeState=null;
+}
+function unitPriceKeyInput(value){
+    let field=$('#'+unitPriceCurrentField);
+    if(!field){
+        unitPriceCurrentField='unitTotalPrice';
+        field=$('#'+unitPriceCurrentField);
+        if(!field)return;
+    }
+    
+    if(value==='.'){
+        const current=field.value||'';
+        if(!current || current.includes('.'))return;
+        field.value=(current||'0')+'.';
+    }else{
+        const current=field.value||'';
+        if(current==='0' && value!=='.'){
+            field.value=value;
+        }else{
+            field.value=current+value;
+        }
+    }
+    calculateUnitPrice();
+}
+function switchUnitPriceField(){
+    const fields=['unitTotalPrice','unitQuantity','unitExchangeRate'];
+    const currentIndex=fields.indexOf(unitPriceCurrentField);
+    unitPriceCurrentField=fields[(currentIndex+1)%fields.length];
+}
+function unitPriceAction(action){
+    if(action==='clear'){
+        // تصفير جميع الخانات
+        $('#unitTotalPrice').value='';
+        $('#unitQuantity').value='';
+        $('#unitExchangeRate').value='1.53';
+        $('#unitItemsPerDosen').value='12';
+        unitPriceInput='';
+        unitPriceCurrentField='unitTotalPrice';
+        $('#unitPriceScreen').textContent='0 د.ع';
+        $('#unitPriceHistory').textContent='';
+    }else if(action==='backspace'){
+        const field=$('#'+unitPriceCurrentField);
+        if(field)field.value=field.value.slice(0,-1);
+        unitPriceInput=unitPriceInput.slice(0,-1);
+        calculateUnitPrice();
+    }else if(action==='decimal'){
+        unitPriceKeyInput('.');
+    }else if(action==='calculate'){
+        calculateUnitPrice();
+    }
+}
+function copyUnitPriceToCalculator(){
+    const screen=$('#unitPriceScreen')?.textContent||'0 د.ع';
+    const value=screen.replace(' د.ع','');
+    if(value==='0' || !value)return toast('لا توجد قيمة للنسخ');
+    if(calcJustEvaluated)calcExpr='';
+    calcExpr+=value;
+    calcJustEvaluated=false;
+    updateCalculatorDisplay();
+    closeUnitPriceCalculator();
+    openCalculator();
+    toast('تم إضافة السعر للحاسبة');
+}
 function calcNormalize(expr){
     return (expr||'').replace(/×/g,'*').replace(/÷/g,'/').replace(/−/g,'-').replace(/\s+/g,'');
 }
@@ -6517,6 +6781,31 @@ function initApp(){
     document.addEventListener('selectionchange',updateCalculatorSelectionFromPage);
     document.addEventListener('pointermove',e=>{if(calcDragState)onCalcDragMove(e);if(calcResizeState)onCalcResizeMove(e);});
     document.addEventListener('pointerup',()=>{if(calcDragState)endCalcDrag();if(calcResizeState)endCalcResize();});
+
+    /* unit price calculator */
+    const floatingUnitPriceBtn=$('#floatingUnitPriceBtn');if(floatingUnitPriceBtn)floatingUnitPriceBtn.addEventListener('click',toggleUnitPriceCalculator);
+    const unitPriceClose=$('#unitPriceClose');if(unitPriceClose)unitPriceClose.addEventListener('click',closeUnitPriceCalculator);
+    const unitPriceCopyBtn=$('#unitPriceCopyBtn');if(unitPriceCopyBtn)unitPriceCopyBtn.addEventListener('click',copyUnitPriceToCalculator);
+    const unitPriceHead=$('#unitPricePanel .unit-price-head');if(unitPriceHead)unitPriceHead.addEventListener('pointerdown',startUnitPriceDrag);
+    const unitQuantityType=$('#unitQuantityType');if(unitQuantityType)unitQuantityType.addEventListener('change',()=>{
+        const dozenRow=document.getElementById('dozenRow');
+        if(dozenRow)dozenRow.style.display=unitQuantityType.value==='درزن'?'':'none';
+    });
+    // Unit price keypad inputs
+    $$('#unitPricePanel [data-unit-input]').forEach(btn=>btn.addEventListener('click',()=>unitPriceKeyInput(btn.dataset.unitInput)));
+    // Unit price keypad actions
+    $$('#unitPricePanel [data-unit-action]').forEach(btn=>btn.addEventListener('click',()=>unitPriceAction(btn.dataset.unitAction)));
+    // Unit price resize handles
+    $$('#unitPricePanel [data-resize]').forEach(h=>h.addEventListener('pointerdown',startUnitPriceResize));
+    // Unit price input fields - select field on click
+    $$('#unitPricePanel [id^="unit"]').forEach(field=>{
+        if(['unitTotalPrice','unitQuantity','unitExchangeRate'].includes(field.id)){
+            field.addEventListener('focus',()=>{unitPriceCurrentField=field.id;});
+        }
+    });
+    // Unit price drag and resize events
+    document.addEventListener('pointermove',e=>{if(unitPriceDragState)onUnitPriceDragMove(e);if(unitPriceResizeState)onUnitPriceResizeMove(e);});
+    document.addEventListener('pointerup',()=>{if(unitPriceDragState)endUnitPriceDrag();if(unitPriceResizeState)endUnitPriceResize();});
     window.addEventListener('resize',constrainCalcPanel);
     document.addEventListener('click',e=>{
         const panel=$('#calculatorPanel');

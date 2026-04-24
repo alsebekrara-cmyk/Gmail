@@ -518,6 +518,10 @@
             <i class="ri-calculator-line"></i>
         </button>
 
+        <button id="floatingUnitPriceBtn" class="floating-calc-btn floating-unit-price-btn" title="حساب سعر القطعة" aria-label="حساب سعر القطعة">
+            <i class="ri-price-tag-3-line"></i>
+        </button>
+
         <div id="calculatorPanel" class="calculator-panel hidden" aria-hidden="true">
             <div class="calculator-head">
                 <div class="calculator-title"><i class="ri-calculator-line"></i> الحاسبة</div>
@@ -565,6 +569,89 @@
             <div class="calc-resize-handle nw" data-resize="nw"></div>
             <div class="calc-resize-handle se" data-resize="se"></div>
             <div class="calc-resize-handle sw" data-resize="sw"></div>
+        </div>
+
+        <!-- Unit Price Calculator Panel -->
+        <div id="unitPricePanel" class="unit-price-panel hidden" aria-hidden="true">
+            <div class="unit-price-head">
+                <div class="unit-price-title"><i class="ri-price-tag-3-line"></i> حساب سعر القطعة</div>
+                <div class="unit-price-head-actions">
+                    <button id="unitPriceCopyBtn" class="unit-price-head-btn" aria-label="نسخ الناتج" title="نسخ"><i class="ri-file-copy-line"></i></button>
+                    <button id="unitPriceClose" class="unit-price-head-btn" aria-label="إغلاق" title="إغلاق"><i class="ri-close-line"></i></button>
+                </div>
+            </div>
+
+            <!-- Display Screen -->
+            <div class="unit-price-screen-wrap">
+                <div id="unitPriceHistory" class="unit-price-history"></div>
+                <div id="unitPriceScreen" class="unit-price-screen">0 د.ع</div>
+            </div>
+
+            <!-- Input Fields -->
+            <div class="unit-price-inputs">
+                <div class="unit-price-input-row">
+                    <div class="unit-price-input-group">
+                        <label for="unitTotalPrice">السعر (USD)</label>
+                        <input type="number" id="unitTotalPrice" placeholder="32" step="0.01" oninput="calculateUnitPrice()">
+                    </div>
+                    <div class="unit-price-input-group">
+                        <label for="unitQuantity">الكمية</label>
+                        <input type="number" id="unitQuantity" placeholder="22" step="1" oninput="calculateUnitPrice()">
+                    </div>
+                </div>
+
+                <div class="unit-price-input-row">
+                    <div class="unit-price-input-group">
+                        <label for="unitQuantityType">الوحدة</label>
+                        <select id="unitQuantityType" onchange="calculateUnitPrice()">
+                            <option value="قطع">قطع</option>
+                            <option value="درزن">درزن</option>
+                            <option value="مجموع">مجموع</option>
+                        </select>
+                    </div>
+                    <div class="unit-price-input-group">
+                        <label for="unitExchangeRate">سعر صرف (د.ع)</label>
+                        <input type="number" id="unitExchangeRate" placeholder="1.53" value="1.53" step="0.01" oninput="calculateUnitPrice()">
+                    </div>
+                </div>
+
+                <div class="unit-price-input-row" id="dozenRow" style="display: none;">
+                    <div class="unit-price-input-group">
+                        <label for="unitItemsPerDosen">القطع/درزن</label>
+                        <input type="number" id="unitItemsPerDosen" placeholder="12" value="12" step="1" oninput="calculateUnitPrice()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Numeric Keypad -->
+            <div class="unit-price-keypad">
+                <button class="unit-price-key function" data-unit-action="backspace"><i class="ri-delete-back-2-line"></i></button>
+                <button class="unit-price-key" data-unit-input="9">9</button>
+                <button class="unit-price-key" data-unit-input="8">8</button>
+                <button class="unit-price-key" data-unit-input="7">7</button>
+
+                <button class="unit-price-key function" data-unit-action="decimal">.</button>
+                <button class="unit-price-key" data-unit-input="6">6</button>
+                <button class="unit-price-key" data-unit-input="5">5</button>
+                <button class="unit-price-key" data-unit-input="4">4</button>
+
+                <button class="unit-price-key equals" data-unit-action="calculate">=</button>
+                <button class="unit-price-key" data-unit-input="3">3</button>
+                <button class="unit-price-key" data-unit-input="2">2</button>
+                <button class="unit-price-key" data-unit-input="1">1</button>
+
+                <button class="unit-price-key function wide" data-unit-action="clear">C</button>
+                <button class="unit-price-key wide" data-unit-input="0">0</button>
+            </div>
+
+            <div class="unit-price-resize-handle n" data-resize="n"></div>
+            <div class="unit-price-resize-handle s" data-resize="s"></div>
+            <div class="unit-price-resize-handle e" data-resize="e"></div>
+            <div class="unit-price-resize-handle w" data-resize="w"></div>
+            <div class="unit-price-resize-handle ne" data-resize="ne"></div>
+            <div class="unit-price-resize-handle nw" data-resize="nw"></div>
+            <div class="unit-price-resize-handle se" data-resize="se"></div>
+            <div class="unit-price-resize-handle sw" data-resize="sw"></div>
         </div>
     </div>
 

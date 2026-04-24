@@ -657,6 +657,225 @@ select.input-field{appearance:auto}
 .debts-filter-btn[data-dfilter="employees"].active{background:#8b5cf6;border-color:#8b5cf6}
 .debts-filter-btn[data-dfilter="customers"].active{background:#ef4444;border-color:#ef4444}
 .debts-filter-count{font-size:.7rem;background:rgba(255,255,255,.25);padding:1px 6px;border-radius:10px;font-weight:700}
+
+/* ===== UNIT PRICE CALCULATOR PANEL ===== */
+.unit-price-panel{
+    position:fixed;
+    bottom:20px;
+    left:calc(18px + 76px);
+    width:340px;
+    height:600px;
+    background:var(--surface);
+    border-radius:var(--radius);
+    box-shadow:0 8px 32px rgba(0,0,0,.18);
+    z-index:362;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    touch-action:none;
+}
+.unit-price-panel.hidden{display:none}
+.unit-price-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px;
+    background:linear-gradient(135deg,#f59e0b,#fbbf24);
+    color:#fff;
+    border-bottom:1px solid var(--border);
+    cursor:move;
+}
+.unit-price-title{
+    font-weight:700;
+    font-size:.95rem;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin:0;
+}
+.unit-price-title i{font-size:1.1rem}
+.unit-price-head-actions{
+    display:flex;
+    gap:6px;
+}
+.unit-price-head-btn{
+    background:rgba(255,255,255,.2);
+    border:none;
+    color:#fff;
+    font-size:1rem;
+    cursor:pointer;
+    padding:6px 8px;
+    border-radius:4px;
+    transition:background .2s;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+.unit-price-head-btn:hover{background:rgba(255,255,255,.35)}
+.unit-price-screen-wrap{
+    padding:12px;
+    background:var(--surface2);
+    border-bottom:1px solid var(--border);
+}
+.unit-price-history{
+    font-size:.75rem;
+    color:var(--text2);
+    min-height:16px;
+    margin-bottom:4px;
+}
+.unit-price-screen{
+    font-size:2rem;
+    font-weight:800;
+    color:var(--text);
+    text-align:center;
+    font-family:'Courier New',monospace;
+    word-break:break-all;
+    line-height:1.2;
+}
+.unit-price-inputs{
+    padding:12px;
+    background:var(--surface2);
+    border-bottom:1px solid var(--border);
+    max-height:140px;
+    overflow-y:auto;
+}
+.unit-price-input-row{
+    display:flex;
+    gap:8px;
+    margin-bottom:10px;
+}
+.unit-price-input-row:last-child{margin-bottom:0}
+.unit-price-input-group{
+    flex:1;
+    min-width:0;
+}
+.unit-price-input-group label{
+    display:block;
+    font-size:.7rem;
+    font-weight:700;
+    color:var(--text2);
+    margin-bottom:3px;
+}
+.unit-price-input-group input,
+.unit-price-input-group select{
+    width:100%;
+    padding:6px 8px;
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    background:var(--surface);
+    color:var(--text);
+    font:inherit;
+    font-size:.8rem;
+    transition:border-color .2s;
+}
+.unit-price-input-group input:focus,
+.unit-price-input-group select:focus{
+    outline:none;
+    border-color:var(--primary);
+    background:var(--surface);
+}
+.unit-price-keypad{
+    flex:1;
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:6px;
+    padding:10px;
+    overflow-y:auto;
+}
+.unit-price-key{
+    background:var(--surface2);
+    border:1.5px solid var(--border);
+    border-radius:var(--radius-sm);
+    font:inherit;
+    font-size:.9rem;
+    font-weight:700;
+    color:var(--text);
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:all .12s;
+    min-height:50px;
+    padding:0;
+}
+.unit-price-key:hover{
+    background:var(--surface);
+    transform:translateY(-1px);
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+.unit-price-key:active{
+    transform:scale(.95);
+}
+.unit-price-key.wide{
+    grid-column:span 2;
+}
+.unit-price-key.function{
+    background:linear-gradient(135deg,#ef4444,#f87171);
+    color:#fff;
+    border-color:#ef4444;
+}
+.unit-price-key.function:hover{
+    background:linear-gradient(135deg,#dc2626,#ef4444);
+}
+.unit-price-key.equals{
+    background:linear-gradient(135deg,#22c55e,#4ade80);
+    color:#fff;
+    border-color:#22c55e;
+    grid-column:span 1;
+}
+.unit-price-key.equals:hover{
+    background:linear-gradient(135deg,#16a34a,#22c55e);
+}
+.unit-price-resize-handle{
+    position:absolute;
+    background:transparent;
+    cursor:pointer;
+}
+.unit-price-resize-handle.n{top:0;left:0;right:0;height:4px;cursor:ns-resize}
+.unit-price-resize-handle.s{bottom:0;left:0;right:0;height:4px;cursor:ns-resize}
+.unit-price-resize-handle.e{right:0;top:0;bottom:0;width:4px;cursor:ew-resize}
+.unit-price-resize-handle.w{left:0;top:0;bottom:0;width:4px;cursor:ew-resize}
+.unit-price-resize-handle.ne{top:0;right:0;width:8px;height:8px;cursor:nesw-resize}
+.unit-price-resize-handle.nw{top:0;left:0;width:8px;height:8px;cursor:nwse-resize}
+.unit-price-resize-handle.se{bottom:0;right:0;width:8px;height:8px;cursor:nwse-resize}
+.unit-price-resize-handle.sw{bottom:0;left:0;width:8px;height:8px;cursor:nesw-resize}
+
+.floating-unit-price-btn{
+    bottom:calc(var(--bottomnav-h) + 78px);
+    background:linear-gradient(135deg,#f59e0b,#fbbf24);
+}
+.floating-unit-price-btn:hover{box-shadow:0 20px 35px rgba(245,158,11,.34)}
+
+[data-theme="dark"] .unit-price-head{background:#d97706}
+[data-theme="dark"] .unit-price-input-group input,
+[data-theme="dark"] .unit-price-input-group select{
+    background:var(--surface);
+    border-color:var(--border);
+    color:var(--text);
+}
+[data-theme="dark"] .unit-price-key{
+    background:var(--surface2);
+    border-color:var(--border);
+}
+[data-theme="dark"] .unit-price-key:hover{background:var(--surface)}
+
+@media(max-width:600px){
+    .unit-price-panel{
+        width:calc(100vw - 40px);
+        height:auto;
+        max-height:80vh;
+        bottom:10px;
+        left:20px;
+    }
+    .unit-price-keypad{
+        grid-template-columns:repeat(4,1fr);
+    }
+}
+
+@media(max-height:700px){
+    .unit-price-inputs{max-height:80px}
+    .unit-price-keypad{grid-template-columns:repeat(4,1fr)}
+}
 .debts-filter-btn:not(.active) .debts-filter-count{background:var(--bg);color:var(--text2)}
 .debts-summary-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:12px}
 .debts-summary-card{background:var(--surface);border-radius:var(--radius-sm);padding:12px;text-align:center;box-shadow:var(--shadow);overflow:hidden}
