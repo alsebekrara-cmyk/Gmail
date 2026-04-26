@@ -51,6 +51,7 @@ body.wizard-open{overflow:hidden;position:fixed;width:100%;height:100%}
 .sb-item[data-page="capital"] i{color:#14b8a6}
 .sb-item[data-page="purchases"] i{color:#f97316}
 .sb-item[data-page="report"] i{color:#ec4899}
+.sb-item[data-page="analytics"] i{color:#8b5cf6}
 .sb-item[data-page="security"] i{color:#ef4444}
 .sb-item[data-page="settings"] i{color:#64748b}
 .sb-hr{border:none;border-top:1px solid var(--border);margin:4px 16px}
@@ -68,7 +69,7 @@ body.wizard-open{overflow:hidden;position:fixed;width:100%;height:100%}
 .tile-icon{font-size:2rem;margin-bottom:8px}
 .tile-label{font-weight:700;font-size:1rem;margin-bottom:2px}
 .tile-desc{font-size:.75rem;color:var(--text2)}
-.tile-closing .tile-icon{color:#6366f1}.tile-individual .tile-icon{color:#06b6d4}.tile-safe .tile-icon{color:#22c55e}.tile-debts .tile-icon{color:#ef4444}.tile-expenses .tile-icon{color:#f59e0b}.tile-salaries .tile-icon{color:#8b5cf6}.tile-payroll .tile-icon{color:#0ea5e9}.tile-capital .tile-icon{color:#14b8a6}.tile-purchases .tile-icon{color:#f97316}.tile-report .tile-icon{color:#ec4899}.tile-settings .tile-icon{color:#64748b}.tile-general-exp .tile-icon{color:#f97316}.tile-closing-sheet .tile-icon{color:#0ea5e9}.tile-profit .tile-icon{color:#10b981}.tile-advances .tile-icon{color:#e11d48}
+.tile-closing .tile-icon{color:#6366f1}.tile-individual .tile-icon{color:#06b6d4}.tile-safe .tile-icon{color:#22c55e}.tile-debts .tile-icon{color:#ef4444}.tile-expenses .tile-icon{color:#f59e0b}.tile-salaries .tile-icon{color:#8b5cf6}.tile-payroll .tile-icon{color:#0ea5e9}.tile-capital .tile-icon{color:#14b8a6}.tile-purchases .tile-icon{color:#f97316}.tile-report .tile-icon{color:#ec4899}.tile-settings .tile-icon{color:#64748b}.tile-general-exp .tile-icon{color:#f97316}.tile-closing-sheet .tile-icon{color:#0ea5e9}.tile-profit .tile-icon{color:#10b981}.tile-advances .tile-icon{color:#e11d48}.tile-analytics .tile-icon{color:#8b5cf6}
 
 /* ===== SALARY ADVANCES PAGE ===== */
 .adv-total-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
@@ -871,6 +872,26 @@ select.input-field{appearance:auto}
         grid-template-columns:repeat(4,1fr);
     }
 }
+
+/* ===== ANALYTICS (الإحصائيات) ===== */
+.analytics-filter-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.analytics-filter-tab{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text2);font-size:.85rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.analytics-filter-tab:hover{background:var(--bg);color:var(--text)}
+.analytics-filter-tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.analytics-filter-tab i{font-size:1rem}
+
+.analytics-summary-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px}
+.analytics-card{background:var(--surface);border-radius:var(--radius-sm);padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);border:1px solid var(--border);transition:transform .2s,box-shadow .2s}
+.analytics-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.analytics-card-label{font-size:.8rem;color:var(--text2);margin-bottom:6px;display:flex;align-items:center;gap:4px}
+.analytics-card-label i{font-size:1rem}
+.analytics-card-value{font-size:1.3rem;font-weight:800;color:var(--text)}
+
+.analytics-item{display:flex;align-items:center;gap:12px;padding:12px;background:var(--surface2);border-radius:8px;margin-bottom:8px;border:1px solid var(--border);transition:background .2s}
+.analytics-item:hover{background:var(--bg)}
+.analytics-rank{width:32px;height:32px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.9rem;flex-shrink:0}
+.analytics-item-label{flex:1;font-weight:600;color:var(--text)}
+.analytics-item-value{font-weight:800;font-size:1rem;min-width:80px;text-align:right}
 
 @media(max-height:700px){
     .unit-price-inputs{max-height:80px}

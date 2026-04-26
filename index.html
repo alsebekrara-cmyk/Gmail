@@ -72,6 +72,7 @@
                 <button class="sb-item" data-page="generalExpenses"><i class="ri-building-line"></i>المصاريف العامة</button>
                 <button class="sb-item" data-page="closingSheet"><i class="ri-file-list-line"></i>كشف الحسابات</button>
                 <button class="sb-item" data-page="report"><i class="ri-bar-chart-box-line"></i>التقرير الشهري</button>
+                <button class="sb-item" data-page="analytics"><i class="ri-pie-chart-2-line"></i>الإحصائيات</button>
                 <hr class="sb-hr">
                 <button class="sb-item sb-security" data-page="security"><i class="ri-shield-keyhole-line"></i>الحماية</button>
                 <button class="sb-item" data-page="settings"><i class="ri-settings-4-line"></i>الإعدادات</button>
@@ -104,6 +105,7 @@
                     <div class="home-tile tile-advances" data-page="salaryAdvances"><div class="tile-icon"><i class="ri-exchange-funds-fill"></i></div><div class="tile-label">سحوبات الرواتب</div><div class="tile-desc">حركات سحوبات الموظفين من الراتب</div></div>
                     <div class="home-tile tile-profit" data-page="profitLoss"><div class="tile-icon"><i class="ri-line-chart-fill"></i></div><div class="tile-label">تحليل الأرباح</div><div class="tile-desc">تحليل الربح والخسارة</div></div>
                     <div class="home-tile tile-report" data-page="report"><div class="tile-icon"><i class="ri-bar-chart-box-fill"></i></div><div class="tile-label">التقرير الشهري</div><div class="tile-desc">تقرير شامل للطباعة</div></div>
+                    <div class="home-tile tile-analytics" data-page="analytics"><div class="tile-icon"><i class="ri-pie-chart-2-fill"></i></div><div class="tile-label">الإحصائيات</div><div class="tile-desc">إحصائيات وتحليلات الأقسام</div></div>
                     <div class="home-tile tile-security" id="securityTile" data-page="security" style="display:none"><div class="tile-icon"><i class="ri-shield-keyhole-fill"></i></div><div class="tile-label">الحماية</div><div class="tile-desc">إدارة المستخدمين والصلاحيات</div></div>
                     <div class="home-tile tile-settings" data-page="settings"><div class="tile-icon"><i class="ri-settings-4-fill"></i></div><div class="tile-label">الإعدادات</div><div class="tile-desc">إعدادات النظام</div></div>
                 </div>
@@ -310,6 +312,47 @@
                 </div>
 
                 <div id="reportContent" class="report-content"></div>
+            </section>
+
+            <!-- ANALYTICS (الإحصائيات) -->
+            <section id="page-analytics" class="page">
+                <div class="section-head">
+                    <h2><button class="back-btn" onclick="navigate('home')"><i class="ri-arrow-right-s-line"></i></button><i class="ri-pie-chart-2-line"></i> الإحصائيات والتحليلات</h2>
+                    <div class="page-io-btns">
+                        <button class="btn btn-warning btn-sm" onclick="printAnalytics()" title="طباعة"><i class="ri-printer-fill"></i></button>
+                    </div>
+                </div>
+
+                <!-- فلاتر التاريخ -->
+                <div class="filter-bar" style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">
+                    <input type="date" id="analyticsDateFrom" class="input-field" placeholder="من التاريخ">
+                    <input type="date" id="analyticsDateTo" class="input-field" placeholder="إلى التاريخ">
+                    <button class="btn btn-primary btn-sm" id="analyticsFilterBtn"><i class="ri-search-line"></i> تصفية</button>
+                </div>
+
+                <!-- فلاتر نوع المصاريف -->
+                <div class="analytics-filter-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+                    <button class="analytics-filter-tab active" data-afilter="all"><i class="ri-list-check"></i> جميع المصاريف</button>
+                    <button class="analytics-filter-tab" data-afilter="expenses"><i class="ri-money-dollar-box-line"></i> المصاريف العامة</button>
+                    <button class="analytics-filter-tab" data-afilter="purchases"><i class="ri-shopping-cart-2-line"></i> المشتريات</button>
+                    <button class="analytics-filter-tab" data-afilter="debts"><i class="ri-file-list-3-line"></i> الديون</button>
+                    <button class="analytics-filter-tab" data-afilter="withdrawals"><i class="ri-hand-coin-line"></i> السحوبات</button>
+                </div>
+
+                <!-- بطاقات الملخص -->
+                <div id="analyticsSummaryCards" class="analytics-summary-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:14px"></div>
+
+                <!-- الأقسام الأكثر مصاريف -->
+                <div class="card" style="margin-bottom:14px">
+                    <h3 class="card-h"><i class="ri-align-top"></i> الأقسام الأكثر مصاريف</h3>
+                    <div id="topExpensesSection" class="records-list"></div>
+                </div>
+
+                <!-- الأقسام الأكثر مبيعات -->
+                <div class="card">
+                    <h3 class="card-h"><i class="ri-trending-up-line"></i> الأقسام الأكثر مبيعات</h3>
+                    <div id="topSalesSection" class="records-list"></div>
+                </div>
             </section>
 
             <!-- SECURITY -->

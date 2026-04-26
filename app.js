@@ -1043,7 +1043,7 @@ function refreshActivePage(){
     const r={closing:renderClosings,safe:renderSafe,debts:renderDebts,expenses:renderExpenses,
         salaries:renderSalaries,payroll:renderPayroll,capital:renderCapital,purchases:renderPurchases,
         report:renderReport,settings:renderSettings,security:renderSecurity,individual:renderIndividual,
-        generalExpenses:renderGeneralExpenses,closingSheet:renderClosingSheet};
+        generalExpenses:renderGeneralExpenses,closingSheet:renderClosingSheet,analytics:renderAnalytics};
     if(r[pid])try{r[pid]();}catch(e){}
     if(pid==='home'){
         const secTile=$('#securityTile');if(secTile)secTile.style.display=isAdmin()?'':'none';
@@ -1394,7 +1394,7 @@ function navigate(page, fromPopState){
     const titles={home:'لوحة التحكم',closing:'التقفيلة',individual:'التقفيلات المنفصلة',safe:'الخزنة',debts:'الديون',expenses:'المصاريف',generalExpenses:'المصاريف العامة',closingSheet:'كشف الحسابات',salaries:'الرواتب',payroll:'صرف الرواتب',capital:'رأس المال',purchases:'المشتريات',salaryAdvances:'سحوبات الرواتب',profitLoss:'تحليل الأرباح',report:'التقرير الشهري',settings:'الإعدادات',security:'الحماية والمستخدمين'};
     $('#topbarTitle').textContent=titles[page]||'لوحة التحكم';
     closeSidebar();
-    const r={closing:renderClosings,individual:renderIndividual,safe:renderSafe,debts:renderDebts,expenses:renderExpenses,generalExpenses:renderGeneralExpenses,closingSheet:renderClosingSheet,salaries:renderSalaries,payroll:renderPayroll,capital:renderCapital,purchases:renderPurchases,salaryAdvances:renderSalaryAdvances,profitLoss:renderProfitLoss,report:renderReport,settings:renderSettings,security:renderSecurity};
+    const r={closing:renderClosings,individual:renderIndividual,safe:renderSafe,debts:renderDebts,expenses:renderExpenses,generalExpenses:renderGeneralExpenses,closingSheet:renderClosingSheet,salaries:renderSalaries,payroll:renderPayroll,capital:renderCapital,purchases:renderPurchases,salaryAdvances:renderSalaryAdvances,profitLoss:renderProfitLoss,report:renderReport,settings:renderSettings,security:renderSecurity,analytics:renderAnalytics};
     if(r[page])r[page]();
     if(page==='home'){
         const secTile=$('#securityTile');if(secTile)secTile.style.display=isAdmin()?'':'none';
@@ -5711,6 +5711,250 @@ function printClosingSheet(){
     showPrintDialog(html);
 }
 
+/* ========= ANALYTICS (الإحصائيات) ========= */
+function renderAnalytics(){
+    const dateFrom=$('#analyticsDateFrom').value;
+    const dateTo=$('#analyticsDateTo').value;
+    const filterType=$('[data-afilter].analytics-filter-tab.active')?.getAttribute('data-afilter')||'all';
+    
+    /* set default dates to current month if not set */
+    if(!dateFrom || !dateTo){
+        const now=new Date();
+        const firstDay=new Date(now.getFullYear(),now.getMonth(),1);
+        const lastDay=new Date(now.getFullYear(),now.getMonth()+1,0);
+        $('#analyticsDateFrom').value=firstDay.toISOString().slice(0,10);
+        $('#analyticsDateTo').value=lastDay.toISOString().slice(0,10);
+    }
+    
+    const from=$('#analyticsDateFrom').value;
+    const to=$('#analyticsDateTo').value;
+    
+    const closings=loadData(KEYS.closings)||[];
+    const debts=loadData(KEYS.debts)||[];
+    const expEntries=loadData(KEYS.expenseEntries)||[];
+    const purchases=loadData(KEYS.purchases)||[];
+    
+    /* filter by date range */
+    const filteredClosings=closings.filter(c=>{
+        const cdate=String(c.date||'').slice(0,10);
+        return cdate>=from && cdate<=to;
+    });
+    
+    const filteredDebts=debts.filter(d=>{
+        const ddate=String(d.date||'').slice(0,10);
+        return ddate>=from && ddate<=to;
+    });
+    
+    const filteredExpenses=expEntries.filter(e=>{
+        const edate=String(e.date||'').slice(0,10);
+        return edate>=from && edate<=to;
+    });
+    
+    const filteredPurchases=purchases.filter(p=>{
+        const pdate=String(p.date||'').slice(0,10);
+        return pdate>=from && pdate<=to;
+    });
+    
+    /* calculate section totals */
+    const sectionData={};
+    CASHIERS.forEach(c=>{
+        sectionData[c.key]={
+            name:c.label,
+            sales:0,
+            expenses:0,
+            debts:0,
+            withdrawals:0,
+            purchases:0,
+            network:0,
+            net:0
+        };
+    });
+    
+    /* aggregate from closings */
+    filteredClosings.forEach(closing=>{
+        Object.keys(closing.cashiers||{}).forEach(key=>{
+            if(!sectionData[key])sectionData[key]={name:(CASHIERS.find(c=>c.key===key)?.label||key),sales:0,expenses:0,debts:0,withdrawals:0,purchases:0,network:0,net:0};
+            const cashier=closing.cashiers[key]||{};
+            sectionData[key].sales+=(cashier.sales||0);
+            sectionData[key].expenses+=(cashier.expenses||0);
+            sectionData[key].network+=(cashier.network||0);
+            sectionData[key].net+=(cashier.net||0);
+            sectionData[key].debts+=(cashier.debts||0);
+            sectionData[key].withdrawals+=(cashier.withdrawals||0);
+        });
+    });
+    
+    /* aggregate debts by section */
+    filteredDebts.forEach(d=>{
+        const cashierKey=CASHIERS.find(c=>c.label.includes(''))?.key||'';
+        if(!d.cashier)return;
+        const section=Object.keys(sectionData).find(key=>sectionData[key].name===d.cashier);
+        if(section && d.type==='debt') sectionData[section].debts+=(d.amount||0);
+        if(section && d.type==='withdraw') sectionData[section].withdrawals+=(d.amount||0);
+    });
+    
+    /* aggregate expenses by section */
+    filteredExpenses.forEach(e=>{
+        const section=Object.keys(sectionData).find(key=>sectionData[key].name===e.cashier);
+        if(section) sectionData[section].expenses+=(e.amount||0);
+    });
+    
+    /* calculate purchase amounts by section from closing expense list */
+    filteredClosings.forEach(closing=>{
+        Object.keys(closing.cashiers||{}).forEach(key=>{
+            const cashier=closing.cashiers[key]||{};
+            if(cashier.expensesList && Array.isArray(cashier.expensesList)){
+                sectionData[key].purchases+=cashier.expensesList.reduce((s,e)=>s+(e.amount||0),0);
+            }
+        });
+    });
+    
+    /* get sorted data */
+    const sections=Object.values(sectionData).sort((a,b)=>b.sales-a.sales);
+    
+    /* calculate totals based on filter */
+    let totalExpenses=0;
+    let expensesByType={};
+    
+    if(filterType==='all' || filterType==='expenses'){
+        totalExpenses+=filteredExpenses.reduce((s,e)=>s+(e.amount||0),0);
+        expensesByType.expenses=filteredExpenses.reduce((s,e)=>s+(e.amount||0),0);
+    }
+    if(filterType==='all' || filterType==='purchases'){
+        sections.forEach(s=>totalExpenses+=s.purchases);
+        expensesByType.purchases=sections.reduce((s,sec)=>s+sec.purchases,0);
+    }
+    if(filterType==='all' || filterType==='debts'){
+        totalExpenses+=filteredDebts.filter(d=>d.type==='debt').reduce((s,d)=>s+(d.amount||0),0);
+        expensesByType.debts=filteredDebts.filter(d=>d.type==='debt').reduce((s,d)=>s+(d.amount||0),0);
+    }
+    if(filterType==='all' || filterType==='withdrawals'){
+        totalExpenses+=filteredDebts.filter(d=>d.type==='withdraw').reduce((s,d)=>s+(d.amount||0),0);
+        expensesByType.withdrawals=filteredDebts.filter(d=>d.type==='withdraw').reduce((s,d)=>s+(d.amount||0),0);
+    }
+    
+    /* render summary cards */
+    let summaryHtml=``;
+    summaryHtml+=`<div class="analytics-card"><div class="analytics-card-label"><i class="ri-trending-up-line"></i> إجمالي المبيعات</div><div class="analytics-card-value">${fmtNum(sections.reduce((s,sec)=>s+sec.sales,0))}</div></div>`;
+    summaryHtml+=`<div class="analytics-card"><div class="analytics-card-label"><i class="ri-money-dollar-box-line"></i> إجمالي المصاريف</div><div class="analytics-card-value" style="color:var(--danger)">${fmtNum(totalExpenses)}</div></div>`;
+    summaryHtml+=`<div class="analytics-card"><div class="analytics-card-label"><i class="ri-file-list-3-line"></i> عدد الأقسام</div><div class="analytics-card-value">${sections.length}</div></div>`;
+    summaryHtml+=`<div class="analytics-card"><div class="analytics-card-label"><i class="ri-calendar-line"></i> الفترة</div><div class="analytics-card-value" style="font-size:.85rem">${from} إلى ${to}</div></div>`;
+    $('#analyticsSummaryCards').innerHTML=summaryHtml;
+    
+    /* render top expenses by section */
+    const expenseSorted=sections.slice().sort((a,b)=>{
+        let aExp=a.expenses;
+        let bExp=b.expenses;
+        if(filterType==='all' || filterType==='expenses') { /* already included */ }
+        if(filterType==='all' || filterType==='purchases') { aExp+=a.purchases; bExp+=b.purchases; }
+        if(filterType==='all' || filterType==='debts') { aExp+=a.debts; bExp+=b.debts; }
+        if(filterType==='all' || filterType==='withdrawals') { aExp+=a.withdrawals; bExp+=b.withdrawals; }
+        return b - a;
+    });
+    
+    let topExpHtml=``;
+    expenseSorted.slice(0,5).forEach((sec,i)=>{
+        let exp=sec.expenses;
+        if(filterType==='all' || filterType==='expenses') { /* already counted */ }
+        if(filterType==='all' || filterType==='purchases') exp+=sec.purchases;
+        if(filterType==='all' || filterType==='debts') exp+=sec.debts;
+        if(filterType==='all' || filterType==='withdrawals') exp+=sec.withdrawals;
+        topExpHtml+=`<div class="analytics-item"><div class="analytics-rank">${i+1}</div><div class="analytics-item-label">${sec.name}</div><div class="analytics-item-value" style="color:var(--danger)">${fmtNum(exp)}</div></div>`;
+    });
+    $('#topExpensesSection').innerHTML=topExpHtml||`<p style="text-align:center;color:var(--text2);padding:20px">لا توجد بيانات</p>`;
+    
+    /* render top sales by section */
+    const salesSorted=sections.slice().sort((a,b)=>b.sales-a.sales);
+    let topSalesHtml=``;
+    salesSorted.slice(0,5).forEach((sec,i)=>{
+        topSalesHtml+=`<div class="analytics-item"><div class="analytics-rank">${i+1}</div><div class="analytics-item-label">${sec.name}</div><div class="analytics-item-value" style="color:var(--success)">${fmtNum(sec.sales)}</div></div>`;
+    });
+    $('#topSalesSection').innerHTML=topSalesHtml||`<p style="text-align:center;color:var(--text2);padding:20px">لا توجد بيانات</p>`;
+}
+
+function printAnalytics(){
+    const dateFrom=$('#analyticsDateFrom').value||'';
+    const dateTo=$('#analyticsDateTo').value||'';
+    const filterType=$('[data-afilter].analytics-filter-tab.active')?.getAttribute('data-afilter')||'all';
+    
+    const printDate=new Date().toLocaleDateString('ar-IQ',{year:'numeric',month:'long',day:'numeric'});
+    const filterLabel=`من ${dateFrom} إلى ${dateTo}`;
+    
+    const closings=loadData(KEYS.closings)||[];
+    const debts=loadData(KEYS.debts)||[];
+    const expEntries=loadData(KEYS.expenseEntries)||[];
+    
+    const filteredClosings=closings.filter(c=>{
+        const cdate=String(c.date||'').slice(0,10);
+        return cdate>=dateFrom && cdate<=dateTo;
+    });
+    
+    const filteredDebts=debts.filter(d=>{
+        const ddate=String(d.date||'').slice(0,10);
+        return ddate>=dateFrom && ddate<=dateTo;
+    });
+    
+    const filteredExpenses=expEntries.filter(e=>{
+        const edate=String(e.date||'').slice(0,10);
+        return edate>=dateFrom && edate<=dateTo;
+    });
+    
+    const sectionData={};
+    CASHIERS.forEach(c=>{
+        sectionData[c.key]={name:c.label,sales:0,expenses:0,debts:0,withdrawals:0,purchases:0,network:0,net:0};
+    });
+    
+    filteredClosings.forEach(closing=>{
+        Object.keys(closing.cashiers||{}).forEach(key=>{
+            if(!sectionData[key]) sectionData[key]={name:(CASHIERS.find(c=>c.key===key)?.label||key),sales:0,expenses:0,debts:0,withdrawals:0,purchases:0,network:0,net:0};
+            const cashier=closing.cashiers[key]||{};
+            sectionData[key].sales+=(cashier.sales||0);
+            sectionData[key].expenses+=(cashier.expenses||0);
+            sectionData[key].network+=(cashier.network||0);
+            sectionData[key].net+=(cashier.net||0);
+            sectionData[key].debts+=(cashier.debts||0);
+            sectionData[key].withdrawals+=(cashier.withdrawals||0);
+        });
+    });
+    
+    filteredDebts.forEach(d=>{
+        if(!d.cashier)return;
+        const section=Object.keys(sectionData).find(key=>sectionData[key].name===d.cashier);
+        if(section && d.type==='debt') sectionData[section].debts+=(d.amount||0);
+        if(section && d.type==='withdraw') sectionData[section].withdrawals+=(d.amount||0);
+    });
+    
+    filteredExpenses.forEach(e=>{
+        const section=Object.keys(sectionData).find(key=>sectionData[key].name===e.cashier);
+        if(section) sectionData[section].expenses+=(e.amount||0);
+    });
+    
+    const sections=Object.values(sectionData).sort((a,b)=>b.sales-a.sales);
+    
+    let html=`<div class="print-page-border"><div class="print-header"><h2>الإحصائيات والتحليلات</h2><p class="print-date">الفترة: ${filterLabel}</p><p class="print-date">تاريخ الطباعة: ${printDate}</p></div>`;
+    
+    /* summary section */
+    html+=`<div class="print-summary-box"><span>إجمالي المبيعات: ${fmtNum(sections.reduce((s,sec)=>s+sec.sales,0))}</span><span>إجمالي المصاريف: ${fmtNum(sections.reduce((s,sec)=>s+sec.expenses+sec.debts+sec.withdrawals,0))}</span><span>عدد الأقسام: ${sections.length}</span></div>`;
+    
+    /* top expenses */
+    html+=`<h3>الأقسام الأكثر مصاريف</h3><table><thead><tr><th>الترتيب</th><th>القسم</th><th>المصاريف</th></tr></thead><tbody>`;
+    const expenseSorted=sections.slice().sort((a,b)=>(b.expenses+b.debts+b.withdrawals)-(a.expenses+a.debts+a.withdrawals));
+    expenseSorted.slice(0,5).forEach((sec,i)=>{
+        const exp=sec.expenses+sec.debts+sec.withdrawals;
+        html+=`<tr><td>${i+1}</td><td>${sec.name}</td><td>${fmtNum(exp)}</td></tr>`;
+    });
+    html+=`</tbody></table>`;
+    
+    /* top sales */
+    html+=`<h3 style="margin-top:20px">الأقسام الأكثر مبيعات</h3><table><thead><tr><th>الترتيب</th><th>القسم</th><th>المبيعات</th></tr></thead><tbody>`;
+    sections.slice(0,5).forEach((sec,i)=>{
+        html+=`<tr><td>${i+1}</td><td>${sec.name}</td><td>${fmtNum(sec.sales)}</td></tr>`;
+    });
+    html+=`</tbody></table></div>`;
+    
+    showPrintDialog(html);
+}
+
 /* ========= SETTINGS ========= */
 function renderSettings(){
     const s=loadSettings();
@@ -6837,6 +7081,16 @@ function initApp(){
 
     /* debts filter buttons */
     $$('[data-dfilter]').forEach(b=>b.addEventListener('click',()=>{debtFilter=b.dataset.dfilter;renderDebts();}));
+
+    /* analytics filter buttons and date inputs */
+    $('#analyticsFilterBtn').addEventListener('click',renderAnalytics);
+    $('#analyticsDateFrom').addEventListener('change',renderAnalytics);
+    $('#analyticsDateTo').addEventListener('change',renderAnalytics);
+    $$('[data-afilter]').forEach(b=>b.addEventListener('click',()=>{
+        $$('[data-afilter]').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+        renderAnalytics();
+    }));
 
     /* expenses */
     $('#expFilterBtn').addEventListener('click',renderExpenses);
