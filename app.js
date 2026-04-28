@@ -1534,6 +1534,46 @@ function calcClosingTotal(cl){
     return t;
 }
 
+/* حساب الرصيد الخام (Raw Balance) - إجمالي المبيعات دون خصومات */
+function calcClosingRawBalance(cl){
+    if(!cl||!cl.cashiers) return 0;
+    let total=0;
+    CASHIERS.forEach(c=>{
+        const d=cl.cashiers[c.key]; if(!d) return;
+        const gross=Number(d.sales)||0;
+        total+=gross;
+    });
+    return total;
+}
+
+/* التحقق من أخطاء التقفيلة وإرجاع قائمة بالأخطاء */
+function validateClosing(wizDataObj){
+    const errors=[];
+    CASHIERS.forEach(c=>{
+        const d=wizDataObj.cashiers[c.key];
+        if(!d) return;
+        
+        // التحقق من أن هناك مبيعات على الأقل
+        const hasSales=(d.sales||0)>0 || (d.network||0)>0;
+        if(!hasSales) return; // تخطي إذا لم يكن هناك بيانات
+        
+        // التحقق من عدم السلبيات غير المقصودة
+        if((d.returns||0)>0 && (d.sales||0)===0){
+            errors.push({cashier:c.label,message:'لا يمكن إضافة مرتجعات دون مبيعات',type:'returns'});
+        }
+        if((d.expenses||0)>0 && (d.sales||0)===0){
+            errors.push({cashier:c.label,message:'المصاريف بدون مبيعات',type:'expenses'});
+        }
+        // التحقق من الفرق الكبير جداً
+        const r=calcCashierNet(d);
+        const percentDiff=r.net!==0?(Math.abs(r.diff)/Math.abs(r.net))*100:0;
+        if(percentDiff>50 && Math.abs(r.diff)>0){
+            errors.push({cashier:c.label,message:'الفرق كبير جداً بين المحسوب والمستلم',type:'diff',amount:r.diff});
+        }
+    });
+    return errors;
+}
+
 /* إعادة ترقيم حقل net داخل كل كاشير (للبيانات القديمة) */
 function recomputeClosingInPlace(cl){
     if(!cl||!cl.cashiers) return cl;
@@ -2094,6 +2134,35 @@ function saveCurrentStep(){
 
 function saveClosing(){
     const s=loadSettings();const cur=s.currency||'د.ع';
+    
+    /* التحقق من الأخطاء المحتملة */
+    const errors=validateClosing(wizData);
+    if(errors.length>0){
+        let errorHtml=`<div style="background:#fef2f2;border-right:4px solid #dc2626;padding:12px;border-radius:6px;margin-bottom:12px">
+        <div style="font-weight:700;color:#dc2626;margin-bottom:8px"><i class="ri-error-warning-line"></i> تم اكتشاف تنبيهات:</div>
+        <ul style="margin:0;padding-right:20px">`;
+        errors.forEach((e,idx)=>{
+            errorHtml+=`<li style="margin-bottom:6px;font-size:.9rem"><strong>${e.cashier}:</strong> ${e.message}${e.amount?' (المبلغ: '+fmtNum(e.amount)+' '+cur+')':''}</li>`;
+        });
+        errorHtml+=`</ul></div>`;
+        showCustomDialog({
+            icon:'ri-error-warning-fill',
+            iconClass:'warning-icon',
+            title:'تنبيهات في التقفيلة',
+            msg:errorHtml,
+            buttons:[
+                {label:'<i class="ri-save-line"></i> حفظ حتى مع التنبيهات',cls:'btn-primary',action:'confirmSaveClosing()'},
+                {label:'إلغاء',cls:'btn-ghost',action:'hideDialog()'}
+            ]
+        });
+        return;
+    }
+    confirmSaveClosing();
+}
+
+function confirmSaveClosing(){
+    hideDialog();
+    const s=loadSettings();const cur=s.currency||'د.ع';
     const closings=loadData(KEYS.closings);
     const safe=loadData(KEYS.safe);
     const debts=loadData(KEYS.debts);
@@ -2421,6 +2490,38 @@ function viewClosingDetails(id){
     const s=loadSettings();const cur=s.currency||'د.ع';
     let html='';
     if(cl.manager)html+=`<div style="text-align:center;font-weight:700;color:var(--primary);margin-bottom:10px"><i class="ri-user-star-line"></i> المدير: ${cl.manager}</div>`;
+    
+    // إضافة جدول شامل بكل التفاصيل
+    html+=`<div style="overflow-x:auto;margin-bottom:16px"><table style="width:100%;border-collapse:collapse;font-size:.8rem;background:var(--surface)">
+    <thead><tr style="background:var(--surface2);border-bottom:2px solid var(--border)">
+        <th style="padding:8px;text-align:right;font-weight:700">البيان</th>`;
+    CASHIERS.forEach(c=>html+=`<th style="padding:8px;text-align:center;font-weight:700;color:${c.color}">${c.label}</th>`);
+    html+=`<th style="padding:8px;text-align:center;font-weight:700">الإجمالي</th></tr></thead><tbody>`;
+    
+    let rowTotals={};
+    CASHIER_FIELDS.forEach(f=>{
+        html+=`<tr style="border-bottom:1px solid var(--border2)"><td style="padding:8px;font-weight:600">${f.label}</td>`;
+        let fieldTotal=0;
+        CASHIERS.forEach(c=>{
+            const d=cl.cashiers[c.key];
+            const v=d?Number(d[f.key])||0:0;
+            fieldTotal+=v;
+            const clr=getTypeColor(f.type);
+            html+=`<td style="padding:8px;text-align:center;color:${clr};font-weight:${f.type==='income'?'700':''}">${fmtNum(v)}</td>`;
+        });
+        html+=`<td style="padding:8px;text-align:center;font-weight:700">${fmtNum(fieldTotal)}</td></tr>`;
+        rowTotals[f.key]=fieldTotal;
+    });
+    html+=`<tr style="background:var(--surface2);border-top:2px solid var(--border);border-bottom:1px solid var(--border)"><td style="padding:8px;font-weight:700">الإجمالي الخام (المبيعات فقط)</td>`;
+    CASHIERS.forEach(c=>{
+        const d=cl.cashiers[c.key];
+        const v=d?Number(d.sales)||0:0;
+        html+=`<td style="padding:8px;text-align:center;font-weight:700;color:#16a34a">${fmtNum(v)}</td>`;
+    });
+    const rawTotal=calcClosingRawBalance(cl);
+    html+=`<td style="padding:8px;text-align:center;font-weight:700;color:#16a34a">${fmtNum(rawTotal)}</td></tr>`;
+    html+=`</tbody></table></div>`;
+    
     CASHIERS.forEach(c=>{
         const d=cl.cashiers[c.key];if(!d)return;
         const r=calcCashierNet(d);
@@ -2437,7 +2538,7 @@ function viewClosingDetails(id){
         html+=`<tr style="background:var(--surface2)"><td style="padding:4px 8px">إجمالي الخصومات</td><td style="padding:4px 8px;font-weight:700;color:var(--clr-expense);text-align:left">${fmtNum(deductions)} ${cur}</td></tr>`;
         html+=`<tr style="background:var(--surface2)"><td style="padding:4px 8px">الصافي المحسوب</td><td style="padding:4px 8px;font-weight:700;text-align:left;color:${r.net>=0?'var(--clr-income)':'var(--clr-expense)'}">${fmtNum(r.net)} ${cur}</td></tr>`;
         if(diff!==0)html+=`<tr style="background:#fef3c7"><td style="padding:4px 8px">الفرق (المستلم - المحسوب)</td><td style="padding:4px 8px;font-weight:700;color:${diff>0?'var(--clr-income)':'var(--clr-expense)'};text-align:left">${fmtNum(diff)} ${cur}</td></tr>`;
-        const net=r.net;                              // الصافي النهائي هو المحسوب
+        const net=r.net;
         html+=`<tr style="border-top:2px solid var(--border);font-weight:800"><td style="padding:4px 8px">الصافي النهائي</td><td style="padding:4px 8px;color:${net>=0?'var(--clr-income)':'var(--clr-expense)'};text-align:left">${fmtNum(net)} ${cur}</td></tr>`;
         html+=`</tbody></table>`;
         if(d.debtsList&&d.debtsList.length){
@@ -2453,8 +2554,12 @@ function viewClosingDetails(id){
             d.expensesList.forEach(ex=>html+=`<div style="font-size:.78rem;padding:2px 8px">${ex.desc||'مصروف'}: ${fmtNum(ex.amount)} ${cur}</div>`);
         }
     });
-    html+=`<div style="text-align:center;margin-top:14px;padding:12px;background:var(--bg);border-radius:8px">
-        <div style="font-size:.85rem;color:var(--text2)">الإجمالي الكلي</div>
+    
+    const rawBalance=calcClosingRawBalance(cl);
+    html+=`<div style="text-align:center;margin-top:14px;padding:12px;background:var(--surface);border-radius:8px;border:2px solid var(--border)">
+        <div style="font-size:.85rem;color:var(--text2);margin-bottom:8px">الرصيد الخام (المبيعات الإجمالية)</div>
+        <div style="font-size:1.3rem;font-weight:800;color:#16a34a;margin-bottom:12px">${fmtNum(rawBalance)} ${cur}</div>
+        <div style="font-size:.85rem;color:var(--text2);margin-bottom:4px">الإجمالي الكلي الصافي</div>
         <div style="font-size:1.4rem;font-weight:800;color:${cl.totalNet>=0?'var(--clr-income)':'var(--clr-expense)'}">${fmtNum(cl.totalNet)} ${cur}</div>
     </div>`;
     openModal('تفاصيل التقفيلة - '+cl.date,html);
@@ -4006,8 +4111,8 @@ function showPayrollColumnPicker(mode){
     /* mode: 'blank' = كشف رواتب, 'history' = كشف صرف */
     if(!hasAction('print'))return toast('غير مصرح');
     const cols=mode==='blank'
-        ?[{key:'name',label:'الموظف',fixed:true},{key:'salary',label:'الراتب الاسمي',fixed:true},{key:'withdrawals',label:'السحوبات'},{key:'sales',label:'المبيعات'},{key:'tips',label:'الإكرامية'},{key:'comm',label:'النسبة'},{key:'debts',label:'الديون'},{key:'deduct',label:'الاستقطاع'}]
-        :[{key:'name',label:'الموظف',fixed:true},{key:'tips',label:'الإكرامية'},{key:'deductions',label:'الاستقطاعات'},{key:'net',label:'الصافي'},{key:'note',label:'ملاحظة'}];
+        ?[{key:'name',label:'الموظف',fixed:true},{key:'salary',label:'الراتب الاسمي',fixed:true},{key:'sales',label:'المبيعات'},{key:'tips',label:'الإكرامية'},{key:'debts',label:'الديون'},{key:'withdrawals',label:'السحوبات'},{key:'deduct',label:'الاستقطاع'},{key:'total',label:'المجموع النهائي'}]
+        :[{key:'name',label:'الموظف',fixed:true},{key:'salary',label:'الراتب الاسمي',fixed:true},{key:'tips',label:'الإكرامية'},{key:'deductions',label:'الاستقطاعات'},{key:'combined',label:'مجموع الديون والسحوبات'},{key:'net',label:'الصافي'},{key:'note',label:'ملاحظة'}];
     let body=`<div style="direction:rtl;text-align:right;padding:4px 0"><p style="margin-bottom:8px;font-weight:700;font-size:.95rem">اختر الأعمدة المطلوبة:</p>`;
     body+=`<label style="display:block;margin-bottom:6px;cursor:pointer"><input type="checkbox" id="pcolAll" checked onchange="document.querySelectorAll('.pcol-cb').forEach(c=>{if(!c.disabled)c.checked=this.checked})"> <strong>تحديد الكل</strong></label><hr style="margin:6px 0;border-color:rgba(0,0,0,.1)">`;
     cols.forEach(c=>{
@@ -4048,47 +4153,56 @@ function _buildPrintPayroll(cols){
         sh+=`<table style="border-collapse:collapse;width:100%"><thead><tr style="background:linear-gradient(90deg,rgba(147,197,253,0.35),rgba(249,168,212,0.35))"><th style="${thSt}${hc}">#</th>`;
         if(cols.includes('name'))sh+=`<th style="${thSt}${hc}">الموظف</th>`;
         if(cols.includes('salary'))sh+=`<th style="${thSt}${hc}">الراتب الاسمي</th>`;
-        if(cols.includes('withdrawals'))sh+=`<th style="${thSt}${hc}">السحوبات</th>`;
         if(cols.includes('sales'))sh+=`<th style="${thSt}${hc}">المبيعات</th>`;
         if(cols.includes('tips'))sh+=`<th style="${thSt}${hc}">الإكرامية</th>`;
-        if(cols.includes('comm'))sh+=`<th style="${thSt}${hc}">النسبة</th>`;
         if(cols.includes('debts'))sh+=`<th style="${thSt}${hc}">الديون</th>`;
+        if(cols.includes('withdrawals'))sh+=`<th style="${thSt}${hc}">السحوبات</th>`;
         if(cols.includes('deduct'))sh+=`<th style="${thSt}${hc}">الاستقطاع</th>`;
+        if(cols.includes('total'))sh+=`<th style="${thSt}${hc}">المجموع النهائي</th>`;
         sh+=`</tr></thead><tbody>`;
-        let secSalary=0,secWd=0;
+        let secSalary=0,secWd=0,secDebts=0,secTotal=0;
         sectionEmps.forEach((e,i)=>{
             const sal=e.salary||0;secSalary+=sal;
             const bg=i%2===0?'rgba(219,234,254,0.3)':'rgba(252,231,243,0.22)';
-            const comm=e.salaryType==='commission'?(e.commRate||0)+'%':'ثابت';
             const empDebtsOnly=debts.filter(d=>d.person===e.name&&d.type!=='withdraw'&&d.type!=='repayment');
             const empRepayments=debts.filter(d=>d.person===e.name&&d.type==='repayment');
-            const debtTotal=empDebtsOnly.reduce((s,d)=>s+d.amount,0)+empRepayments.reduce((s,d)=>s+d.amount,0);
+            const debtTotal=empDebtsOnly.reduce((s,d)=>s+d.amount,0)+empRepayments.reduce((s,d)=>s+d.amount,0);secDebts+=debtTotal;
             const empWithdraws=debts.filter(d=>d.person===e.name&&d.type==='withdraw'&&d.date&&d.date.startsWith(ym));
             const wdTotal=empWithdraws.reduce((s,d)=>s+d.amount,0);secWd+=wdTotal;
+            const combined=debtTotal+wdTotal; // مجموع الديون والسحوبات
+            secTotal+=combined;
             sh+=`<tr style="background:${bg}"><td style="padding:6px;${brd}text-align:center">${i+1}</td>`;
             if(cols.includes('name'))sh+=`<td style="padding:6px;${brd}font-weight:800">${e.name}</td>`;
             if(cols.includes('salary'))sh+=`<td style="padding:6px;${brd}color:#2563eb;font-weight:700">${fmtNum(sal)} ${cur}</td>`;
+            if(cols.includes('sales'))sh+=`<td style="padding:6px;${brd}text-align:center">-</td>`;
+            if(cols.includes('tips'))sh+=`<td style="padding:6px;${brd}text-align:center">-</td>`;
+            if(cols.includes('debts'))sh+=`<td style="padding:6px;${brd}color:${debtTotal>0?'#dc2626':'#16a34a'};font-weight:700">${debtTotal!==0?fmtNum(debtTotal)+' '+cur:'-'}</td>`;
             if(cols.includes('withdrawals')){
-                let wdCell=wdTotal>0?`<span style="color:#dc2626;font-weight:700">${fmtNum(wdTotal)} ${cur}</span>`:'-';
+                let wdCell=wdTotal>0?`<span style="color:#d97706;font-weight:700">${fmtNum(wdTotal)} ${cur}</span>`:'-';
                 sh+=`<td style="padding:6px;${brd}text-align:center">${wdCell}</td>`;
             }
-            if(cols.includes('sales'))sh+=`<td style="padding:6px;${brd}"></td>`;
-            if(cols.includes('tips'))sh+=`<td style="padding:6px;${brd}"></td>`;
-            if(cols.includes('comm'))sh+=`<td style="padding:6px;${brd}text-align:center;color:#9333ea;font-weight:700">${comm}</td>`;
-            if(cols.includes('debts'))sh+=`<td style="padding:6px;${brd}color:${debtTotal>0?'#dc2626':'#16a34a'};font-weight:700">${debtTotal!==0?fmtNum(debtTotal)+' '+cur:'-'}</td>`;
-            if(cols.includes('deduct'))sh+=`<td style="padding:6px;${brd}"></td>`;
+            if(cols.includes('deduct'))sh+=`<td style="padding:6px;${brd}text-align:center">-</td>`;
+            if(cols.includes('total'))sh+=`<td style="padding:6px;${brd}color:${combined>0?'#dc2626':'#16a34a'};font-weight:700;text-align:center">${combined>0?fmtNum(combined)+' '+cur:'-'}</td>`;
             sh+=`</tr>`;
         });
         const nameIdx=cols.includes('name')?2:1;
+        let colCount=1+nameIdx;
+        if(cols.includes('salary'))colCount++;
+        if(cols.includes('sales'))colCount++;
+        if(cols.includes('tips'))colCount++;
+        if(cols.includes('debts'))colCount++;
+        if(cols.includes('withdrawals'))colCount++;
+        if(cols.includes('deduct'))colCount++;
+        if(cols.includes('total'))colCount++;
         sh+=`<tr style="font-weight:700;background:linear-gradient(90deg,rgba(147,197,253,0.3),rgba(249,168,212,0.3))">`;
         sh+=`<td colspan="${nameIdx}" style="padding:9px;${brd}color:#1e3a8a">الإجمالي</td>`;
         if(cols.includes('salary'))sh+=`<td style="padding:9px;${brd}color:#b45309;font-weight:900">${fmtNum(secSalary)} ${cur}</td>`;
-        if(cols.includes('withdrawals'))sh+=`<td style="padding:9px;${brd}color:#dc2626;font-weight:900">${secWd>0?fmtNum(secWd)+' '+cur:'-'}</td>`;
-        if(cols.includes('sales'))sh+=`<td style="padding:9px;${brd}"></td>`;
-        if(cols.includes('tips'))sh+=`<td style="padding:9px;${brd}"></td>`;
-        if(cols.includes('comm'))sh+=`<td style="padding:9px;${brd}"></td>`;
-        if(cols.includes('debts'))sh+=`<td style="padding:9px;${brd}"></td>`;
-        if(cols.includes('deduct'))sh+=`<td style="padding:9px;${brd}"></td>`;
+        if(cols.includes('sales'))sh+=`<td style="padding:9px;${brd}">-</td>`;
+        if(cols.includes('tips'))sh+=`<td style="padding:9px;${brd}">-</td>`;
+        if(cols.includes('debts'))sh+=`<td style="padding:9px;${brd}color:#dc2626;font-weight:900">${secDebts>0?fmtNum(secDebts)+' '+cur:'-'}</td>`;
+        if(cols.includes('withdrawals'))sh+=`<td style="padding:9px;${brd}color:#d97706;font-weight:900">${secWd>0?fmtNum(secWd)+' '+cur:'-'}</td>`;
+        if(cols.includes('deduct'))sh+=`<td style="padding:9px;${brd}">-</td>`;
+        if(cols.includes('total'))sh+=`<td style="padding:9px;${brd}color:#dc2626;font-weight:900">${secTotal>0?fmtNum(secTotal)+' '+cur:'-'}</td>`;
         sh+=`</tr></tbody></table>`;
         return sh;
     }
@@ -4128,6 +4242,7 @@ function _buildPrintPayrollHistory(cols){
     const dateStr=getPrintDateString();
     const maleEmps=emps.filter(e=>e.gender!=='female');
     const femaleEmps=emps.filter(e=>e.gender==='female');
+    const debts=loadData(KEYS.debts);
     /* تفاصيل الصرف فقط - مفصولة حسب الجنس */
     function buildDetailSection(sectionEmps,sectionTitle){
         const sPayroll=payroll.filter(p=>sectionEmps.some(e=>e.id===p.empId));
@@ -4137,19 +4252,27 @@ function _buildPrintPayrollHistory(cols){
         sh+=`<table style="border-collapse:collapse;width:100%;margin-top:4px"><thead><tr style="background:linear-gradient(90deg,rgba(249,168,212,0.3),rgba(147,197,253,0.35))"><th style="${thSt}${hc}">#</th><th style="${thSt}${hc}">الموظف</th><th style="${thSt}${hc}">الراتب</th>`;
         if(cols.includes('tips'))sh+=`<th style="${thSt}${hc}">الإكرامية</th>`;
         if(cols.includes('deductions'))sh+=`<th style="${thSt}${hc}">الاستقطاعات</th>`;
+        if(cols.includes('combined'))sh+=`<th style="${thSt}${hc}">مجموع الديون والسحوبات</th>`;
         if(cols.includes('net'))sh+=`<th style="${thSt}${hc}">الصافي</th>`;
         if(cols.includes('note'))sh+=`<th style="${thSt}${hc}">ملاحظة</th>`;
         sh+=`</tr></thead><tbody>`;
-        let secBase=0,secTips=0,secDed=0,secNet=0;
+        let secBase=0,secTips=0,secDed=0,secCombined=0,secNet=0;
         sPayroll.forEach((p,i)=>{
             const tip=p.tip||0;
             const ded=p.deductions?((p.deductions.debt||0)+(p.deductions.attendance||0)+(p.deductions.loan||0)):0;
             const net=p.netPay||p.amount;
-            secBase+=p.amount;secTips+=tip;secDed+=ded;secNet+=net;
+            
+            // حساب مجموع الديون والسحوبات
+            const empDebts=debts.filter(d=>d.person===p.empName&&d.type!=='withdraw'&&d.type!=='repayment').reduce((s,d)=>s+d.amount,0);
+            const empWithdraws=debts.filter(d=>d.person===p.empName&&d.type==='withdraw'&&d.date&&d.date.startsWith(ym)).reduce((s,d)=>s+d.amount,0);
+            const combined=empDebts+empWithdraws;
+            
+            secBase+=p.amount;secTips+=tip;secDed+=ded;secCombined+=combined;secNet+=net;
             const bg=i%2===0?'rgba(219,234,254,0.3)':'rgba(252,231,243,0.22)';
             sh+=`<tr style="background:${bg}"><td style="padding:6px;${brd}text-align:center">${i+1}</td><td style="padding:6px;${brd}font-weight:800">${p.empName}</td><td style="padding:6px;${brd}color:#2563eb;font-weight:700">${fmtNum(p.amount)} ${cur}</td>`;
             if(cols.includes('tips'))sh+=`<td style="padding:6px;${brd}color:#9333ea;font-weight:700">${tip>0?fmtNum(tip)+' '+cur:'-'}</td>`;
             if(cols.includes('deductions'))sh+=`<td style="padding:6px;${brd}color:#dc2626;font-weight:700">${ded>0?fmtNum(ded)+' '+cur:'-'}</td>`;
+            if(cols.includes('combined'))sh+=`<td style="padding:6px;${brd}color:${combined>0?'#dc2626':'#16a34a'};font-weight:700">${combined>0?fmtNum(combined)+' '+cur:'-'}</td>`;
             if(cols.includes('net'))sh+=`<td style="padding:6px;${brd}color:#16a34a;font-weight:900">${fmtNum(net)} ${cur}</td>`;
             if(cols.includes('note'))sh+=`<td style="padding:6px;${brd}font-size:11pt">${p.note||''}</td>`;
             sh+=`</tr>`;
@@ -4157,6 +4280,7 @@ function _buildPrintPayrollHistory(cols){
         sh+=`<tr style="font-weight:700;background:linear-gradient(90deg,rgba(249,168,212,0.3),rgba(147,197,253,0.3))"><td colspan="2" style="padding:9px;${brd}${hc}">الإجمالي</td><td style="padding:9px;${brd}color:#2563eb;font-weight:900">${fmtNum(secBase)} ${cur}</td>`;
         if(cols.includes('tips'))sh+=`<td style="padding:9px;${brd}color:#9333ea;font-weight:900">${secTips>0?fmtNum(secTips)+' '+cur:'-'}</td>`;
         if(cols.includes('deductions'))sh+=`<td style="padding:9px;${brd}color:#dc2626;font-weight:900">${secDed>0?fmtNum(secDed)+' '+cur:'-'}</td>`;
+        if(cols.includes('combined'))sh+=`<td style="padding:9px;${brd}color:#dc2626;font-weight:900">${secCombined>0?fmtNum(secCombined)+' '+cur:'-'}</td>`;
         if(cols.includes('net'))sh+=`<td style="padding:9px;${brd}color:#16a34a;font-weight:900">${fmtNum(secNet)} ${cur}</td>`;
         if(cols.includes('note'))sh+=`<td style="padding:9px;${brd}"></td>`;
         sh+=`</tr></tbody></table>`;
