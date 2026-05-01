@@ -947,3 +947,55 @@ select.input-field{appearance:auto}
 .profit-detail-table .positive{color:var(--clr-income)}
 .profit-detail-table .negative{color:var(--clr-expense)}
 @media(min-width:768px){.profit-summary-grid{grid-template-columns:repeat(3,1fr)}}
+/* ===== WIZARD STEP PILLS ===== */
+.wiz-steps-nav{display:flex;gap:4px;padding:8px 10px;background:var(--surface2);border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.wiz-steps-nav::-webkit-scrollbar{display:none}
+.wiz-step-pill{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;white-space:nowrap;transition:all .2s;flex-shrink:0;font-size:.78rem;color:var(--text2)}
+.wiz-step-pill:hover{border-color:var(--primary);color:var(--primary)}
+.wiz-step-pill.active{background:var(--primary);border-color:var(--primary);color:#fff}
+.wiz-step-num{width:18px;height:18px;background:rgba(0,0,0,.1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:800}
+.wiz-step-pill.active .wiz-step-num{background:rgba(255,255,255,.3)}
+.wiz-step-lbl{font-weight:600}
+
+/* ===== VIEW TOGGLE ===== */
+.view-toggle-bar{display:flex;align-items:center;justify-content:space-between;margin:8px 0}
+.view-toggle-btns{display:flex;gap:4px}
+.view-toggle-btns button{padding:5px 8px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;font-size:.82rem;transition:all .2s}
+.view-toggle-btns button.active-view,.active-view{background:var(--primary)!important;border-color:var(--primary)!important;color:#fff!important}
+
+/* ===== PRINT OPT BUTTONS ===== */
+.print-opt-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:20px;background:var(--surface2);border:2px solid var(--border);cursor:pointer;font-size:.82rem;font-weight:600;transition:all .2s;color:var(--text)}
+.print-opt-btn.active{background:var(--primary);border-color:var(--primary);color:#fff}
+.print-cb-opt{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;font-size:.82rem;font-weight:500}
+.print-cb-opt input{accent-color:var(--primary)}
+
+/* ===== DEBTS SUMMARY CARDS - 6 col ===== */
+.debts-summary-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+@media(max-width:480px){.debts-summary-cards{grid-template-columns:repeat(2,1fr)}}
+
+/* ===== DEBTS TABLE VIEW ===== */
+.debts-table-view{overflow-x:auto;margin-top:8px}
+.debts-table-view table{width:100%;border-collapse:collapse;font-size:.82rem}
+/* ===== PAYROLL FILL TABLE ===== */
+@media print {
+    .payroll-fill-table {
+        height: 100% !important;
+    }
+    .payroll-fill-table tbody {
+        display: table-row-group;
+        height: 100%;
+    }
+    .payroll-fill-table tbody tr {
+        height: auto;
+    }
+    .payroll-fill-table tbody tr td {
+        vertical-align: middle;
+    }
+    /* منع الصفحات الفارغة */
+    .print-page-border {
+        page-break-after: auto !important;
+        break-after: auto !important;
+    }
+    /* ضمان ملء الصفحة أفقياً */
+    #printArea { width: 100% !important; }
+}

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#6366f1">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>نظام إدارة الكاشير</title>
     <link rel="manifest" href="manifest.json">
@@ -117,7 +118,13 @@
                 <div class="date-bar"><i class="ri-calendar-line"></i><span id="closingDateDisplay"></span></div>
                 <button class="btn btn-primary btn-block" id="newClosingBtn"><i class="ri-add-circle-line"></i> تقفيلة جديدة</button>
                 <div class="filter-bar" style="margin-top:12px"><input type="text" id="closingSearch" class="input-field" placeholder="بحث في التقفيلات..."><button class="btn btn-primary btn-sm" onclick="renderClosings()"><i class="ri-search-line"></i></button></div>
-                <h3 class="sub-title">التقفيلات السابقة</h3>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+                    <h3 class="sub-title" style="margin:0">التقفيلات السابقة</h3>
+                    <div class="view-toggle-btns">
+                        <button id="closingViewGrid" class="active-view" onclick="setClosingView('grid')" title="عرض بطاقات"><i class="ri-layout-grid-line"></i></button>
+                        <button id="closingViewTable" onclick="setClosingView('table')" title="عرض جدول"><i class="ri-table-line"></i></button>
+                    </div>
+                </div>
                 <div id="closingsList" class="records-list"></div>
             </section>
 
@@ -148,6 +155,13 @@
                         <span class="wiz-progress" id="wizProgress">1/28</span>
                     </div>
                     <div class="wizard-progress-bar"><div class="wizard-progress-fill" id="wizProgressFill"></div></div>
+                    <div class="wiz-steps-nav" id="wizStepsNav">
+                        <div class="wiz-step-pill active" id="wizStepPill0" onclick="jumpWizardToSection(0)"><span class="wiz-step-num">★</span><span class="wiz-step-lbl"> المدير</span></div>
+                        <div class="wiz-step-pill" id="wizStepPill1" onclick="jumpWizardToSection(0)"><span class="wiz-step-num">١</span><span class="wiz-step-lbl"><i class="ri-men-line"></i> رجالي</span></div>
+                        <div class="wiz-step-pill" id="wizStepPill1b" onclick="jumpWizardToSection(1)"><span class="wiz-step-num">٢</span><span class="wiz-step-lbl"><i class="ri-women-line"></i> نسائي</span></div>
+                        <div class="wiz-step-pill" id="wizStepPill2" onclick="jumpWizardToSection(2)"><span class="wiz-step-num">٣</span><span class="wiz-step-lbl"><i class="ri-sparkling-line"></i> تجميل</span></div>
+                        <div class="wiz-step-pill" id="wizStepPill3" onclick="jumpWizardToSection(3)"><span class="wiz-step-num">٤</span><span class="wiz-step-lbl"><i class="ri-check-double-line"></i> تسديد</span></div>
+                    </div>
                     <div class="wizard-body" id="wizBody"></div>
                     <div class="wizard-footer">
                         <button class="btn btn-ghost" id="wizBack"><i class="ri-arrow-right-line"></i> السابق</button>

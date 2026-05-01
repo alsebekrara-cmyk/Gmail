@@ -1494,7 +1494,7 @@ const CASHIER_FIELDS=[
     {key:'debts',label:'الديون',icon:'ri-file-list-3-line',type:'debt'},
     {key:'withdrawals',label:'السحوبات',icon:'ri-hand-coin-line',type:'withdraw'}
 ];
-const TOTAL_STEPS = CASHIERS.length * CASHIER_FIELDS.length + 2; // +1 manager +1 summary
+const TOTAL_STEPS = CASHIERS.length * CASHIER_FIELDS.length + 3; // +1 manager +1 payment +1 summary
 
 /* ========= CENTRAL CALCULATION ENGINE ========= */
 /* هذه هي الدالة الوحيدة والمعتمدة لحساب صافي كل كاشير.
@@ -1701,14 +1701,41 @@ function getStepInfo(step){
     const fieldStep=step-1;
     const fieldCount=CASHIER_FIELDS.length;
     const summaryIdx=CASHIERS.length*fieldCount;
-    if(fieldStep>=summaryIdx)return {type:'summary'};
+    if(fieldStep===summaryIdx)return {type:'payment'};
+    if(fieldStep>summaryIdx)return {type:'summary'};
     const ci=Math.floor(fieldStep/fieldCount);
     const fi=fieldStep%fieldCount;
     return {type:'field',cashier:CASHIERS[ci],field:CASHIER_FIELDS[fi]};
 }
 
+function jumpWizardToSection(sectionIdx){
+    /* sectionIdx: 0=men,1=women,2=cosmetics,3=payment */
+    saveCurrentStep();
+    if(sectionIdx===3){
+        const paymentStepIdx=CASHIERS.length*CASHIER_FIELDS.length+1;
+        wizStep=paymentStepIdx;
+    } else {
+        wizStep=sectionIdx*CASHIER_FIELDS.length+1;
+    }
+    renderWizStep();
+}
+function updateWizStepPills(){
+    const fieldCount=CASHIER_FIELDS.length;
+    let sectionActive=-1;
+    if(wizStep===0){sectionActive=0;}
+    else{
+        const fs=wizStep-1;
+        const paymentIdx=CASHIERS.length*fieldCount;
+        if(fs>=paymentIdx)sectionActive=3;
+        else sectionActive=Math.floor(fs/fieldCount);
+    }
+    for(let i=0;i<4;i++){
+        const pill=document.getElementById('wizStepPill'+i);
+        if(pill)pill.classList.toggle('active',i===sectionActive);
+    }
+}
 function startWizard(){
-    wizData={manager:'',cashiers:{}};
+    wizData={manager:'',cashiers:{},closingPayment:{person:'',amount:0,note:''}};
     CASHIERS.forEach(c=>{
         wizData.cashiers[c.key]={};
         CASHIER_FIELDS.forEach(f=>wizData.cashiers[c.key][f.key]=0);
@@ -1756,6 +1783,7 @@ function renderWizStep(){
     $('#wizBack').style.visibility=wizStep===0?'hidden':'visible';
     const isLast=wizStep===TOTAL_STEPS-1;
     $('#wizNext').innerHTML=isLast?'<i class="ri-save-line"></i> حفظ':'التالي <i class="ri-arrow-left-line"></i>';
+    updateWizStepPills();
 
     const body=$('#wizBody');
 
@@ -1788,6 +1816,48 @@ function renderWizStep(){
                 else{sel.value='__new__';$('#newManagerRow').style.display='block';setTimeout(()=>{const inp=$('#newManagerName');if(inp)inp.value=wizData.manager;},0);}
             }
         }
+        return;
+    }
+
+    if(info.type==='payment'){
+        const pay=wizData.closingPayment||{person:'',amount:0,note:''};
+        const allDebts=loadData(KEYS.debts);
+        const emps=loadData(KEYS.employees);
+        const debtPersons=[...new Set(allDebts.map(d=>d.person))].filter(p=>{
+            const net=allDebts.filter(d=>d.person===p).reduce((s,d)=>s+d.amount,0);
+            return net>0;
+        });
+        const empNames=emps.map(e=>e.name);
+        const opts=debtPersons.map(p=>`<option value="${p}"${p===pay.person?' selected':''}>${p}${empNames.includes(p)?' (موظف)':''}</option>`).join('');
+        body.innerHTML=`
+        <div class="wiz-cashier-label" style="color:#16a34a"><i class="ri-check-double-line"></i> تسديد دين (اختياري)</div>
+        <p style="font-size:.82rem;color:var(--text2);margin-bottom:10px">إذا كان هناك تسديد لدين في هذه التقفيلة أدخله هنا، يمكنك تركه فارغاً للمتابعة</p>
+        <div class="wiz-label"><i class="ri-user-line"></i> اختر الشخص</div>
+        <input type="text" class="input-field" placeholder="🔍 بحث عن اسم..." style="margin-bottom:6px" oninput="filterPersonSelect('wizPayPersonSel',this.value)">
+        <select id="wizPayPersonSel" class="input-field">
+            <option value="">-- لا تسديد (اختياري) --</option>
+            <option value="__new__">+ اسم جديد</option>
+            ${opts}
+        </select>
+        <div id="wizPayNewPersonRow" style="display:none;margin-top:6px">
+            <div class="debtor-add-row">
+                <input type="text" class="input-field" id="wizPayNewPerson" placeholder="اسم الشخص الجديد">
+                <button class="btn btn-success btn-sm" onclick="confirmWizPayNewPerson()">✓</button>
+            </div>
+        </div>
+        <div class="wiz-label" style="margin-top:10px"><i class="ri-money-dollar-box-line"></i> مبلغ التسديد <span style="font-size:.75rem;color:var(--text3)">(بالآلاف)</span></div>
+        <input type="number" class="wiz-input" id="wizPaymentAmount" inputmode="decimal" value="${pay.amount||''}" placeholder="0">
+        <div class="wiz-label" style="margin-top:10px"><i class="ri-sticky-note-line"></i> الملاحظة</div>
+        <input type="text" class="input-field" id="wizPaymentNote" value="${pay.note||''}" placeholder="ملاحظة التسديد (اختياري)" style="margin-top:6px">`;
+        setTimeout(()=>{
+            const sel=document.getElementById('wizPayPersonSel');
+            if(sel)sel.addEventListener('change',()=>{
+                const nr=document.getElementById('wizPayNewPersonRow');
+                if(nr)nr.style.display=sel.value==='__new__'?'block':'none';
+            });
+            const inp=document.getElementById('wizPaymentAmount');
+            if(inp)inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#wizNext').click();}});
+        },100);
         return;
     }
 
@@ -2108,8 +2178,16 @@ function renderWizSummary(body){
     });
     html+=`<div style="text-align:center;margin-top:14px;padding:12px;background:var(--bg);border-radius:var(--radius-sm)">
         <div style="font-size:.85rem;color:var(--text2)">الإجمالي الكلي</div>
-        <div style="font-size:1.6rem;font-weight:800;color:${grandNet>=0?'var(--clr-income)':'var(--clr-expense)'}">${fmtNum(grandNet)} ${cur}</div>
-    </div></div>`;
+        <div style="font-size:1.6rem;font-weight:800;color:${grandNet>=0?'var(--clr-income)':'var(--clr-expense)'}">${fmtNum(grandNet)} ${cur}</div>`;
+    if(wizData.closingPayment&&wizData.closingPayment.amount>0){
+        const pay=wizData.closingPayment;
+        html+=`<div style="margin-top:10px;padding:8px;background:#dcfce7;border-radius:8px;border:1px solid #86efac">
+            <div style="font-size:.82rem;color:#166534;font-weight:700"><i class="ri-check-double-line"></i> تسديد${pay.person?' لـ '+pay.person:''}: ${fmtNum(pay.amount)} ${cur}</div>
+            ${pay.note?`<div style="font-size:.75rem;color:#15803d">${pay.note}</div>`:''}
+            <div style="font-size:.82rem;color:#166534;font-weight:700;margin-top:4px">الصافي بعد التسديد: ${fmtNum(grandNet-pay.amount)} ${cur}</div>
+        </div>`;
+    }
+    html+=`</div></div>`;
     body.innerHTML=html;
 }
 
@@ -2118,11 +2196,29 @@ function getTypeColor(type){
     return map[type]||'var(--text)';
 }
 
+function confirmWizPayNewPerson(){
+    const inp=document.getElementById('wizPayNewPerson');
+    if(inp&&inp.value.trim()){
+        const sel=document.getElementById('wizPayPersonSel');
+        const opt=document.createElement('option');opt.value=inp.value.trim();opt.textContent=inp.value.trim();
+        sel.insertBefore(opt,sel.querySelector('option[value="__new__"]'));
+        sel.value=inp.value.trim();
+        document.getElementById('wizPayNewPersonRow').style.display='none';
+    }
+}
 function saveCurrentStep(){
     const info=getStepInfo(wizStep);
     if(info.type==='manager'){
         const sel=$('#managerSelect');
         if(sel&&sel.value&&sel.value!=='__new__')wizData.manager=sel.value;
+        return true;
+    }
+    if(info.type==='payment'){
+        const sel=document.getElementById('wizPayPersonSel');
+        const person=sel?sel.value:'';
+        const amt=parseK(document.getElementById('wizPaymentAmount')?.value)||0;
+        const note=document.getElementById('wizPaymentNote')?.value||'';
+        wizData.closingPayment={person:person==='__new__'?'':person,amount:amt,note:note};
         return true;
     }
     if(info.type==='summary')return true;
@@ -2219,6 +2315,13 @@ function confirmSaveClosing(){
             }
         });
     });
+    /* save closing payment if provided */
+    if(wizData.closingPayment&&wizData.closingPayment.amount>0){
+        const pay=wizData.closingPayment;
+        const payPerson=pay.person||'تسديد عام';
+        debts.push({id:uid(),person:payPerson,amount:-pay.amount,note:pay.note||'تسديد من التقفيلة',type:'repayment',cashier:'تقفيلة',date,by});
+        safe.push({id:uid(),date,type:'deposit',amount:pay.amount,note:'تسديد دين من التقفيلة'+(pay.person?' - '+pay.person:'')+(pay.note?' - '+pay.note:''),by});
+    }
     /* save closing */
     const closingId=uid();
     closings.push({id:closingId,date,manager:wizData.manager||'',cashiers:cashiersData,totalNet,by,safeLinkId:null});
@@ -2265,6 +2368,15 @@ function confirmSaveClosing(){
 }
 
 /* ========= CLOSINGS PAGE ========= */
+let closingViewMode='grid';
+function setClosingView(mode){
+    closingViewMode=mode;
+    const gBtn=document.getElementById('closingViewGrid');
+    const tBtn=document.getElementById('closingViewTable');
+    if(gBtn)gBtn.classList.toggle('active-view',mode==='grid');
+    if(tBtn)tBtn.classList.toggle('active-view',mode==='table');
+    renderClosings();
+}
 function renderClosings(){
     showDate();
     const searchVal=($('#closingSearch')?.value||'').trim().toLowerCase();
@@ -2275,21 +2387,55 @@ function renderClosings(){
     if(!closings.length){list.innerHTML='<div class="empty-state"><i class="ri-inbox-line"></i><p>لا توجد تقفيلات</p></div>';return;}
     const allIds=closings.map(c=>c.id);
     let cHtml=_multiSelectBar('closings',KEYS.closings,allIds,'renderClosings');
-    cHtml+=closings.map(c=>{
-        const cTotal=calcClosingTotal(c);
-        const clr=cTotal>=0?'income':'expense';
-        const mgr=c.manager?`<span style="color:var(--primary);font-size:.75rem"><i class="ri-user-star-line"></i> ${c.manager}</span>`:'';
-        const detailsBtn=`<button onclick="viewClosingDetails('${c.id}')" title="تفاصيل"><i class="ri-eye-line"></i></button>`;
-        const editBtn=hasAction('edit')?`<button onclick="editClosing('${c.id}')" title="تعديل"><i class="ri-edit-line"></i></button>`:'';
-        const printBtn=hasAction('print')?`<button onclick="printClosing('${c.id}')"><i class="ri-printer-line"></i></button>`:'';
-        const delBtn=hasAction('delete')?`<button onclick="deleteClosing('${c.id}')"><i class="ri-delete-bin-line"></i></button>`:'';
-        const sel=(_selectedIds['closings']&&_selectedIds['closings'].has(c.id))?'selected':'';
-        const cb=_multiSelectCheckbox('closings',c.id,'renderClosings');
-        return `<div class="record-card ${sel}">
-        <div style="display:flex;align-items:center">${cb}<div class="rec-info"><div class="rec-title">${c.date} ${mgr}</div><div class="rec-sub">${CASHIERS.map(cs=>cs.label).join(' | ')}${c.by?' | <span class="by-tag">بواسطة: '+c.by+'</span>':''}</div></div></div>
-        <div class="rec-amount ${clr}">${fmtNum(cTotal)} ${cur}</div>
-        <div class="rec-actions">${detailsBtn}${editBtn}${printBtn}${delBtn}</div>
-    </div>`;}).join('');
+    if(closingViewMode==='table'){
+        cHtml+=`<div style="overflow-x:auto;margin-top:8px"><table style="width:100%;border-collapse:collapse;font-size:.82rem">
+        <thead><tr style="background:var(--surface2);border-bottom:2px solid var(--border)">
+            <th style="padding:8px 6px;text-align:right">التاريخ</th>
+            <th style="padding:8px 6px;text-align:right">المدير</th>`;
+        CASHIERS.forEach(cs=>cHtml+=`<th style="padding:8px 6px;text-align:center;color:${cs.color}">${cs.label}</th>`);
+        cHtml+=`<th style="padding:8px 6px;text-align:center">الصافي</th><th style="padding:8px 6px;text-align:center">إجراءات</th></tr></thead><tbody>`;
+        closings.forEach(c=>{
+            const cTotal=calcClosingTotal(c);
+            const clrStyle=cTotal>=0?'color:#16a34a':'color:#dc2626';
+            cHtml+=`<tr style="border-bottom:1px solid var(--border2)">
+                <td style="padding:7px 6px;font-weight:600">${c.date}</td>
+                <td style="padding:7px 6px;color:var(--primary);font-size:.8rem">${c.manager||'-'}</td>`;
+            CASHIERS.forEach(cs=>{const d=c.cashiers[cs.key];cHtml+=`<td style="padding:7px 6px;text-align:center">${d?fmtNum(calcCashierNet(d).net):'-'}</td>`;});
+            cHtml+=`<td style="padding:7px 6px;text-align:center;font-weight:800;${clrStyle}">${fmtNum(cTotal)} ${cur}</td>
+                <td style="padding:7px 6px;text-align:center">
+                    <button onclick="viewClosingDetails('${c.id}')" style="background:none;border:none;cursor:pointer;color:var(--primary);padding:2px 4px"><i class="ri-eye-line"></i></button>
+                    ${hasAction('edit')?`<button onclick="editClosing('${c.id}')" style="background:none;border:none;cursor:pointer;color:var(--text2);padding:2px 4px"><i class="ri-edit-line"></i></button>`:''}
+                    ${hasAction('print')?`<button onclick="printClosing('${c.id}')" style="background:none;border:none;cursor:pointer;color:#d97706;padding:2px 4px"><i class="ri-printer-line"></i></button>`:''}
+                    ${hasAction('delete')?`<button onclick="deleteClosing('${c.id}')" style="background:none;border:none;cursor:pointer;color:var(--danger);padding:2px 4px"><i class="ri-delete-bin-line"></i></button>`:''}
+                </td></tr>`;
+        });
+        const grandTotal=closings.reduce((s,c)=>s+calcClosingTotal(c),0);
+        cHtml+=`<tr style="background:var(--surface2);font-weight:800;border-top:2px solid var(--border)">
+            <td style="padding:8px 6px" colspan="2">الإجمالي (${closings.length})</td>`;
+        CASHIERS.forEach(cs=>{
+            const t=closings.reduce((s,c)=>{const d=c.cashiers[cs.key];return s+(d?calcCashierNet(d).net:0);},0);
+            cHtml+=`<td style="padding:8px 6px;text-align:center">${fmtNum(t)}</td>`;
+        });
+        cHtml+=`<td style="padding:8px 6px;text-align:center;color:${grandTotal>=0?'#16a34a':'#dc2626'}">${fmtNum(grandTotal)} ${cur}</td><td></td></tr>`;
+        cHtml+=`</tbody></table></div>`;
+    } else {
+        cHtml+=closings.map(c=>{
+            const cTotal=calcClosingTotal(c);
+            const clr=cTotal>=0?'income':'expense';
+            const mgr=c.manager?`<span style="color:var(--primary);font-size:.75rem"><i class="ri-user-star-line"></i> ${c.manager}</span>`:'';
+            const detailsBtn=`<button onclick="viewClosingDetails('${c.id}')" title="تفاصيل"><i class="ri-eye-line"></i></button>`;
+            const editBtn=hasAction('edit')?`<button onclick="editClosing('${c.id}')" title="تعديل"><i class="ri-edit-line"></i></button>`:'';
+            const printBtn=hasAction('print')?`<button onclick="printClosing('${c.id}')"><i class="ri-printer-line"></i></button>`:'';
+            const delBtn=hasAction('delete')?`<button onclick="deleteClosing('${c.id}')"><i class="ri-delete-bin-line"></i></button>`:'';
+            const sel=(_selectedIds['closings']&&_selectedIds['closings'].has(c.id))?'selected':'';
+            const cb=_multiSelectCheckbox('closings',c.id,'renderClosings');
+            return `<div class="record-card ${sel}">
+            <div style="display:flex;align-items:center">${cb}<div class="rec-info"><div class="rec-title">${c.date} ${mgr}</div><div class="rec-sub">${CASHIERS.map(cs=>cs.label).join(' | ')}${c.by?' | <span class="by-tag">بواسطة: '+c.by+'</span>':''}</div></div></div>
+            <div class="rec-amount ${clr}">${fmtNum(cTotal)} ${cur}</div>
+            <div class="rec-actions">${detailsBtn}${editBtn}${printBtn}${delBtn}</div>
+        </div>`;
+        }).join('');
+    }
     list.innerHTML=cHtml;
 }
 function deleteClosing(id){
@@ -3223,12 +3369,18 @@ function renderDebts(){
     /* filter buttons */
     $$('[data-dfilter]').forEach(b=>{b.classList.toggle('active',b.dataset.dfilter===debtFilter);});
 
-    /* compute counts and totals */
+    /* compute counts and totals - correct separation */
     const empDebts=debts.filter(d=>emps.includes(d.person));
     const custDebts=debts.filter(d=>!emps.includes(d.person));
-    const empTotal=empDebts.reduce((s,d)=>s+d.amount,0);
-    const custTotal=custDebts.reduce((s,d)=>s+d.amount,0);
-    const allTotal=debts.reduce((s,d)=>s+d.amount,0);
+    const isPayEntry=d=>d.type==='repayment'||d.type==='payment';
+    const isDebtEntry=d=>!d.type||d.type==='debt';
+    const isWithEntry=d=>d.type==='withdraw';
+    const totalDebtOnly=debts.filter(isDebtEntry).reduce((s,d)=>s+d.amount,0);
+    const totalPayOnly=Math.abs(debts.filter(isPayEntry).reduce((s,d)=>s+d.amount,0));
+    const totalWithOnly=debts.filter(isWithEntry).reduce((s,d)=>s+d.amount,0);
+    const allNet=totalDebtOnly+totalWithOnly-totalPayOnly;
+    const empNet=empDebts.reduce((s,d)=>s+d.amount,0);
+    const custNet=custDebts.reduce((s,d)=>s+d.amount,0);
 
     /* update filter counts */
     const cAll=$('#debtsCountAll');if(cAll)cAll.textContent=debts.length;
@@ -3239,9 +3391,12 @@ function renderDebts(){
     const summaryEl=$('#debtsSummaryCards');
     if(summaryEl){
         summaryEl.innerHTML=`
-        <div class="debts-summary-card"><div class="dsc-label">إجمالي الديون</div><div class="dsc-val" style="color:var(--danger)">${fmtNum(allTotal)} ${cur}</div></div>
-        <div class="debts-summary-card"><div class="dsc-label">ديون الموظفين</div><div class="dsc-val" style="color:#8b5cf6">${fmtNum(empTotal)} ${cur}</div></div>
-        <div class="debts-summary-card"><div class="dsc-label">ديون العملاء</div><div class="dsc-val" style="color:#ef4444">${fmtNum(custTotal)} ${cur}</div></div>`;
+        <div class="debts-summary-card"><div class="dsc-label">إجمالي الديون</div><div class="dsc-val" style="color:#dc2626">${fmtNum(totalDebtOnly)} ${cur}</div></div>
+        <div class="debts-summary-card"><div class="dsc-label">إجمالي السحوبات</div><div class="dsc-val" style="color:#d97706">${fmtNum(totalWithOnly)} ${cur}</div></div>
+        <div class="debts-summary-card"><div class="dsc-label">إجمالي التسديدات</div><div class="dsc-val" style="color:#16a34a">${fmtNum(totalPayOnly)} ${cur}</div></div>
+        <div class="debts-summary-card" style="background:linear-gradient(135deg,#fee2e2,#fecaca)"><div class="dsc-label">الدين المتبقي الكلي</div><div class="dsc-val" style="color:#991b1b;font-size:1.1rem">${fmtNum(allNet)} ${cur}</div></div>
+        <div class="debts-summary-card"><div class="dsc-label">رصيد الموظفين</div><div class="dsc-val" style="color:#8b5cf6">${fmtNum(empNet)} ${cur}</div></div>
+        <div class="debts-summary-card"><div class="dsc-label">رصيد العملاء</div><div class="dsc-val" style="color:#ef4444">${fmtNum(custNet)} ${cur}</div></div>`}{
     }
 
     /* apply filter */
@@ -3252,9 +3407,19 @@ function renderDebts(){
 
     if(searchVal)filtered=filtered.filter(d=>d.person.toLowerCase().includes(searchVal)||(d.note||'').toLowerCase().includes(searchVal)||d.date.includes(searchVal));
 
-    /* persons grid */
+    /* persons grid - use unified balance formula */
     const persons={};
-    filtered.forEach(d=>{if(!persons[d.person])persons[d.person]=0;persons[d.person]+=d.amount;});
+    const _allDebtsByPerson={};
+    loadData(KEYS.debts).forEach(d=>{
+        if(!_allDebtsByPerson[d.person])_allDebtsByPerson[d.person]=[];
+        _allDebtsByPerson[d.person].push(d);
+    });
+    filtered.forEach(d=>{
+        if(!persons[d.person]){
+            const {balance}=_getPersonBalance(_allDebtsByPerson[d.person]||[]);
+            persons[d.person]=balance;
+        }
+    });
     const grid=$('#debtsPersonsList');
     const pKeys=Object.keys(persons);
     if(!pKeys.length){grid.innerHTML='<div class="empty-state"><i class="ri-inbox-line"></i><p>لا توجد ديون</p></div>';}
@@ -3536,36 +3701,81 @@ function saveEditDebt(id){
     saveData(KEYS.debts,debts);
     closeModal();toast('تم التحديث');renderDebts();
 }
+function _getPersonBalance(allDebts){
+    /*
+     * نموذج A (بيانات قديمة): التسديد مخزّن سالباً (-300)، الدين لم يُخفَّض
+     *   balance = debtAmt + negRep = 1107 + (-300) = 807
+     * نموذج B (جديد، confirmRepayDebt): التسديد موجب (+250)، الدين خُفِّض فعلاً (533→283)
+     *   balance = debtAmt = 283   |   originalDebt = 283+250 = 533
+     */
+    const debtAmt   = allDebts.filter(d=>!d.type||d.type==='debt').reduce((a,d)=>a+d.amount,0);
+    const withAmt   = allDebts.filter(d=>d.type==='withdraw').reduce((a,d)=>a+d.amount,0);
+    const repays    = allDebts.filter(d=>d.type==='repayment'||d.type==='payment');
+    const posRepAmt = repays.filter(d=>d.amount>0).reduce((a,d)=>a+d.amount,0); // موجبة: الدين خُفِّض مسبقاً
+    const negRepAmt = repays.filter(d=>d.amount<0).reduce((a,d)=>a+d.amount,0); // سالبة: الدين لم يُخفَّض
+    const balance      = debtAmt + withAmt + negRepAmt; // طرح السالبات تلقائياً
+    const totalPaid    = posRepAmt + Math.abs(negRepAmt);
+    const originalDebt = debtAmt + withAmt + posRepAmt; // الدين الأصلي قبل التسديد الموجب
+    return {debtAmt,withAmt,posRepAmt,negRepAmt,balance,totalPaid,originalDebt};
+}
 function showPersonDebts(person){
     const s=loadSettings();const cur=s.currency||'د.ع';
-    const debts=loadData(KEYS.debts).filter(d=>d.person===person);
-    const total=debts.reduce((s,d)=>s+d.amount,0);
-    let html=`<div style="text-align:center;margin-bottom:10px"><div style="font-size:.85rem;color:var(--text2)">إجمالي الديون</div><div style="font-size:1.4rem;font-weight:800;color:${total>0?'var(--danger)':'var(--success)'}">${fmtNum(total)} ${cur}</div></div>`;
+    const allDebts=loadData(KEYS.debts).filter(d=>d.person===person);
+    const {debtAmt,withAmt,balance,totalPaid,originalDebt}=_getPersonBalance(allDebts);
+    const isSettled=balance<=0&&originalDebt>0;
+    let html=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:6px;margin-bottom:12px;padding:10px;background:var(--surface2);border-radius:10px">
+        <div style="text-align:center;padding:6px;background:#fff5f5;border-radius:8px">
+            <div style="font-size:.68rem;color:#64748b;margin-bottom:2px">إجمالي الديون</div>
+            <div style="font-size:.95rem;font-weight:800;color:#dc2626">${fmtNum(originalDebt)} ${cur}</div>
+        </div>`;
+    if(withAmt>0)html+=`<div style="text-align:center;padding:6px;background:#fffbeb;border-radius:8px">
+            <div style="font-size:.68rem;color:#64748b;margin-bottom:2px">السحوبات</div>
+            <div style="font-size:.95rem;font-weight:800;color:#d97706">${fmtNum(withAmt)} ${cur}</div>
+        </div>`;
+    if(totalPaid>0)html+=`<div style="text-align:center;padding:6px;background:#f0fdf4;border-radius:8px">
+            <div style="font-size:.68rem;color:#64748b;margin-bottom:2px">تم تسديده</div>
+            <div style="font-size:.95rem;font-weight:800;color:#16a34a">${fmtNum(totalPaid)} ${cur}</div>
+        </div>`;
+    html+=`<div style="text-align:center;padding:6px;background:${isSettled?'#dcfce7':'#fee2e2'};border-radius:8px;border:2px solid ${isSettled?'#86efac':'#fca5a5'}">
+            <div style="font-size:.68rem;color:${isSettled?'#166534':'#991b1b'};margin-bottom:2px">${isSettled?'✅ مسوّى':'المتبقي من الدين'}</div>
+            <div style="font-size:1rem;font-weight:900;color:${isSettled?'#16a34a':'#dc2626'}">${isSettled?'صفر':fmtNum(balance)+' '+cur}</div>
+        </div>
+    </div>`;
     html+=`<div class="records-list">`;
-    debts.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).forEach(d=>{
-        const clr=d.type==='repayment'?'income-clr':d.type==='withdraw'?'withdraw-clr':'debt-clr';
-        const lbl=d.type==='repayment'?'تسديد':d.type==='withdraw'?'سحب':'دين';
-        html+=`<div class="record-card"><div class="rec-info"><div class="rec-title">${lbl}</div><div class="rec-sub">${d.date} - ${d.note||d.cashier||''}</div></div><div class="rec-amount ${clr}">${fmtNum(d.amount)} ${cur}</div></div>`;
+    allDebts.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).forEach(d=>{
+        const isPay=d.type==='repayment'||d.type==='payment';
+        const isW=d.type==='withdraw';
+        const lbl=isPay?'تسديد':isW?'سحب':'دين';
+        const dispAmt=Math.abs(d.amount);
+        const badgeBg=isPay?'#dcfce7':isW?'#fef9c3':'#fee2e2';
+        const badgeClr=isPay?'#166534':isW?'#92400e':'#991b1b';
+        const amtClr=isPay?'#16a34a':isW?'#d97706':'#dc2626';
+        html+=`<div class="record-card" style="border-right:3px solid ${amtClr}">
+            <div class="rec-info">
+                <div class="rec-title"><span style="font-size:.75rem;padding:2px 8px;border-radius:10px;background:${badgeBg};color:${badgeClr};font-weight:700">${lbl}</span></div>
+                <div class="rec-sub">${d.date||''}${d.note||d.cashier?' — '+(d.note||d.cashier):''}</div>
+            </div>
+            <div style="color:${amtClr};font-weight:800;font-size:.95rem;white-space:nowrap">${isPay?'−':''}${fmtNum(dispAmt)} ${cur}</div>
+        </div>`;
     });
     html+=`</div>`;
-    html+=`<button class="btn btn-danger btn-block" onclick="closeModal();setTimeout(()=>quickAddDebtFor('${person.replace(/'/g,"\\'")}'),150)" style="margin-top:10px"><i class="ri-add-circle-line"></i> إضافة دين جديد</button>`;
-    if(total>0){
-        html+=`<button class="btn btn-success btn-block" onclick="repayDebt('${person}')" style="margin-top:6px"><i class="ri-money-dollar-circle-line"></i> تسديد دين</button>`;
-    }
-    html+=`<button class="btn btn-warning btn-block" onclick="printPersonDebts('${person}')" style="margin-top:6px"><i class="ri-printer-line"></i> طباعة</button>`;
+    const pEsc=person.replace(/'/g,"\\'");
+    html+=`<button class="btn btn-danger btn-block" onclick="closeModal();setTimeout(()=>quickAddDebtFor('${pEsc}'),150)" style="margin-top:10px"><i class="ri-add-circle-line"></i> إضافة دين جديد</button>`;
+    if(balance>0)html+=`<button class="btn btn-success btn-block" onclick="repayDebt('${pEsc}')" style="margin-top:6px"><i class="ri-money-dollar-circle-line"></i> تسديد الدين — المتبقي: ${fmtNum(balance)} ${cur}</button>`;
+    html+=`<button class="btn btn-warning btn-block" onclick="printPersonDebts('${pEsc}')" style="margin-top:6px"><i class="ri-printer-line"></i> طباعة كشف الدين</button>`;
     openModal('ديون '+person,html);
 }
 function repayDebt(person){
     const s=loadSettings();const cur=s.currency||'د.ع';
-    const debts=loadData(KEYS.debts).filter(d=>d.person===person);
-    const total=debts.reduce((s,d)=>s+d.amount,0);
+    const allDebts=loadData(KEYS.debts).filter(d=>d.person===person);
+    const {balance}=_getPersonBalance(allDebts);
     let html=`<div style="background:var(--bg);padding:10px;border-radius:8px;margin-bottom:10px;font-size:.85rem">
-        <div>إجمالي الديون الحالية: <strong style="color:var(--danger)">${fmtNum(total)} ${cur}</strong></div>
+        <div>المتبقي من الدين: <strong style="color:var(--danger)">${fmtNum(balance)} ${cur}</strong></div>
     </div>`;
-    html+=`<div class="field"><label>مبلغ التسديد (بالآلاف)</label><input type="number" id="repayAmountInput" class="input-field" value="${toK(total)}" inputmode="decimal"></div>`;
+    html+=`<div class="field"><label>مبلغ التسديد (بالآلاف)</label><input type="number" id="repayAmountInput" class="input-field" value="${toK(balance)}" inputmode="decimal"></div>`;
     html+=`<div class="field"><label>ملاحظة</label><input type="text" id="repayNoteInput" class="input-field" placeholder="مثال: تسديد نقدي"></div>`;
     openModal('تسديد دين - '+person,html,
-    `<button class="btn btn-success" onclick="confirmRepayDebt('${person}')">تأكيد التسديد</button><button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>`);
+    `<button class="btn btn-success" onclick="confirmRepayDebt('${person.replace(/'/g,"\\'")}')">تأكيد التسديد</button><button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>`);
 }
 function confirmRepayDebt(person){
     const repayAmount=parseK($('#repayAmountInput').value);
@@ -3576,14 +3786,20 @@ function confirmRepayDebt(person){
     /* reduce existing debt records */
     const debts=loadData(KEYS.debts);
     let remaining=repayAmount;
-    const personDebts=debts.filter(d=>d.person===person&&d.amount>0).sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const personDebts=debts.filter(d=>d.person===person&&(d.type==='debt'||!d.type)&&d.amount>0).sort((a,b)=>new Date(a.date)-new Date(b.date));
     for(let d of personDebts){
         if(remaining<=0)break;
-        if(d.amount<=remaining){remaining-=d.amount;d.amount=0;}
-        else{d.amount-=remaining;remaining=0;}
+        if(d.amount<=remaining){
+            remaining-=d.amount;
+            d.amount=0;
+        }
+        else{
+            d.amount-=remaining;
+            remaining=0;
+        }
     }
     /* add repayment record for tracking */
-    debts.push({id:uid(),person,amount:-repayAmount,note,type:'repayment',cashier:'',date:today(),by});
+    debts.push({id:uid(),person,amount:repayAmount,note,type:'repayment',cashier:'',date:today(),by});
     saveData(KEYS.debts,debts.filter(d=>d.amount!==0));
 
     /* add to safe as deposit */
@@ -3591,7 +3807,11 @@ function confirmRepayDebt(person){
     safe.push({id:uid(),date:today(),type:'deposit',amount:repayAmount,note:'تسديد دين: '+person+' - '+note,by});
     saveData(KEYS.safe,safe);
 
-    closeModal();toast('تم تسديد '+fmtNum(repayAmount)+' من دين '+person);renderDebts();
+    const totalAfter=debts.filter(d=>d.person===person).reduce((s,d)=>{
+        if(d.type==='repayment'||d.type==='payment')return s;
+        return s+d.amount;
+    },0);
+    closeModal();toast('تم تسديد '+fmtNum(repayAmount)+' من دين '+person+(totalAfter>0?' | المتبقي: '+fmtNum(totalAfter):' | تم سداد جميع الديون'));renderDebts();
 }
 function printPersonDebts(person){
     if(!hasAction('print'))return toast('غير مصرح');
@@ -3802,7 +4022,15 @@ function openEmployee(id){
     </div>
     <div class="field"><label>الراتب الأساسي (بالآلاف)</label><input type="number" id="empSalaryInput" class="input-field" value="${toK(emp.salary)}" inputmode="decimal"></div>
     <div class="field" id="empCommField" style="${isComm?'':'display:none'}"><label>نسبة العمولة %</label><input type="number" id="empCommInput" class="input-field" value="${emp.commRate||0}"></div>`;
-    openModal('تعديل الموظف',html,`<button class="btn btn-success" onclick="saveEmployee('${id}')">حفظ</button><button class="btn btn-danger" onclick="deleteEmployee('${id}')">حذف</button><button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>`);
+    /* إضافة حقل المبيعات الشهرية */
+    const curYm=$('#payrollMonth')?.value||today().slice(0,7);
+    const savedSalesEmp=Number(localStorage.getItem('payrollSales_'+emp.id+'_'+curYm)||0);
+    html+=`<div style="background:var(--surface2);padding:10px;border-radius:8px;margin-top:8px">
+        <div style="font-weight:700;font-size:.85rem;margin-bottom:6px;color:var(--primary)"><i class="ri-bar-chart-line"></i> المبيعات الشهرية (${curYm})</div>
+        <input type="number" id="empMonthlySales" class="input-field" value="${toK(savedSalesEmp)}" inputmode="decimal" placeholder="مبيعات هذا الشهر بالآلاف">
+        ${isComm?`<div id="empSalesCommPreview" style="margin-top:6px;font-size:.82rem;color:#059669"></div>`:''}
+    </div>`;
+    openModal('تعديل الموظف',html,`<button class="btn btn-success" onclick="saveEmployeeWithSales('${id}')">حفظ</button><button class="btn btn-danger" onclick="deleteEmployee('${id}')">حذف</button><button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>`);
     setTimeout(()=>{
         document.querySelectorAll('input[name="salaryType"]').forEach(r=>r.addEventListener('change',()=>{
             const cf=$('#empCommField');if(cf)cf.style.display=document.querySelector('input[name="salaryType"]:checked').value==='commission'?'':'none';
@@ -3826,8 +4054,12 @@ function addEmployee(){
         </div>
     </div>
     <div class="field"><label>الراتب الأساسي (بالآلاف)</label><input type="number" id="empSalaryInput" class="input-field" inputmode="decimal"></div>
-    <div class="field" id="empCommField" style="display:none"><label>نسبة العمولة %</label><input type="number" id="empCommInput" class="input-field" value="0"></div>`,
-    `<button class="btn btn-success" onclick="saveEmployee()">حفظ</button><button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>`);
+    <div class="field" id="empCommField" style="display:none"><label>نسبة العمولة %</label><input type="number" id="empCommInput" class="input-field" value="0"></div>
+    <div style="background:var(--surface2);padding:10px;border-radius:8px;margin-top:8px">
+        <div style="font-weight:700;font-size:.85rem;margin-bottom:6px;color:var(--primary)"><i class="ri-bar-chart-line"></i> مبيعات الشهر الحالي (اختياري)</div>
+        <input type="number" id="empMonthlySales" class="input-field" inputmode="decimal" placeholder="مبيعات بالآلاف">
+    </div>`,
+    `<button class="btn btn-success" onclick="saveEmployeeWithSales()">حفظ</button><button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>`);
     setTimeout(()=>{
         document.querySelectorAll('input[name="salaryType"]').forEach(r=>r.addEventListener('change',()=>{
             const cf=$('#empCommField');if(cf)cf.style.display=document.querySelector('input[name="salaryType"]:checked').value==='commission'?'':'none';
@@ -3840,8 +4072,9 @@ function saveEmployee(id){
     const emps=loadData(KEYS.employees);
     const stEl=document.querySelector('input[name="salaryType"]:checked');
     const gEl=document.querySelector('input[name="empGender"]:checked');
+    const newId=id||uid();
     const obj={
-        id:id||uid(),
+        id:newId,
         name,
         role:$('#empRoleInput').value.trim(),
         gender:gEl?gEl.value:'male',
@@ -3853,6 +4086,42 @@ function saveEmployee(id){
     else emps.push(obj);
     saveData(KEYS.employees,emps);
     closeModal();toast('تم الحفظ');renderSalaries();
+}
+function saveEmployeeWithSales(id){
+    /* حفظ المبيعات الشهرية أولاً */
+    const salesVal=parseK($('#empMonthlySales')?.value)||0;
+    const ym=$('#payrollMonth')?.value||(typeof getPrevMonth==='function'?getPrevMonth():today().slice(0,7));
+    /* يجب أن نعرف الـ id أولاً */
+    if(salesVal>0){
+        const saveId=id||'__pending__';
+        if(id)localStorage.setItem('payrollSales_'+id+'_'+ym,String(salesVal));
+    }
+    /* حفظ بيانات الموظف */
+    const name=$('#empNameInput').value.trim();
+    if(!name)return toast('أدخل الاسم');
+    const emps=loadData(KEYS.employees);
+    const stEl=document.querySelector('input[name="salaryType"]:checked');
+    const gEl=document.querySelector('input[name="empGender"]:checked');
+    const newId=id||uid();
+    const obj={
+        id:newId,
+        name,
+        role:$('#empRoleInput').value.trim(),
+        gender:gEl?gEl.value:'male',
+        salary:parseK($('#empSalaryInput').value),
+        salaryType:stEl?stEl.value:'fixed',
+        commRate:parseFloat($('#empCommInput')?.value)||0
+    };
+    if(id){const idx=emps.findIndex(e=>e.id===id);if(idx>=0)emps[idx]=obj;}
+    else{
+        emps.push(obj);
+        /* للموظف الجديد: حفظ المبيعات بالـ id الجديد */
+        if(salesVal>0)localStorage.setItem('payrollSales_'+newId+'_'+ym,String(salesVal));
+    }
+    saveData(KEYS.employees,emps);
+    closeModal();toast('تم الحفظ');renderSalaries();
+    /* تحديث صفحة الرواتب إذا كانت مفتوحة */
+    if(document.getElementById('payrollList'))renderPayroll();
 }
 function deleteEmployee(id){
     if(!confirm('حذف الموظف؟'))return;
@@ -3884,12 +4153,17 @@ function printAllSalaries(){
 }
 
 /* ========= PAYROLL ========= */
+function getPrevMonth(){
+    const d=new Date();
+    d.setMonth(d.getMonth()-1);
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
 function renderPayroll(){
     const s=loadSettings();const cur=s.currency||'د.ع';
     const monthInput=$('#payrollMonth');
-    if(!monthInput.value)monthInput.value=today().slice(0,7);
+    if(!monthInput.value)monthInput.value=getPrevMonth();
     const histMonthInput=$('#payrollHistoryMonth');
-    if(histMonthInput&&!histMonthInput.value)histMonthInput.value=today().slice(0,7);
+    if(histMonthInput&&!histMonthInput.value)histMonthInput.value=getPrevMonth();
     const emps=loadData(KEYS.employees);
     const payroll=loadData(KEYS.payroll);
     const ym=monthInput.value;
@@ -3903,12 +4177,27 @@ function renderPayroll(){
         const remaining=owed-paid;
         const isComm=e.salaryType==='commission';
         const typeLabel=isComm?`<span style="color:var(--clr-income);font-size:.75rem">عمولة ${e.commRate}%</span>`:'<span style="font-size:.75rem;color:var(--text3)">ثابت</span>';
+        const savedSalesCard=Number(localStorage.getItem('payrollSales_'+e.id+'_'+ym)||0);
+        const commCard=isComm&&savedSalesCard>0?savedSalesCard*(e.commRate/100):0;
+        const effectiveSalaryCard=owed+commCard;
         return `<div class="emp-card">
         <div class="emp-top"><span class="emp-name">${e.name}</span><span class="emp-role">${e.role||'موظف'} ${typeLabel}</span></div>
         <div class="emp-stats">
             <div class="emp-stat"><div class="emp-stat-label">الراتب</div><div class="emp-stat-val">${fmtNum(owed)}</div></div>
+            ${savedSalesCard>0?`<div class="emp-stat"><div class="emp-stat-label">المبيعات</div><div class="emp-stat-val" style="color:#7c3aed">${fmtNum(savedSalesCard)}</div></div>`:''}
+            ${commCard>0?`<div class="emp-stat"><div class="emp-stat-label">العمولة</div><div class="emp-stat-val" style="color:var(--clr-income)">${fmtNum(commCard)}</div></div>`:''}
             <div class="emp-stat"><div class="emp-stat-label">المسلّم</div><div class="emp-stat-val" style="color:var(--clr-income)">${fmtNum(paid)}</div></div>
-            <div class="emp-stat"><div class="emp-stat-label">المتبقي</div><div class="emp-stat-val" style="color:${remaining>0?'var(--clr-expense)':'var(--clr-income)'}">${fmtNum(remaining)}</div></div>
+            <div class="emp-stat"><div class="emp-stat-label">المتبقي</div><div class="emp-stat-val" style="color:${remaining>0?'var(--clr-expense)':'var(--clr-income)'}">${fmtNum(isComm&&commCard>0?effectiveSalaryCard-paid:remaining)}</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:8px;padding:6px;background:var(--bg);border-radius:8px;border:1px solid var(--border2)">
+            <label style="font-size:.75rem;color:var(--text2);white-space:nowrap"><i class="ri-bar-chart-line"></i> مبيعات ${ym}:</label>
+            <input type="number" class="input-field" style="flex:1;padding:4px 8px;font-size:.82rem;height:32px"
+                id="salesInput_${e.id}"
+                value="${savedSalesCard>0?toK(savedSalesCard):''}"
+                inputmode="decimal"
+                placeholder="0 (بالآلاف)"
+                oninput="saveEmpSalesInline('${e.id}','${ym}',this.value)">
+            ${isComm?`<span id="commPreview_${e.id}" style="font-size:.72rem;color:#059669;font-weight:700;white-space:nowrap">${commCard>0?'='+(toK(commCard))+'':''}%</span>`:''}
         </div>
         <button class="btn btn-success btn-block btn-sm" style="margin-top:8px" onclick="disbursePayroll('${e.id}')"><i class="ri-hand-coin-line"></i> صرف</button>
         </div>`;
@@ -3941,6 +4230,23 @@ function renderPayroll(){
         </div>`;}).join('');
     hList.innerHTML=hHtml;
 }
+function saveEmpSalesInline(empId,ym,val){
+    const salesVal=parseK(val)||0;
+    const key='payrollSales_'+empId+'_'+ym;
+    if(salesVal>0){
+        localStorage.setItem(key,String(salesVal));
+    } else {
+        localStorage.removeItem(key);
+    }
+    /* تحديث معاينة العمولة إذا كان موظف عمولة */
+    const emps=loadData(KEYS.employees);
+    const emp=emps.find(e=>e.id===empId);
+    if(emp&&emp.salaryType==='commission'&&emp.commRate){
+        const comm=salesVal*(emp.commRate/100);
+        const el=document.getElementById('commPreview_'+empId);
+        if(el)el.textContent=comm>0?'= '+fmtNum(comm)+' '+(loadSettings().currency||'د.ع'):'';
+    }
+}
 function disbursePayroll(empId){
     const emps=loadData(KEYS.employees);
     const emp=emps.find(e=>e.id===empId);if(!emp)return;
@@ -3968,10 +4274,16 @@ function disbursePayroll(empId){
         </div>`;
     }
 
-    if(isComm){
-        html+=`<div class="field"><label>مبلغ المبيعات (بالآلاف) - لحساب العمولة</label><input type="number" id="paySalesInput" class="input-field" inputmode="decimal" oninput="calcPayrollComm('${empId}')"></div>
-        <div id="payCommResult" style="background:var(--surface2);padding:8px;border-radius:8px;margin-bottom:10px;font-size:.85rem;display:none"></div>`;
-    }
+    /* حقل المبيعات لجميع الموظفين */
+    const savedSalesForModal=Number(localStorage.getItem('payrollSales_'+empId+'_'+ym)||0);
+    html+=`<div style="background:var(--surface2);padding:10px;border-radius:8px;margin-bottom:10px">
+        <div style="font-weight:700;font-size:.88rem;margin-bottom:8px;color:var(--primary)"><i class="ri-bar-chart-line"></i> المبيعات الشهرية</div>
+        <div class="field" style="margin-bottom:0">
+            <label>مبيعات ${emp.name} لشهر ${ym} (بالآلاف)</label>
+            <input type="number" id="paySalesInput" class="input-field" value="${toK(savedSalesForModal)}" inputmode="decimal" oninput="calcPayrollComm('${empId}')">
+        </div>
+        ${isComm?'<div id="payCommResult" style="margin-top:6px;padding:6px;background:var(--bg);border-radius:6px;font-size:.85rem;display:none"></div>':''}
+    </div>`;
 
     html+=`<div class="field"><label>المبلغ المراد صرفه (بالآلاف)</label><input type="number" id="payAmountInput" class="input-field" value="${toK(remaining>0?remaining:0)}" inputmode="decimal" oninput="updatePayNet()"></div>`;
 
@@ -4006,15 +4318,22 @@ function disbursePayroll(empId){
 function calcPayrollComm(empId){
     const emps=loadData(KEYS.employees);
     const emp=emps.find(e=>e.id===empId);if(!emp)return;
-    const salesInput=parseK($('#paySalesInput').value);
-    const commission=salesInput*(emp.commRate/100);
-    const total=(emp.salary||0)+commission;
-    const s=loadSettings();const cur=s.currency||'د.ع';
-    const el=$('#payCommResult');
-    el.style.display='';
-    el.innerHTML=`<div>العمولة (${emp.commRate}%): <strong style="color:var(--clr-income)">${fmtNum(commission)} ${cur}</strong></div>
-    <div>الإجمالي (راتب + عمولة): <strong style="color:var(--primary)">${fmtNum(total)} ${cur}</strong></div>`;
-    $('#payAmountInput').value=toK(total);
+    const salesInput=parseK($('#paySalesInput').value)||0;
+    const ym=$('#payrollMonth')?.value||(typeof getPrevMonth==='function'?getPrevMonth():today().slice(0,7));
+    /* حفظ المبيعات فوراً في localStorage */
+    localStorage.setItem('payrollSales_'+empId+'_'+ym,String(salesInput));
+    if(emp.salaryType==='commission'&&emp.commRate){
+        const commission=salesInput*(emp.commRate/100);
+        const total=(emp.salary||0)+commission;
+        const s=loadSettings();const cur=s.currency||'د.ع';
+        const el=$('#payCommResult');
+        if(el){
+            el.style.display='';
+            el.innerHTML=`<div style="color:#059669;font-weight:700"><i class="ri-percent-line"></i> العمولة (${emp.commRate}%): ${fmtNum(commission)} ${cur}</div>
+            <div style="color:var(--primary);font-weight:700">الإجمالي (راتب + عمولة): ${fmtNum(total)} ${cur}</div>`;
+        }
+        $('#payAmountInput').value=toK(total);
+    }
 }
 function updatePayNet(){
     const s=loadSettings();const cur=s.currency||'د.ع';
@@ -4046,6 +4365,9 @@ function confirmDisburse(empId,empName){
     if(!amount)return toast('أدخل المبلغ');
     const ym=$('#payrollMonth').value||today().slice(0,7);
     const by=getByTag();
+    /* حفظ المبيعات المدخلة */
+    const salesInModal=parseK($('#paySalesInput')?.value)||0;
+    if(salesInModal>0)localStorage.setItem('payrollSales_'+empId+'_'+ym,String(salesInModal));
 
     /* calculate deductions */
     let deductDebt=0,deductAttend=0,deductLoan=0;
@@ -4111,8 +4433,8 @@ function showPayrollColumnPicker(mode){
     /* mode: 'blank' = كشف رواتب, 'history' = كشف صرف */
     if(!hasAction('print'))return toast('غير مصرح');
     const cols=mode==='blank'
-        ?[{key:'name',label:'الموظف',fixed:true},{key:'salary',label:'الراتب الاسمي',fixed:true},{key:'sales',label:'المبيعات'},{key:'tips',label:'الإكرامية'},{key:'debts',label:'الديون'},{key:'withdrawals',label:'السحوبات'},{key:'deduct',label:'الاستقطاع'},{key:'total',label:'المجموع النهائي'}]
-        :[{key:'name',label:'الموظف',fixed:true},{key:'salary',label:'الراتب الاسمي',fixed:true},{key:'tips',label:'الإكرامية'},{key:'deductions',label:'الاستقطاعات'},{key:'combined',label:'مجموع الديون والسحوبات'},{key:'net',label:'الصافي'},{key:'note',label:'ملاحظة'}];
+        ?[{key:'name',label:'الموظف',fixed:true},{key:'salary',label:'الراتب الاسمي',fixed:true},{key:'percentage',label:'النسبة %'},{key:'sales',label:'المبيعات'},{key:'tips',label:'الإكرامية'},{key:'debts',label:'الديون'},{key:'withdrawals',label:'السحوبات'},{key:'deduct',label:'الاستقطاع'},{key:'total',label:'المجموع النهائي'}]
+        :[{key:'name',label:'الموظف',fixed:true},{key:'salary',label:'الراتب النهائي',fixed:true},{key:'percentage',label:'النسبة %'},{key:'tips',label:'الإكرامية'},{key:'deductions',label:'الاستقطاعات'},{key:'debts',label:'الديون'},{key:'withdrawals',label:'السحوبات'},{key:'net',label:'الصافي',fixed:true},{key:'note',label:'ملاحظة'}];
     let body=`<div style="direction:rtl;text-align:right;padding:4px 0"><p style="margin-bottom:8px;font-weight:700;font-size:.95rem">اختر الأعمدة المطلوبة:</p>`;
     body+=`<label style="display:block;margin-bottom:6px;cursor:pointer"><input type="checkbox" id="pcolAll" checked onchange="document.querySelectorAll('.pcol-cb').forEach(c=>{if(!c.disabled)c.checked=this.checked})"> <strong>تحديد الكل</strong></label><hr style="margin:6px 0;border-color:rgba(0,0,0,.1)">`;
     cols.forEach(c=>{
@@ -4139,20 +4461,45 @@ function _buildPrintPayroll(cols){
     const emps=loadData(KEYS.employees);
     if(!emps.length)return toast('لا يوجد موظفين');
     const debts=loadData(KEYS.debts);
-    const ym=$('#payrollMonth')?.value||today().slice(0,7);
-    const thSt='padding:9px 8px;border:1px solid rgba(180,160,210,0.3);font-weight:900;';
+    const ym=$('#payrollMonth')?.value||(typeof getPrevMonth==='function'?getPrevMonth():today().slice(0,7));
+    const thSt='padding:12px 8px;border:1px solid rgba(180,160,210,0.3);font-weight:900;font-size:13px';
     const brd='border:1px solid rgba(180,160,210,0.25);';
     const hc='color:#1e3a8a';
     const dateStr=getPrintDateString();
     const maleEmps=emps.filter(e=>e.gender!=='female');
     const femaleEmps=emps.filter(e=>e.gender==='female');
-    function buildSection(sectionEmps,sectionTitle){
+    
+    function calculateRowHeight(totalEmps){
+        /* حساب ارتفاع الصف لملء الصفحة الأفقية بشكل أفضل */
+        /* الصفحة الأفقية (landscape) ارتفاع فعال تقريباً 180 ملم = 680px */
+        const headerHeight=80; /* عنوان الصفحة */
+        const footerHeight=60; /* صف الإجمالي */
+        const availableHeight=680-headerHeight-footerHeight;
+        const minRowHeight=Math.max(48, Math.floor(availableHeight/Math.max(totalEmps,3)));
+        return minRowHeight+'px';
+    }
+    
+    function buildSection(sectionEmps,sectionTitle,skipFiller){
         if(!sectionEmps.length)return '';
+        skipFiller=skipFiller||0;
+        let colCount=1;
+        if(cols.includes('name'))colCount++;
+        if(cols.includes('salary'))colCount++;
+        if(cols.includes('sales'))colCount++;
+        if(cols.includes('tips'))colCount++;
+        if(cols.includes('debts'))colCount++;
+        if(cols.includes('withdrawals'))colCount++;
+        if(cols.includes('deduct'))colCount++;
+        if(cols.includes('total'))colCount++;
+        const nameIdx=cols.includes('name')?2:1;
+        const rowHeight=calculateRowHeight(sectionEmps.length);
+        
         let sh='';
-        sh+=`<h3 style="margin:8px 0 4px;color:#1e3a8a;font-size:12pt;border-bottom:1.5px solid rgba(147,197,253,0.5);padding-bottom:3px">${sectionTitle}</h3>`;
-        sh+=`<table style="border-collapse:collapse;width:100%"><thead><tr style="background:linear-gradient(90deg,rgba(147,197,253,0.35),rgba(249,168,212,0.35))"><th style="${thSt}${hc}">#</th>`;
+        sh+=`<h3 style="margin:6px 0 3px;color:#1e3a8a;font-size:13pt;border-bottom:1.5px solid rgba(147,197,253,0.5);padding-bottom:3px;font-weight:800">${sectionTitle}</h3>`;
+        sh+=`<table style="border-collapse:collapse;width:100%;table-layout:fixed"><thead><tr style="background:linear-gradient(90deg,rgba(147,197,253,0.35),rgba(249,168,212,0.35))"><th style="${thSt}${hc}">#</th>`;
         if(cols.includes('name'))sh+=`<th style="${thSt}${hc}">الموظف</th>`;
         if(cols.includes('salary'))sh+=`<th style="${thSt}${hc}">الراتب الاسمي</th>`;
+        if(cols.includes('percentage'))sh+=`<th style="${thSt}${hc}">النسبة %</th>`;
         if(cols.includes('sales'))sh+=`<th style="${thSt}${hc}">المبيعات</th>`;
         if(cols.includes('tips'))sh+=`<th style="${thSt}${hc}">الإكرامية</th>`;
         if(cols.includes('debts'))sh+=`<th style="${thSt}${hc}">الديون</th>`;
@@ -4163,96 +4510,106 @@ function _buildPrintPayroll(cols){
         let secSalary=0,secWd=0,secDebts=0,secTotal=0;
         sectionEmps.forEach((e,i)=>{
             const sal=e.salary||0;secSalary+=sal;
-            const bg=i%2===0?'rgba(219,234,254,0.3)':'rgba(252,231,243,0.22)';
-            const empDebtsOnly=debts.filter(d=>d.person===e.name&&d.type!=='withdraw'&&d.type!=='repayment');
-            const empRepayments=debts.filter(d=>d.person===e.name&&d.type==='repayment');
-            const debtTotal=empDebtsOnly.reduce((s,d)=>s+d.amount,0)+empRepayments.reduce((s,d)=>s+d.amount,0);secDebts+=debtTotal;
+            const {balance:empBalance}=_getPersonBalance(loadData(KEYS.debts).filter(d=>d.person===e.name));
+            const debtTotal=empBalance;secDebts+=debtTotal;
             const empWithdraws=debts.filter(d=>d.person===e.name&&d.type==='withdraw'&&d.date&&d.date.startsWith(ym));
             const wdTotal=empWithdraws.reduce((s,d)=>s+d.amount,0);secWd+=wdTotal;
-            const combined=debtTotal+wdTotal; // مجموع الديون والسحوبات
-            secTotal+=combined;
-            sh+=`<tr style="background:${bg}"><td style="padding:6px;${brd}text-align:center">${i+1}</td>`;
-            if(cols.includes('name'))sh+=`<td style="padding:6px;${brd}font-weight:800">${e.name}</td>`;
-            if(cols.includes('salary'))sh+=`<td style="padding:6px;${brd}color:#2563eb;font-weight:700">${fmtNum(sal)} ${cur}</td>`;
-            if(cols.includes('sales'))sh+=`<td style="padding:6px;${brd}text-align:center">-</td>`;
-            if(cols.includes('tips'))sh+=`<td style="padding:6px;${brd}text-align:center">-</td>`;
-            if(cols.includes('debts'))sh+=`<td style="padding:6px;${brd}color:${debtTotal>0?'#dc2626':'#16a34a'};font-weight:700">${debtTotal!==0?fmtNum(debtTotal)+' '+cur:'-'}</td>`;
+            secTotal+=debtTotal+wdTotal;
+            const isComm=e.salaryType==='commission';
+            const savedSales=Number(localStorage.getItem('payrollSales_'+e.id+'_'+ym)||0);
+            const commission=isComm&&savedSales>0?savedSales*(e.commRate/100):0;
+            const bg=i%2===0?'rgba(219,234,254,0.3)':'rgba(252,231,243,0.22)';
+            const tdStyle='padding:10px 6px;font-size:12px;vertical-align:middle;word-wrap:break-word;overflow-wrap:break-word';
+            sh+=`<tr style="background:${bg};height:${rowHeight}"><td style="${tdStyle}${brd}text-align:center;font-weight:700">${i+1}</td>`;
+            if(cols.includes('name'))sh+=`<td style="${tdStyle}${brd}font-weight:800">${e.name}</td>`;
+            if(cols.includes('salary'))sh+=`<td style="${tdStyle}${brd}color:#2563eb;font-weight:700">${fmtNum(sal)} ${cur}</td>`;
+            if(cols.includes('percentage'))sh+=`<td style="${tdStyle}${brd}color:#7c3aed;font-weight:700;text-align:center">${isComm?(e.commRate+'%'):'-'}</td>`;
+            if(cols.includes('sales'))sh+=`<td style="${tdStyle}${brd}text-align:center;color:#475569">${savedSales>0?fmtNum(savedSales)+' '+cur:'-'}</td>`;
+            if(cols.includes('tips'))sh+=`<td style="${tdStyle}${brd}text-align:center">-</td>`;
+            if(cols.includes('debts'))sh+=`<td style="${tdStyle}${brd}color:${debtTotal>0?'#dc2626':'#16a34a'};font-weight:700">${debtTotal>0?fmtNum(debtTotal)+' '+cur:'-'}</td>`;
             if(cols.includes('withdrawals')){
-                let wdCell=wdTotal>0?`<span style="color:#d97706;font-weight:700">${fmtNum(wdTotal)} ${cur}</span>`:'-';
-                sh+=`<td style="padding:6px;${brd}text-align:center">${wdCell}</td>`;
+                sh+=`<td style="${tdStyle}${brd}text-align:center">${wdTotal>0?'<span style="color:#d97706;font-weight:700">'+fmtNum(wdTotal)+' '+cur+'</span>':'-'}</td>`;
             }
-            if(cols.includes('deduct'))sh+=`<td style="padding:6px;${brd}text-align:center">-</td>`;
-            if(cols.includes('total'))sh+=`<td style="padding:6px;${brd}color:${combined>0?'#dc2626':'#16a34a'};font-weight:700;text-align:center">${combined>0?fmtNum(combined)+' '+cur:'-'}</td>`;
+            if(cols.includes('deduct'))sh+=`<td style="${tdStyle}${brd}text-align:center">-</td>`;
+            if(cols.includes('total'))sh+=`<td style="${tdStyle}${brd}text-align:center"></td>`;
             sh+=`</tr>`;
         });
-        const nameIdx=cols.includes('name')?2:1;
-        let colCount=1+nameIdx;
-        if(cols.includes('salary'))colCount++;
-        if(cols.includes('sales'))colCount++;
-        if(cols.includes('tips'))colCount++;
-        if(cols.includes('debts'))colCount++;
-        if(cols.includes('withdrawals'))colCount++;
-        if(cols.includes('deduct'))colCount++;
-        if(cols.includes('total'))colCount++;
-        sh+=`<tr style="font-weight:700;background:linear-gradient(90deg,rgba(147,197,253,0.3),rgba(249,168,212,0.3))">`;
-        sh+=`<td colspan="${nameIdx}" style="padding:9px;${brd}color:#1e3a8a">الإجمالي</td>`;
-        if(cols.includes('salary'))sh+=`<td style="padding:9px;${brd}color:#b45309;font-weight:900">${fmtNum(secSalary)} ${cur}</td>`;
-        if(cols.includes('sales'))sh+=`<td style="padding:9px;${brd}">-</td>`;
-        if(cols.includes('tips'))sh+=`<td style="padding:9px;${brd}">-</td>`;
-        if(cols.includes('debts'))sh+=`<td style="padding:9px;${brd}color:#dc2626;font-weight:900">${secDebts>0?fmtNum(secDebts)+' '+cur:'-'}</td>`;
-        if(cols.includes('withdrawals'))sh+=`<td style="padding:9px;${brd}color:#d97706;font-weight:900">${secWd>0?fmtNum(secWd)+' '+cur:'-'}</td>`;
-        if(cols.includes('deduct'))sh+=`<td style="padding:9px;${brd}">-</td>`;
-        if(cols.includes('total'))sh+=`<td style="padding:9px;${brd}color:#dc2626;font-weight:900">${secTotal>0?fmtNum(secTotal)+' '+cur:'-'}</td>`;
+        sh+=`<tr style="font-weight:700;background:linear-gradient(90deg,rgba(147,197,253,0.3),rgba(249,168,212,0.3));height:auto">`;
+        sh+=`<td colspan="${nameIdx}" style="padding:10px;${brd}color:#1e3a8a;font-weight:800">الإجمالي</td>`;
+        if(cols.includes('salary'))sh+=`<td style="padding:10px;${brd}color:#b45309;font-weight:900">${fmtNum(secSalary)} ${cur}</td>`;
+        if(cols.includes('percentage'))sh+=`<td style="padding:10px;${brd}">-</td>`;
+        if(cols.includes('sales'))sh+=`<td style="padding:10px;${brd}">-</td>`;
+        if(cols.includes('tips'))sh+=`<td style="padding:10px;${brd}">-</td>`;
+        if(cols.includes('debts'))sh+=`<td style="padding:10px;${brd}color:#dc2626;font-weight:900">${secDebts>0?fmtNum(secDebts)+' '+cur:'-'}</td>`;
+        if(cols.includes('withdrawals'))sh+=`<td style="padding:10px;${brd}color:#d97706;font-weight:900">${secWd>0?fmtNum(secWd)+' '+cur:'-'}</td>`;
+        if(cols.includes('deduct'))sh+=`<td style="padding:10px;${brd}">-</td>`;
+        if(cols.includes('total'))sh+=`<td style="padding:10px;${brd}"></td>`;
         sh+=`</tr></tbody></table>`;
         return sh;
     }
     const pgStyle='background:linear-gradient(135deg,rgba(219,234,254,0.3),rgba(252,231,243,0.3));border:2px solid rgba(180,160,210,0.3);border-radius:0;padding:0;margin:0;width:100%';
-    const hdrStyle='display:flex;justify-content:space-between;align-items:center;background:linear-gradient(90deg,rgba(219,234,254,0.4),rgba(252,231,243,0.4));border-radius:0;padding:8px 12px;margin-bottom:0;border-bottom:2px solid rgba(180,160,210,0.3)';
+    const hdrStyle='display:flex;justify-content:space-between;align-items:center;background:linear-gradient(90deg,rgba(219,234,254,0.4),rgba(252,231,243,0.4));border-radius:0;padding:10px 14px;margin-bottom:0;border-bottom:2px solid rgba(180,160,210,0.3)';
+    
     function wrapPage(content,title){
         if(!content)return '';
-        let p=`<div class="print-page-border" style="${pgStyle}">`;
+        const fullPageStyle=pgStyle+';min-height:190mm;display:flex;flex-direction:column;box-sizing:border-box';
+        let p=`<div class="print-page-border" style="${fullPageStyle}">`;
         p+=`<div class="print-header" style="${hdrStyle}">`;
-        p+=`<div style="font-size:11pt;font-weight:900;color:#1e3a8a">لافيش سنتر - قسم الملابس</div>`;
-        p+=`<div style="font-size:14pt;font-weight:900;color:#1e3a8a">كشف الرواتب - ${ym}</div>`;
-        p+=`<div style="font-size:10pt;font-weight:800;color:#333;direction:ltr">${dateStr}</div>`;
+        p+=`<div style="font-size:12pt;font-weight:900;color:#1e3a8a">لافيش سنتر - قسم الملابس</div>`;
+        p+=`<div style="font-size:15pt;font-weight:900;color:#1e3a8a">كشف الرواتب - ${ym}</div>`;
+        p+=`<div style="font-size:11pt;font-weight:800;color:#333;direction:ltr">${dateStr}</div>`;
         p+=`</div>`;
-        p+=content;
+        p+=`<div style="flex:1;display:flex;flex-direction:column;padding:6px 4px">${content}</div>`;
         p+=`</div>`;
         return p;
     }
+    
     const maleContent=buildSection(maleEmps,'موظفين الرجالي');
     const femaleContent=buildSection(femaleEmps,'موظفين النسائي');
     let html=wrapPage(maleContent,'موظفين الرجالي');
     if(maleContent&&femaleContent)html+=`<div style="page-break-before:always"></div>`;
     html+=wrapPage(femaleContent,'موظفين النسائي');
-    showPrintDialog(html,true);
+    /* طباعة مباشرة بصيغة أفقية (landscape) */
+    doPrint(html,true,true);
 }
 
 function printPayrollHistory(){ showPayrollColumnPicker('history'); }
 function _buildPrintPayrollHistory(cols){
     if(!hasAction('print'))return toast('غير مصرح');
     const s=loadSettings();const cur=s.currency||'د.ع';const store=s.storeName||'';
-    const ym=$('#payrollHistoryMonth').value||$('#payrollMonth').value||today().slice(0,7);
+    const ym=$('#payrollHistoryMonth').value||$('#payrollMonth').value||(typeof getPrevMonth==='function'?getPrevMonth():today().slice(0,7));
     const emps=loadData(KEYS.employees);
     const payroll=loadData(KEYS.payroll).filter(p=>p.month===ym);
     if(!payroll.length)return toast('لا توجد رواتب مسلّمة لهذا الشهر');
-    const thSt='padding:9px 8px;border:1px solid rgba(180,160,210,0.3);font-weight:900;';
+    const thSt='padding:12px 8px;border:1px solid rgba(180,160,210,0.3);font-weight:900;font-size:13px';
     const brd='border:1px solid rgba(180,160,210,0.25);';
     const hc='color:#1e3a8a';
     const dateStr=getPrintDateString();
     const maleEmps=emps.filter(e=>e.gender!=='female');
     const femaleEmps=emps.filter(e=>e.gender==='female');
     const debts=loadData(KEYS.debts);
+    
+    function calculateRowHeight(totalRows){
+        const headerHeight=80;
+        const footerHeight=60;
+        const availableHeight=680-headerHeight-footerHeight;
+        const minRowHeight=Math.max(50, Math.floor(availableHeight/Math.max(totalRows,3)));
+        return minRowHeight+'px';
+    }
+    
     /* تفاصيل الصرف فقط - مفصولة حسب الجنس */
     function buildDetailSection(sectionEmps,sectionTitle){
         const sPayroll=payroll.filter(p=>sectionEmps.some(e=>e.id===p.empId));
         if(!sPayroll.length)return '';
+        const rowHeight=calculateRowHeight(sPayroll.length);
         let sh='';
-        sh+=`<h3 style="margin:8px 0 4px;color:#1e3a8a;font-size:12pt;border-bottom:1.5px solid rgba(147,197,253,0.5);padding-bottom:3px">${sectionTitle}</h3>`;
-        sh+=`<table style="border-collapse:collapse;width:100%;margin-top:4px"><thead><tr style="background:linear-gradient(90deg,rgba(249,168,212,0.3),rgba(147,197,253,0.35))"><th style="${thSt}${hc}">#</th><th style="${thSt}${hc}">الموظف</th><th style="${thSt}${hc}">الراتب</th>`;
+        sh+=`<h3 style="margin:6px 0 3px;color:#1e3a8a;font-size:13pt;border-bottom:1.5px solid rgba(147,197,253,0.5);padding-bottom:3px;font-weight:800">${sectionTitle}</h3>`;
+        sh+=`<table style="border-collapse:collapse;width:100%;table-layout:fixed;margin-top:4px"><thead><tr style="background:linear-gradient(90deg,rgba(249,168,212,0.3),rgba(147,197,253,0.35))"><th style="${thSt}${hc}">#</th><th style="${thSt}${hc}">الموظف</th><th style="${thSt}${hc}">الراتب النهائي</th>`;
+        if(cols.includes('percentage'))sh+=`<th style="${thSt}${hc}">النسبة %</th>`;
         if(cols.includes('tips'))sh+=`<th style="${thSt}${hc}">الإكرامية</th>`;
         if(cols.includes('deductions'))sh+=`<th style="${thSt}${hc}">الاستقطاعات</th>`;
-        if(cols.includes('combined'))sh+=`<th style="${thSt}${hc}">مجموع الديون والسحوبات</th>`;
+        if(cols.includes('debts'))sh+=`<th style="${thSt}${hc}">الديون</th>`;
+        if(cols.includes('withdrawals'))sh+=`<th style="${thSt}${hc}">السحوبات</th>`;
         if(cols.includes('net'))sh+=`<th style="${thSt}${hc}">الصافي</th>`;
         if(cols.includes('note'))sh+=`<th style="${thSt}${hc}">ملاحظة</th>`;
         sh+=`</tr></thead><tbody>`;
@@ -4262,41 +4619,50 @@ function _buildPrintPayrollHistory(cols){
             const ded=p.deductions?((p.deductions.debt||0)+(p.deductions.attendance||0)+(p.deductions.loan||0)):0;
             const net=p.netPay||p.amount;
             
-            // حساب مجموع الديون والسحوبات
-            const empDebts=debts.filter(d=>d.person===p.empName&&d.type!=='withdraw'&&d.type!=='repayment').reduce((s,d)=>s+d.amount,0);
-            const empWithdraws=debts.filter(d=>d.person===p.empName&&d.type==='withdraw'&&d.date&&d.date.startsWith(ym)).reduce((s,d)=>s+d.amount,0);
-            const combined=empDebts+empWithdraws;
-            
-            secBase+=p.amount;secTips+=tip;secDed+=ded;secCombined+=combined;secNet+=net;
+            const empObj=emps.find(e=>e.id===p.empId)||{};
+            const isCommH=empObj.salaryType==='commission';
+            const commRateH=empObj.commRate||0;
+            const savedSalesH=Number(localStorage.getItem('payrollSales_'+p.empId+'_'+ym)||0);
+            const empDebtsH=debts.filter(d=>d.person===p.empName);
+            const {balance:empDebtBal}=_getPersonBalance(empDebtsH);
+            const empWdH=debts.filter(d=>d.person===p.empName&&d.type==='withdraw'&&d.date&&d.date.startsWith(ym)).reduce((a,d)=>a+d.amount,0);
+            secBase+=p.amount;secTips+=tip;secDed+=ded;secNet+=net;
             const bg=i%2===0?'rgba(219,234,254,0.3)':'rgba(252,231,243,0.22)';
-            sh+=`<tr style="background:${bg}"><td style="padding:6px;${brd}text-align:center">${i+1}</td><td style="padding:6px;${brd}font-weight:800">${p.empName}</td><td style="padding:6px;${brd}color:#2563eb;font-weight:700">${fmtNum(p.amount)} ${cur}</td>`;
-            if(cols.includes('tips'))sh+=`<td style="padding:6px;${brd}color:#9333ea;font-weight:700">${tip>0?fmtNum(tip)+' '+cur:'-'}</td>`;
-            if(cols.includes('deductions'))sh+=`<td style="padding:6px;${brd}color:#dc2626;font-weight:700">${ded>0?fmtNum(ded)+' '+cur:'-'}</td>`;
-            if(cols.includes('combined'))sh+=`<td style="padding:6px;${brd}color:${combined>0?'#dc2626':'#16a34a'};font-weight:700">${combined>0?fmtNum(combined)+' '+cur:'-'}</td>`;
-            if(cols.includes('net'))sh+=`<td style="padding:6px;${brd}color:#16a34a;font-weight:900">${fmtNum(net)} ${cur}</td>`;
-            if(cols.includes('note'))sh+=`<td style="padding:6px;${brd}font-size:11pt">${p.note||''}</td>`;
+            const tdStyle='padding:10px 6px;font-size:12px;vertical-align:middle;word-wrap:break-word;overflow-wrap:break-word';
+            sh+=`<tr style="background:${bg};height:${rowHeight}"><td style="${tdStyle}${brd}text-align:center;font-weight:700">${i+1}</td><td style="${tdStyle}${brd}font-weight:800">${p.empName}</td><td style="${tdStyle}${brd}color:#2563eb;font-weight:700">${fmtNum(p.amount)} ${cur}</td>`;
+            if(cols.includes('percentage'))sh+=`<td style="${tdStyle}${brd}color:#7c3aed;font-weight:700;text-align:center">${isCommH?(commRateH+'%'):'-'}</td>`;
+            if(cols.includes('tips'))sh+=`<td style="${tdStyle}${brd}color:#9333ea;font-weight:700">${tip>0?fmtNum(tip)+' '+cur:'-'}</td>`;
+            if(cols.includes('deductions'))sh+=`<td style="${tdStyle}${brd}color:#dc2626;font-weight:700">${ded>0?fmtNum(ded)+' '+cur:'-'}</td>`;
+            if(cols.includes('debts'))sh+=`<td style="${tdStyle}${brd}color:${empDebtBal>0?'#dc2626':'#16a34a'};font-weight:700">${empDebtBal>0?fmtNum(empDebtBal)+' '+cur:'-'}</td>`;
+            if(cols.includes('withdrawals'))sh+=`<td style="${tdStyle}${brd}color:${empWdH>0?'#d97706':'#16a34a'};font-weight:700">${empWdH>0?fmtNum(empWdH)+' '+cur:'-'}</td>`;
+            if(cols.includes('net'))sh+=`<td style="${tdStyle}${brd}color:#16a34a;font-weight:900">${fmtNum(net)} ${cur}</td>`;
+            if(cols.includes('note'))sh+=`<td style="${tdStyle}${brd}font-size:11px">${(p.note||'').substring(0,50)}</td>`;
             sh+=`</tr>`;
         });
-        sh+=`<tr style="font-weight:700;background:linear-gradient(90deg,rgba(249,168,212,0.3),rgba(147,197,253,0.3))"><td colspan="2" style="padding:9px;${brd}${hc}">الإجمالي</td><td style="padding:9px;${brd}color:#2563eb;font-weight:900">${fmtNum(secBase)} ${cur}</td>`;
-        if(cols.includes('tips'))sh+=`<td style="padding:9px;${brd}color:#9333ea;font-weight:900">${secTips>0?fmtNum(secTips)+' '+cur:'-'}</td>`;
-        if(cols.includes('deductions'))sh+=`<td style="padding:9px;${brd}color:#dc2626;font-weight:900">${secDed>0?fmtNum(secDed)+' '+cur:'-'}</td>`;
-        if(cols.includes('combined'))sh+=`<td style="padding:9px;${brd}color:#dc2626;font-weight:900">${secCombined>0?fmtNum(secCombined)+' '+cur:'-'}</td>`;
-        if(cols.includes('net'))sh+=`<td style="padding:9px;${brd}color:#16a34a;font-weight:900">${fmtNum(secNet)} ${cur}</td>`;
-        if(cols.includes('note'))sh+=`<td style="padding:9px;${brd}"></td>`;
+        sh+=`<tr style="font-weight:700;background:linear-gradient(90deg,rgba(249,168,212,0.3),rgba(147,197,253,0.3));height:auto"><td colspan="2" style="padding:10px;${brd}${hc};font-weight:800">الإجمالي</td><td style="padding:10px;${brd}color:#2563eb;font-weight:900">${fmtNum(secBase)} ${cur}</td>`;
+        if(cols.includes('percentage'))sh+=`<td style="padding:10px;${brd}">-</td>`;
+        if(cols.includes('tips'))sh+=`<td style="padding:10px;${brd}color:#9333ea;font-weight:900">${secTips>0?fmtNum(secTips)+' '+cur:'-'}</td>`;
+        if(cols.includes('deductions'))sh+=`<td style="padding:10px;${brd}color:#dc2626;font-weight:900">${secDed>0?fmtNum(secDed)+' '+cur:'-'}</td>`;
+        if(cols.includes('debts'))sh+=`<td style="padding:10px;${brd}">-</td>`;
+        if(cols.includes('withdrawals'))sh+=`<td style="padding:10px;${brd}">-</td>`;
+        if(cols.includes('net'))sh+=`<td style="padding:10px;${brd}color:#16a34a;font-weight:900">${fmtNum(secNet)} ${cur}</td>`;
+        if(cols.includes('note'))sh+=`<td style="padding:10px;${brd}"></td>`;
         sh+=`</tr></tbody></table>`;
         return sh;
     }
     const pgStyle='background:linear-gradient(135deg,rgba(219,234,254,0.3),rgba(252,231,243,0.3));border:2px solid rgba(180,160,210,0.3);border-radius:0;padding:0;margin:0;width:100%';
-    const hdrStyle='display:flex;justify-content:space-between;align-items:center;background:linear-gradient(90deg,rgba(219,234,254,0.4),rgba(252,231,243,0.4));border-radius:0;padding:8px 12px;margin-bottom:0;border-bottom:2px solid rgba(180,160,210,0.3)';
+    const hdrStyle='display:flex;justify-content:space-between;align-items:center;background:linear-gradient(90deg,rgba(219,234,254,0.4),rgba(252,231,243,0.4));border-radius:0;padding:10px 14px;margin-bottom:0;border-bottom:2px solid rgba(180,160,210,0.3)';
+    
     function wrapPage(content){
         if(!content)return '';
-        let p=`<div class="print-page-border" style="${pgStyle}">`;
+        const pgFullStyle=pgStyle+';min-height:190mm;display:flex;flex-direction:column;box-sizing:border-box';
+        let p=`<div class="print-page-border" style="${pgFullStyle}">`;
         p+=`<div class="print-header" style="${hdrStyle}">`;
-        p+=`<div style="font-size:11pt;font-weight:900;color:#1e3a8a">لافيش سنتر - قسم الملابس</div>`;
-        p+=`<div style="font-size:14pt;font-weight:900;color:#1e3a8a">كشف صرف الرواتب - ${ym}</div>`;
-        p+=`<div style="font-size:10pt;font-weight:800;color:#333;direction:ltr">${dateStr}</div>`;
+        p+=`<div style="font-size:12pt;font-weight:900;color:#1e3a8a">لافيش سنتر - قسم الملابس</div>`;
+        p+=`<div style="font-size:15pt;font-weight:900;color:#1e3a8a">كشف صرف الرواتب - ${ym}</div>`;
+        p+=`<div style="font-size:11pt;font-weight:800;color:#333;direction:ltr">${dateStr}</div>`;
         p+=`</div>`;
-        p+=content;
+        p+=`<div style="flex:1;display:flex;flex-direction:column;padding:6px 4px">${content}</div>`;
         p+=`</div>`;
         return p;
     }
@@ -4305,7 +4671,8 @@ function _buildPrintPayrollHistory(cols){
     let html=wrapPage(maleContent);
     if(maleContent&&femaleContent)html+=`<div style="page-break-before:always"></div>`;
     html+=wrapPage(femaleContent);
-    showPrintDialog(html,true);
+    /* طباعة مباشرة بصيغة أفقية (landscape) */
+    doPrint(html,true,true);
 }
 
 /* ========= CAPITAL (= SAFE) ========= */
@@ -6269,25 +6636,277 @@ function globalSearch(){
 /* ========= PRINT DEBTS ========= */
 function printDebts(){
     if(!hasAction('print'))return toast('غير مصرح');
-    const s=loadSettings();const cur=s.currency||'د.ع';const store=s.storeName||'';
-    const debts=loadData(KEYS.debts);
-    const printDate=new Date().toLocaleDateString('ar-IQ',{year:'numeric',month:'long',day:'numeric'});
-    let html=`<div class="print-page-border">`;
-    html+=`<div class="print-header"><h2>سجل الديون</h2>`;
-    if(store)html+=`<p>${store}</p>`;
-    html+=`<p class="print-date">تاريخ الطباعة: ${printDate}</p></div>`;
-    html+=`<table><thead><tr><th>الشخص</th><th>المبلغ</th><th>ملاحظة</th><th>التاريخ</th></tr></thead><tbody>`;
-    let total=0;
-    debts.forEach(d=>{
-        total+=d.amount;
-        html+=`<tr><td>${d.person}</td><td>${fmtNum(d.amount)} ${cur}</td><td>${d.note||d.cashier||''}</td><td>${d.date}</td></tr>`;
+    const curMonth=new Date().toISOString().slice(0,7);
+    const today_date = new Date().toLocaleDateString('ar-IQ',{year:'numeric',month:'2-digit',day:'2-digit'});
+    const html2=`
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <div style="font-weight:700;margin-bottom:8px;color:var(--primary)"><i class="ri-group-line"></i> نوع الأشخاص</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <label class="print-opt-btn active" id="dpTypeAll" onclick="selectDebtPrintType('all')"><i class="ri-list-check"></i> الكل</label>
+          <label class="print-opt-btn" id="dpTypeEmployees" onclick="selectDebtPrintType('employees')"><i class="ri-user-line"></i> موظفين فقط</label>
+          <label class="print-opt-btn" id="dpTypeCustomers" onclick="selectDebtPrintType('customers')"><i class="ri-group-2-line"></i> عملاء فقط</label>
+        </div>
+      </div>
+      <div>
+        <div style="font-weight:700;margin-bottom:8px;color:var(--primary)"><i class="ri-calendar-line"></i> نوع البيانات</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <label class="print-cb-opt"><input type="checkbox" id="dpShowDebts" checked> <i class="ri-file-list-3-line"></i> ديون فقط</label>
+          <label class="print-cb-opt"><input type="checkbox" id="dpShowWithdraw" checked> <i class="ri-hand-coin-line"></i> سحوبات فقط</label>
+          <label class="print-cb-opt"><input type="checkbox" id="dpShowPayments"> <i class="ri-check-double-line"></i> تسديدات فقط</label>
+        </div>
+      </div>
+      <div>
+        <div style="font-weight:700;margin-bottom:8px;color:var(--primary)"><i class="ri-calendar-line"></i> فترة الحساب</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <label class="print-opt-btn active" id="dpPeriodAll" onclick="selectDebtPrintPeriod('all')"><i class="ri-history-line"></i> جميع الديون</label>
+          <label class="print-opt-btn" id="dpPeriodMonth" onclick="selectDebtPrintPeriod('month')"><i class="ri-calendar-2-line"></i> هذا الشهر فقط</label>
+        </div>
+        <div id="dpMonthPickerRow" style="display:none;margin-top:8px">
+          <input type="month" id="dpMonthPicker" class="input-field" value="${curMonth}">
+        </div>
+      </div>
+      <div>
+        <div style="font-weight:700;margin-bottom:8px;color:var(--primary)"><i class="ri-layout-line"></i> نوع العرض</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <label class="print-cb-opt"><input type="checkbox" id="dpSummaryMode"> <i class="ri-user-line"></i> ملخص رصيد واحد لكل شخص (بدون تفاصيل الحركات)</label>
+        </div>
+      </div>
+      <div>
+        <div style="font-weight:700;margin-bottom:8px;color:var(--primary)"><i class="ri-table-line"></i> الأعمدة المطلوبة</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <label class="print-cb-opt"><input type="checkbox" id="dpColName" checked> الاسم</label>
+          <label class="print-cb-opt"><input type="checkbox" id="dpColDate" checked> التاريخ</label>
+          <label class="print-cb-opt"><input type="checkbox" id="dpColDebt" checked> الديون</label>
+          <label class="print-cb-opt"><input type="checkbox" id="dpColPay" checked> التسديد</label>
+          <label class="print-cb-opt"><input type="checkbox" id="dpColWithdraw"> السحوبات</label>
+          <label class="print-cb-opt"><input type="checkbox" id="dpColNote" checked> الملاحظة</label>
+          <label class="print-cb-opt"><input type="checkbox" id="dpColNet"> الدين المتبقي</label>
+        </div>
+      </div>
+    </div>`;
+    openModal('خيارات طباعة الديون',html2,
+        `<button class="btn btn-warning" onclick="executePrintDebts()"><i class="ri-printer-fill"></i> طباعة</button>
+         <button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>`);
+}
+function selectDebtPrintType(val){
+    ['All','Employees','Customers'].forEach(v=>{
+        const el=document.getElementById('dpType'+v);
+        if(el)el.classList.toggle('active',v.toLowerCase()===val);
     });
-    html+=`</tbody></table>`;
-    html+=`<div class="print-total">الإجمالي: ${fmtNum(total)} ${cur}</div>`;
+}
+function selectDebtPrintPeriod(val){
+    const a=document.getElementById('dpPeriodAll'),m=document.getElementById('dpPeriodMonth');
+    if(a)a.classList.toggle('active',val==='all');
+    if(m)m.classList.toggle('active',val==='month');
+    const row=document.getElementById('dpMonthPickerRow');
+    if(row)row.style.display=val==='month'?'block':'none';
+}
+function executePrintDebts(){
+    const s=loadSettings();const cur=s.currency||'د.ع';const store=s.storeName||'';
+    const emps=loadData(KEYS.employees).map(e=>e.name);
+    let allDebts=loadData(KEYS.debts);
+    const typeVal=(document.querySelector('.print-opt-btn.active[id^="dpType"]')?.id||'dpTypeAll').replace('dpType','').toLowerCase();
+    if(typeVal==='employees') allDebts=allDebts.filter(d=>emps.includes(d.person));
+    else if(typeVal==='customers') allDebts=allDebts.filter(d=>!emps.includes(d.person));
+    const periodAll=document.getElementById('dpPeriodAll')?.classList.contains('active');
+    const ym=document.getElementById('dpMonthPicker')?.value||new Date().toISOString().slice(0,7);
+    if(!periodAll){
+        allDebts=allDebts.filter(d=>d.date&&d.date.startsWith(ym));
+    }
+    const showDebts=document.getElementById('dpShowDebts')?.checked!==false;
+    const showWithdraw=document.getElementById('dpShowWithdraw')?.checked!==false;
+    const showPayments=document.getElementById('dpShowPayments')?.checked||false;
+    if(!showDebts || !showWithdraw || !showPayments){
+        allDebts=allDebts.filter(d=>
+            (showDebts && (!d.type||d.type==='debt')) ||
+            (showWithdraw && d.type==='withdraw') ||
+            (showPayments && (d.type==='repayment'||d.type==='payment'))
+        );
+    }
+    const colName=document.getElementById('dpColName')?.checked!==false;
+    const colDate=document.getElementById('dpColDate')?.checked!==false;
+    const colDebt=document.getElementById('dpColDebt')?.checked!==false;
+    const colPay=document.getElementById('dpColPay')?.checked!==false;
+    const colWithdraw=document.getElementById('dpColWithdraw')?.checked||false;
+    const colNote=document.getElementById('dpColNote')?.checked!==false;
+    const colNet=document.getElementById('dpColNet')?.checked||false;
+    const summaryMode=document.getElementById('dpSummaryMode')?.checked||false;
+    closeModal();
+    const isDebtE=d=>!d.type||d.type==='debt';
+    const isPayE=d=>d.type==='repayment'||d.type==='payment';
+    const isWithE=d=>d.type==='withdraw';
+    const absAmt=d=>Math.abs(d.amount);
+    const persons={};
+    allDebts.forEach(d=>{
+        if(!persons[d.person])persons[d.person]={debtTotal:0,posRepTotal:0,negRepTotal:0,withdrawTotal:0,rows:[]};
+        if(isDebtE(d))         persons[d.person].debtTotal+=d.amount;
+        else if(isPayE(d)&&d.amount>0) persons[d.person].posRepTotal+=d.amount;  // موجب: الدين خُفِّض
+        else if(isPayE(d)&&d.amount<0) persons[d.person].negRepTotal+=d.amount;  // سالب: الدين لم يُخفَّض
+        else if(isWithE(d))    persons[d.person].withdrawTotal+=d.amount;
+        persons[d.person].rows.push(d);
+    });
+    Object.values(persons).forEach(pg=>{
+        pg.payTotal=pg.posRepTotal+Math.abs(pg.negRepTotal);
+        /* balance: طرح السالبات (نموذج قديم)، لا نطرح الموجبات لأن الدين خُفِّض مسبقاً */
+        pg.balance=pg.debtTotal+pg.withdrawTotal+pg.negRepTotal;
+        /* الدين الأصلي قبل التسديد */
+        pg.originalDebt=pg.debtTotal+pg.withdrawTotal+pg.posRepTotal;
+    });
+    const printDate=new Date().toLocaleDateString('ar-IQ',{year:'numeric',month:'long',day:'numeric'});
+    const periodLabel = periodAll ? 'كل الديون' : new Date(ym+'-01').toLocaleDateString('ar-IQ',{year:'numeric',month:'long'});
+    const selectedTypes=[];
+    if(showDebts) selectedTypes.push('ديون');
+    if(showWithdraw) selectedTypes.push('سحوبات');
+    if(showPayments) selectedTypes.push('تسديدات');
+    const operationsLabel = selectedTypes.length ? selectedTypes.join(' + ') : 'لا توجد عمليات محددة';
+    const totalDebtRec =allDebts.filter(isDebtE).reduce((s,d)=>s+d.amount,0);
+    const totalPosRep  =allDebts.filter(d=>isPayE(d)&&d.amount>0).reduce((s,d)=>s+d.amount,0);
+    const totalNegRep  =allDebts.filter(d=>isPayE(d)&&d.amount<0).reduce((s,d)=>s+d.amount,0);
+    const totalWith    =allDebts.filter(isWithE).reduce((s,d)=>s+d.amount,0);
+    const totalPay     =totalPosRep+Math.abs(totalNegRep);
+    const totalDebt    =totalDebtRec+totalWith+totalPosRep; /* الأصلي */
+    const totalNet     =totalDebtRec+totalWith+totalNegRep; /* المتبقي */
+    const typeLabel=typeVal==='employees'?'ديون الموظفين':typeVal==='customers'?'ديون العملاء':'سجل الديون';
+    let html=`<div class="print-page-border">`;
+    html+=`<div class="print-header"><h2>${typeLabel}${summaryMode?' - ملخص الدين المتبقي':''}</h2>`;
+    if(store)html+=`<p style="font-weight:700">${store}</p>`;
+    html+=`<p class="print-date">تاريخ الطباعة: ${printDate}</p><p class="print-date">الفترة: ${periodLabel} | العمليات: ${operationsLabel}</p></div>`;
+    html+=`<div style="display:flex;gap:0;flex-wrap:wrap;margin-bottom:14px;border-radius:10px;overflow:hidden;border:1.5px solid #e2e8f0">
+        <div style="flex:1;min-width:80px;text-align:center;padding:10px 6px;background:#fff5f5">
+            <div style="font-size:.65rem;color:#64748b">إجمالي الديون</div>
+            <div style="font-weight:800;color:#dc2626">${fmtNum(totalDebt)} ${cur}</div>
+        </div>
+        <div style="flex:1;min-width:80px;text-align:center;padding:10px 6px;background:#f0fdf4;border-right:1px solid #e2e8f0;border-left:1px solid #e2e8f0">
+            <div style="font-size:.65rem;color:#64748b">إجمالي التسديدات</div>
+            <div style="font-weight:800;color:#16a34a">${fmtNum(totalPay)} ${cur}</div>
+        </div>
+        <div style="flex:1;min-width:80px;text-align:center;padding:10px 6px;background:#fffbeb;border-left:1px solid #e2e8f0">
+            <div style="font-size:.65rem;color:#64748b">إجمالي السحوبات</div>
+            <div style="font-weight:800;color:#d97706">${fmtNum(totalWith)} ${cur}</div>
+        </div>
+        <div style="flex:1;min-width:80px;text-align:center;padding:10px 6px;background:#fef2f2">
+            <div style="font-size:.65rem;color:#64748b">الدين المتبقي الكلي</div>
+            <div style="font-weight:800;color:${totalNet>0?'#dc2626':'#16a34a'}">${fmtNum(totalNet)} ${cur}</div>
+        </div>
+    </div>`;
+    if(summaryMode){
+        /* للموظفين: عرض السحوبات | للعملاء والكل: عرض التاريخ */
+        const showWdCol  = typeVal==='employees';
+        const showDtCol  = !showWdCol;
+        const printDateFull2=new Date().toLocaleDateString('ar-IQ',{year:'numeric',month:'long',day:'numeric'});
+        html+=`<table style="width:100%;border-collapse:collapse;font-size:.82rem">
+        <thead><tr style="background:#1e293b;color:#fff">
+            <th style="padding:8px 6px">#</th><th style="padding:8px 6px">الاسم</th>
+            ${showDtCol?'<th style="padding:8px 6px;text-align:center;background:#475569">آخر تعامل</th>':''}
+            <th style="padding:8px 6px;text-align:center;background:#dc2626">الديون</th>
+            ${showWdCol?'<th style="padding:8px 6px;text-align:center;background:#d97706">السحوبات</th>':''}
+            <th style="padding:8px 6px;text-align:center;background:#16a34a">التسديد</th>
+            <th style="padding:8px 6px;text-align:center;background:#4f46e5">الدين المتبقي</th>
+        </tr></thead><tbody>`;
+        let idx=1;
+        Object.keys(persons).forEach(person=>{
+            const pg=persons[person];
+            const balance=pg.balance;
+            const shortName=person.split(/\s+/).slice(0,3).join(' ');
+            const lastDate=pg.rows.reduce((l,r)=>(r.date||'')>l?r.date:l,'');
+            const bg=idx%2===0?'#f8fafc':'#ffffff';
+            html+=`<tr style="background:${bg};border-bottom:1px solid #e2e8f0">
+                <td style="padding:6px;text-align:center;color:#94a3b8;font-size:.75rem">${idx}</td>
+                <td style="padding:6px;font-weight:700">${shortName}</td>
+                ${showDtCol?`<td style="padding:6px;text-align:center;color:#64748b;font-size:.78rem">${lastDate||printDateFull2}</td>`:''}
+                <td style="padding:6px;text-align:center;color:${pg.debtTotal>0?'#dc2626':'#94a3b8'}">${pg.debtTotal>0?fmtNum(pg.debtTotal)+' '+cur:'-'}</td>
+                ${showWdCol?`<td style="padding:6px;text-align:center;color:${pg.withdrawTotal>0?'#d97706':'#94a3b8'}">${pg.withdrawTotal>0?fmtNum(pg.withdrawTotal)+' '+cur:'-'}</td>`:''}
+                <td style="padding:6px;text-align:center;color:${pg.payTotal>0?'#16a34a':'#94a3b8'}">${pg.payTotal>0?fmtNum(pg.payTotal)+' '+cur:'-'}</td>
+                <td style="padding:6px;text-align:center;font-weight:800;color:${balance>0?'#dc2626':'#16a34a'}">${fmtNum(balance)} ${cur}</td>
+            </tr>`;
+            idx++;
+        });
+        const totCols=2+(showDtCol?1:0);
+        html+=`<tr style="background:#1e293b;color:#fff;font-weight:800">
+            <td colspan="${totCols}" style="padding:8px 6px">الإجمالي (${idx-1} شخص)</td>
+            <td style="padding:8px 6px;text-align:center;color:#fca5a5">${fmtNum(totalDebt)} ${cur}</td>
+            ${showWdCol?`<td style="padding:8px 6px;text-align:center;color:#fde68a">${fmtNum(totalWith)} ${cur}</td>`:''}
+            <td style="padding:8px 6px;text-align:center;color:#86efac">${fmtNum(totalPay)} ${cur}</td>
+            <td style="padding:8px 6px;text-align:center;color:${totalNet>0?'#fca5a5':'#86efac'}">${fmtNum(totalNet)} ${cur}</td>
+        </tr></tbody></table>`;
+    } else {
+        let ths='';
+        if(colName)ths+=`<th style="background:#1e293b;color:#fff;padding:8px 6px">الاسم</th>`;
+        if(colDate)ths+=`<th style="background:#1e293b;color:#fff;padding:8px 6px">التاريخ</th>`;
+        if(colDebt)ths+=`<th style="background:#dc2626;color:#fff;padding:8px 6px">الديون</th>`;
+        if(colPay)ths+=`<th style="background:#16a34a;color:#fff;padding:8px 6px">التسديد</th>`;
+        if(colWithdraw)ths+=`<th style="background:#d97706;color:#fff;padding:8px 6px">السحوبات</th>`;
+        if(colNote)ths+=`<th style="background:#1e293b;color:#fff;padding:8px 6px">الملاحظة</th>`;
+        if(colNet)ths+=`<th style="background:#4f46e5;color:#fff;padding:8px 6px">الدين المتبقي</th>`;
+        html+=`<table style="width:100%;border-collapse:collapse;font-size:.82rem"><thead><tr>${ths}</tr></thead><tbody>`;
+        let rowBg=false;
+        Object.keys(persons).forEach(person=>{
+            const pg=persons[person];
+            const balance=pg.balance;
+            const shortName=person.split(/\s+/).slice(0,3).join(' ');
+            const rows=pg.rows.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+            rows.forEach((d,ri)=>{
+                const isD=isDebtE(d),isP=isPayE(d),isW=isWithE(d);
+                const dispAmt=isP?absAmt(d):d.amount;
+                const rowColor = isP?'#f0fdf4':isW?'#fffbeb':'#fff5f5';
+                const rs=`background:${rowBg?rowColor:'#ffffff'};border-bottom:1px solid #e2e8f0`;
+                let tds='';
+                if(colName)tds+=`<td style="${rs};padding:6px;font-weight:${ri===0?'700':'400'}">${ri===0?shortName:''}</td>`;
+                if(colDate)tds+=`<td style="${rs};padding:6px;color:#64748b;font-size:.78rem">${d.date||''}</td>`;
+                if(colDebt)tds+=`<td style="${rs};padding:6px;text-align:center;color:${isD?'#dc2626':'#9ca3af'};font-weight:${isD?'700':'400'}">${isD?fmtNum(dispAmt)+' '+cur:'-'}</td>`;
+                if(colPay)tds+=`<td style="${rs};padding:6px;text-align:center;color:${isP?'#16a34a':'#9ca3af'};font-weight:${isP?'700':'400'}">${isP?fmtNum(dispAmt)+' '+cur:'-'}</td>`;
+                if(colWithdraw)tds+=`<td style="${rs};padding:6px;text-align:center;color:${isW?'#d97706':'#9ca3af'};font-weight:${isW?'700':'400'}">${isW?fmtNum(dispAmt)+' '+cur:'-'}</td>`;
+                if(colNote)tds+=`<td style="${rs};padding:6px;color:#64748b;font-size:.78rem">${d.note||d.cashier||''}</td>`;
+                if(colNet&&ri===rows.length-1)tds+=`<td style="${rs};padding:6px;text-align:center;font-weight:800;color:${balance>0?'#dc2626':'#16a34a'}">${fmtNum(balance)} ${cur}</td>`;
+                else if(colNet)tds+=`<td style="${rs}"></td>`;
+                html+=`<tr>${tds}</tr>`;
+            });
+            if(rows.length>1){
+                let stds='';
+                if(colName)stds+=`<td style="background:#f1f5f9;padding:5px 6px;font-weight:700;font-size:.78rem;color:#475569">مجموع: ${shortName}</td>`;
+                if(colDate)stds+=`<td style="background:#f1f5f9"></td>`;
+                if(colDebt)stds+=`<td style="background:#f1f5f9;padding:5px 6px;text-align:center;font-weight:700;color:#dc2626">${fmtNum(pg.debtTotal)} ${cur}</td>`;
+                if(colPay)stds+=`<td style="background:#f1f5f9;padding:5px 6px;text-align:center;font-weight:700;color:#16a34a">${fmtNum(pg.payTotal)} ${cur}</td>`;
+                if(colWithdraw)stds+=`<td style="background:#f1f5f9;padding:5px 6px;text-align:center;font-weight:700;color:#d97706">${fmtNum(pg.withdrawTotal)} ${cur}</td>`;
+                if(colNote)stds+=`<td style="background:#f1f5f9"></td>`;
+                if(colNet)stds+=`<td style="background:#f1f5f9;padding:5px 6px;text-align:center;font-weight:800;color:${balance>0?'#dc2626':'#16a34a'}">${fmtNum(balance)} ${cur}</td>`;
+                html+=`<tr>${stds}</tr>`;
+            }
+            rowBg=!rowBg;
+        });
+        html+=`</tbody></table>`;
+    }
+    html+=`<div class="print-total">الدين المتبقي الكلي: ${fmtNum(totalNet)} ${cur}</div>`;
     html+=`</div>`;
     showPrintDialog(html);
 }
 
+function printPersonDebts(person){
+    if(!hasAction('print'))return toast('غير مصرح');
+    const s=loadSettings();const cur=s.currency||'د.ع';const store=s.storeName||'';
+    const debts=loadData(KEYS.debts).filter(d=>d.person===person);
+    const total=debts.filter(d=>!d.type||d.type==='debt').reduce((s,d)=>s+d.amount,0);
+    const totalPaid=debts.filter(d=>d.type==='repayment'||d.type==='payment').reduce((s,d)=>s+Math.abs(d.amount),0);
+    const totalWithdraw=debts.filter(d=>d.type==='withdraw').reduce((s,d)=>s+d.amount,0);
+    const balance=total+totalWithdraw-totalPaid;
+    const printDate=new Date().toLocaleDateString('ar-IQ',{year:'numeric',month:'long',day:'numeric'});
+    let html=`<div class="print-page-border">`;
+    html+=`<div class="print-header"><h2>كشف ديون: ${person}</h2>`;
+    if(store)html+=`<p>${store}</p>`;
+    html+=`<p class="print-date">تاريخ الطباعة: ${printDate}</p></div>`;
+    html+=`<table><thead><tr><th>التاريخ</th><th>النوع</th><th>المبلغ</th><th>ملاحظة</th></tr></thead><tbody>`;
+    debts.sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(d=>{
+        const clr=d.type==='repayment'?'p-income':d.type==='withdraw'?'p-withdraw':'p-debt';
+        const lbl=d.type==='repayment'?'تسديد':d.type==='withdraw'?'سحب':'دين';
+        const amount = d.type==='repayment' ? Math.abs(d.amount) : d.amount;
+        html+=`<tr><td>${d.date}</td><td>${lbl}</td><td class="${clr}">${fmtNum(amount)} ${cur}</td><td>${d.note||''}</td></tr>`;
+    });
+    html+=`</tbody></table>`;
+    html+=`<div class="print-total">الدين المتبقي: ${fmtNum(balance)} ${cur}</div>`;
+    html+=`</div>`;
+    closeModal();showPrintDialog(html);
+}
 /* ========= PRINT EXPENSES ========= */
 function printExpenses(){
     if(!hasAction('print'))return toast('غير مصرح');
@@ -6561,8 +7180,9 @@ function getPrintDateString(){
 }
 function wrapPrintHtml(html,noHeader){
     const dateStr=getPrintDateString();
+    const _ws=loadSettings?loadSettings():{};const _sn=_ws.storeName||'قسم الملابس';
     const header=noHeader?'':`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0;padding:4px 0 6px;border-bottom:2.5px solid #333">
-        <div style="font-size:11pt;font-weight:900;color:#111;text-align:right">قسم الملابس<br>لافيش سنتر</div>
+        <div style="font-size:11pt;font-weight:900;color:#111;text-align:right">${_sn}</div>
         <div style="font-size:10pt;font-weight:800;color:#111;text-align:left;direction:ltr">${dateStr}</div>
     </div>`;
     const footer=`<div style="margin-top:20px;padding-top:10px;border-top:1.5px solid #999">
@@ -7314,3 +7934,78 @@ function initApp(){
     /* service worker */
     if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}
 }
+/* ========= UNIFIED PRINT HELPERS ========= */
+function buildPrintHeader(title,subtitle){
+    var s=loadSettings();var store=s.storeName||'';
+    var printDate=new Date().toLocaleDateString('ar-IQ',{year:'numeric',month:'long',day:'numeric'});
+    var h='<div class="print-header"><h2>'+title+'</h2>';
+    if(store)h+='<p style="font-weight:700;color:#334155">'+store+'</p>';
+    if(subtitle)h+='<p style="color:#64748b;font-size:.85rem">'+subtitle+'</p>';
+    h+='<p class="print-date">تاريخ الطباعة: '+printDate+'</p></div>';
+    return h;
+}
+function buildPrintStatsBar(stats){
+    var h='<div style="display:flex;gap:0;flex-wrap:wrap;margin-bottom:14px;border-radius:10px;overflow:hidden;border:1.5px solid #e2e8f0">';
+    stats.forEach(function(st,i){
+        var border=i<stats.length-1?'border-left:1px solid #e2e8f0':'';
+        h+='<div style="flex:1;min-width:80px;text-align:center;padding:10px 6px;background:'+(st.bg||'#f8fafc')+';'+border+'">'
+            +'<div style="font-size:.65rem;color:#64748b;margin-bottom:2px">'+st.label+'</div>'
+            +'<div style="font-weight:800;font-size:.92rem;color:'+(st.color||'#1e293b')+'">'+st.value+'</div>'
+            +'</div>';
+    });
+    return h+'</div>';
+}
+function buildPrintPage(opts){
+    var title=opts.title||'';var store=opts.store||'';var stats=opts.stats||[];
+    var columns=opts.columns||[];var rows=opts.rows||[];
+    var footerLabel=opts.footerLabel||'';var footer=opts.footer||'';
+    var s=loadSettings();var cur=s.currency||'د.ع';var st=store||s.storeName||'';
+    var html='<div class="print-page-border">';
+    html+=buildPrintHeader(title);
+    if(stats.length){
+        html+='<div style="display:flex;gap:0;flex-wrap:wrap;margin-bottom:14px;border-radius:10px;overflow:hidden;border:1.5px solid #e2e8f0">';
+        stats.forEach(function(sta,i){
+            var border=i<stats.length-1?'border-left:1px solid #e2e8f0':'';
+            html+='<div style="flex:1;min-width:80px;text-align:center;padding:10px 6px;background:'+(sta.bg||'#f8fafc')+';'+border+'">'
+                +'<div style="font-size:.65rem;color:#64748b">'+sta.label+'</div>'
+                +'<div style="font-weight:800;font-size:.92rem;color:'+(sta.color||'#1e293b')+'">'+sta.value+'</div>'
+                +'</div>';
+        });
+        html+='</div>';
+    }
+    if(columns.length&&rows.length){
+        html+='<table style="width:100%;border-collapse:collapse;font-size:.82rem"><thead><tr>';
+        columns.forEach(function(c){
+            html+='<th style="background:'+(c.bg||'#1e293b')+';color:'+(c.color||'#fff')+';padding:8px 6px;text-align:'+(c.align||'right')+'">'+c.label+'</th>';
+        });
+        html+='</tr></thead><tbody>';
+        rows.forEach(function(r,ri){
+            var bg=ri%2===0?'#ffffff':'#f8fafc';
+            html+='<tr style="background:'+bg+';border-bottom:1px solid #e2e8f0">';
+            columns.forEach(function(c){
+                var val=r[c.key]!==undefined?r[c.key]:'';
+                html+='<td style="padding:6px;text-align:'+(c.align||'right')+'">'+val+'</td>';
+            });
+            html+='</tr>';
+        });
+        html+='</tbody></table>';
+    }
+    if(footerLabel||footer)html+='<div class="print-total">'+(footerLabel?footerLabel+': ':'')+footer+'</div>';
+    html+='</div>';
+    return html;
+}
+/* ===== Print opt button CSS helpers (injected) ===== */
+(function(){
+    var style=document.createElement('style');
+    style.textContent='.print-opt-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:20px;background:var(--surface2);border:2px solid var(--border);cursor:pointer;font-size:.82rem;font-weight:600;transition:all .2s;color:var(--text)}'
+        +'.print-opt-btn.active{background:var(--primary);border-color:var(--primary);color:#fff}'
+        +'.print-cb-opt{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;font-size:.82rem;font-weight:500}'
+        +'.print-cb-opt input{accent-color:var(--primary)}'
+        +'.active-view{background:var(--primary)!important;color:#fff!important;border-color:var(--primary)!important}'
+        +'.view-toggle-bar{display:flex;align-items:center;justify-content:space-between;margin:8px 0}'
+        +'.view-toggle-btns{display:flex;gap:4px}'
+        +'.view-toggle-btns button{padding:5px 8px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;font-size:.82rem;transition:all .2s}'
+        +'.view-toggle-btns button.active-view{background:var(--primary);border-color:var(--primary);color:#fff}'
+        +'.debts-summary-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}';
+    document.head.appendChild(style);
+})();
