@@ -4430,17 +4430,41 @@ function deletePayrollEntry(id){
     toast('تم الحذف');renderPayroll();
 }
 function showPayrollColumnPicker(mode){
-    /* mode: 'blank' = كشف رواتب, 'history' = كشف صرف */
+    /* mode: 'blank' = كشف رواتب, 'history' = كشف صرف
+       موحّدة: نفس التسميات والخيارات لكلا القالبين */
     if(!hasAction('print'))return toast('غير مصرح');
-    const cols=mode==='blank'
-        ?[{key:'name',label:'الموظف',fixed:true},{key:'salary',label:'الراتب الاسمي',fixed:true},{key:'percentage',label:'النسبة %'},{key:'sales',label:'المبيعات'},{key:'tips',label:'الإكرامية'},{key:'debts',label:'الديون'},{key:'withdrawals',label:'السحوبات'},{key:'deduct',label:'الاستقطاع'},{key:'total',label:'المجموع النهائي'}]
-        :[{key:'name',label:'الموظف',fixed:true},{key:'salary',label:'الراتب النهائي',fixed:true},{key:'percentage',label:'النسبة %'},{key:'tips',label:'الإكرامية'},{key:'deductions',label:'الاستقطاعات'},{key:'debts',label:'الديون'},{key:'withdrawals',label:'السحوبات'},{key:'net',label:'الصافي',fixed:true},{key:'note',label:'ملاحظة'}];
-    let body=`<div style="direction:rtl;text-align:right;padding:4px 0"><p style="margin-bottom:8px;font-weight:700;font-size:.95rem">اختر الأعمدة المطلوبة:</p>`;
-    body+=`<label style="display:block;margin-bottom:6px;cursor:pointer"><input type="checkbox" id="pcolAll" checked onchange="document.querySelectorAll('.pcol-cb').forEach(c=>{if(!c.disabled)c.checked=this.checked})"> <strong>تحديد الكل</strong></label><hr style="margin:6px 0;border-color:rgba(0,0,0,.1)">`;
+    /* الأعمدة الموحدة: name + salary + sales + commission + totalSalary + debts + deduct + net + tip */
+    const baseCols=[
+        {key:'name',label:'الاسم'},
+        {key:'salary',label:'الراتب الاسمي'},
+        {key:'sales',label:'المبيعات'},
+        {key:'percentage',label:'النسبة %'},
+        {key:'commission',label:'الحوافز'},
+        {key:'totalSalary',label:'مجموع الراتب'},
+        {key:'debts',label:'الديون'},
+        {key:'deduct',label:'الاستقطاع'},
+        {key:'net',label:'الراتب النهائي'},
+        {key:'tip',label:'الإكرامية'}
+    ];
+    const cols=baseCols;
+    let body=`<div style="direction:rtl;text-align:right;padding:4px 0">
+        <p style="margin-bottom:6px;font-weight:700;font-size:.95rem">اختر الأعمدة المطلوبة وقيمها:</p>
+        <p style="font-size:.78rem;color:var(--text2);margin-bottom:10px">✓ <strong>إظهار العمود</strong>: يضيف العمود إلى الجدول | ✓ <strong>إظهار القيم</strong>: يملأ العمود بالبيانات (وإلا يبقى فارغاً)</p>
+        <div style="display:grid;grid-template-columns:auto auto auto;gap:8px 14px;align-items:center;background:var(--surface2);padding:10px;border-radius:8px">
+            <strong style="font-size:.82rem;color:var(--primary)">العمود</strong>
+            <strong style="font-size:.82rem;color:var(--primary);text-align:center">إظهار العمود</strong>
+            <strong style="font-size:.82rem;color:var(--primary);text-align:center">إظهار القيم</strong>`;
     cols.forEach(c=>{
-        body+=`<label style="display:block;margin-bottom:5px;cursor:pointer"><input type="checkbox" class="pcol-cb" data-col="${c.key}" checked ${c.fixed?'disabled':''}> ${c.label}${c.fixed?' (أساسي)':''}</label>`;
+        body+=`<span style="font-size:.86rem">${c.label}</span>
+            <label style="text-align:center;cursor:pointer"><input type="checkbox" class="pcol-cb" data-col="${c.key}" checked style="width:18px;height:18px;cursor:pointer;accent-color:var(--primary)"></label>
+            <label style="text-align:center;cursor:pointer"><input type="checkbox" class="pval-cb" data-col="${c.key}" ${c.key==='tip'?'':'checked'} style="width:18px;height:18px;cursor:pointer;accent-color:#16a34a"></label>`;
     });
-    body+=`</div>`;
+    body+=`</div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn btn-ghost btn-sm" onclick="document.querySelectorAll('.pcol-cb').forEach(c=>c.checked=true);document.querySelectorAll('.pval-cb').forEach(c=>c.checked=true)">✓ تحديد الكل</button>
+            <button class="btn btn-ghost btn-sm" onclick="document.querySelectorAll('.pval-cb').forEach(c=>c.checked=false)">⊗ كل القيم فارغة</button>
+        </div>
+        </div>`;
     openModal('خيارات أعمدة الطباعة',body,`<button class="btn btn-primary" onclick="_doPrintPayroll('${mode}')"><i class="ri-printer-fill"></i> طباعة</button><button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>`);
 }
 function _getSelectedPrintCols(){
@@ -4448,15 +4472,26 @@ function _getSelectedPrintCols(){
     document.querySelectorAll('.pcol-cb:checked').forEach(c=>checked.push(c.dataset.col));
     return checked;
 }
+function _getSelectedPrintValues(){
+    const valuesShown=[];
+    document.querySelectorAll('.pval-cb:checked').forEach(c=>valuesShown.push(c.dataset.col));
+    return valuesShown;
+}
 function _doPrintPayroll(mode){
     const cols=_getSelectedPrintCols();
+    const values=_getSelectedPrintValues();
     closeModal();
-    if(mode==='blank') _buildPrintPayroll(cols);
-    else _buildPrintPayrollHistory(cols);
+    if(mode==='blank') _buildPrintPayroll(cols,values);
+    else _buildPrintPayrollHistory(cols,values);
+}
+/* helper: إذا الـ key ليس في values → نرجع فارغ */
+function _showVal(key,values,renderedHtml){
+    return values.includes(key)?renderedHtml:'';
 }
 
 function printPayroll(){ showPayrollColumnPicker('blank'); }
-function _buildPrintPayroll(cols){
+function _buildPrintPayroll(cols,values){
+    values=values||cols; /* افتراضياً جميع القيم تُعرض */
     const s=loadSettings();const cur=s.currency||'د.ع';const store=s.storeName||'';
     const emps=loadData(KEYS.employees);
     if(!emps.length)return toast('لا يوجد موظفين');
@@ -4486,64 +4521,64 @@ function _buildPrintPayroll(cols){
         if(cols.includes('name'))colCount++;
         if(cols.includes('salary'))colCount++;
         if(cols.includes('sales'))colCount++;
-        if(cols.includes('tips'))colCount++;
+        if(cols.includes('commission'))colCount++;
+        if(cols.includes('totalSalary'))colCount++;
         if(cols.includes('debts'))colCount++;
-        if(cols.includes('withdrawals'))colCount++;
         if(cols.includes('deduct'))colCount++;
-        if(cols.includes('total'))colCount++;
+        if(cols.includes('net'))colCount++;
+        if(cols.includes('tip'))colCount++;
         const nameIdx=cols.includes('name')?2:1;
         const rowHeight=calculateRowHeight(sectionEmps.length);
         
         let sh='';
         sh+=`<h3 style="margin:6px 0 3px;color:#1e3a8a;font-size:13pt;border-bottom:1.5px solid rgba(147,197,253,0.5);padding-bottom:3px;font-weight:800">${sectionTitle}</h3>`;
-        sh+=`<table style="border-collapse:collapse;width:100%;table-layout:fixed"><thead><tr style="background:linear-gradient(90deg,rgba(147,197,253,0.35),rgba(249,168,212,0.35))"><th style="${thSt}${hc}">#</th>`;
-        if(cols.includes('name'))sh+=`<th style="${thSt}${hc}">الموظف</th>`;
+        sh+=`<table style="border-collapse:collapse;width:100%;table-layout:fixed"><thead><tr style="background:linear-gradient(90deg,rgba(147,197,253,0.35),rgba(249,168,212,0.35))"><th style="${thSt}${hc};padding:8px 3px;width:5%">#</th>`;
+        if(cols.includes('name'))sh+=`<th style="${thSt}${hc}">الاسم</th>`;
         if(cols.includes('salary'))sh+=`<th style="${thSt}${hc}">الراتب الاسمي</th>`;
-        if(cols.includes('percentage'))sh+=`<th style="${thSt}${hc}">النسبة %</th>`;
         if(cols.includes('sales'))sh+=`<th style="${thSt}${hc}">المبيعات</th>`;
-        if(cols.includes('tips'))sh+=`<th style="${thSt}${hc}">الإكرامية</th>`;
+        if(cols.includes('percentage'))sh+=`<th style="${thSt}${hc}">النسبة %</th>`;
+        if(cols.includes('commission'))sh+=`<th style="${thSt}${hc}">الحوافز</th>`;
+        if(cols.includes('totalSalary'))sh+=`<th style="${thSt}${hc}">مجموع الراتب</th>`;
         if(cols.includes('debts'))sh+=`<th style="${thSt}${hc}">الديون</th>`;
-        if(cols.includes('withdrawals'))sh+=`<th style="${thSt}${hc}">السحوبات</th>`;
         if(cols.includes('deduct'))sh+=`<th style="${thSt}${hc}">الاستقطاع</th>`;
-        if(cols.includes('total'))sh+=`<th style="${thSt}${hc}">المجموع النهائي</th>`;
+        if(cols.includes('net'))sh+=`<th style="${thSt}${hc}">الراتب النهائي</th>`;
+        if(cols.includes('tip'))sh+=`<th style="${thSt}${hc}">الإكرامية</th>`;
         sh+=`</tr></thead><tbody>`;
-        let secSalary=0,secWd=0,secDebts=0,secTotal=0;
+        let secSalary=0,secCommission=0,secTotalSalary=0,secDebts=0;
         sectionEmps.forEach((e,i)=>{
             const sal=e.salary||0;secSalary+=sal;
             const {balance:empBalance}=_getPersonBalance(loadData(KEYS.debts).filter(d=>d.person===e.name));
             const debtTotal=empBalance;secDebts+=debtTotal;
-            const empWithdraws=debts.filter(d=>d.person===e.name&&d.type==='withdraw'&&d.date&&d.date.startsWith(ym));
-            const wdTotal=empWithdraws.reduce((s,d)=>s+d.amount,0);secWd+=wdTotal;
-            secTotal+=debtTotal+wdTotal;
             const isComm=e.salaryType==='commission';
             const savedSales=Number(localStorage.getItem('payrollSales_'+e.id+'_'+ym)||0);
-            const commission=isComm&&savedSales>0?savedSales*(e.commRate/100):0;
+            const commission=isComm&&savedSales>0?savedSales*(e.commRate/100):0;secCommission+=commission;
+            const totalSal=sal+commission;secTotalSalary+=totalSal;
             const bg=i%2===0?'rgba(219,234,254,0.3)':'rgba(252,231,243,0.22)';
             const tdStyle='padding:10px 6px;font-size:12px;vertical-align:middle;word-wrap:break-word;overflow-wrap:break-word';
-            sh+=`<tr style="background:${bg};height:${rowHeight}"><td style="${tdStyle}${brd}text-align:center;font-weight:700">${i+1}</td>`;
-            if(cols.includes('name'))sh+=`<td style="${tdStyle}${brd}font-weight:800">${e.name}</td>`;
-            if(cols.includes('salary'))sh+=`<td style="${tdStyle}${brd}color:#2563eb;font-weight:700">${fmtNum(sal)} ${cur}</td>`;
-            if(cols.includes('percentage'))sh+=`<td style="${tdStyle}${brd}color:#7c3aed;font-weight:700;text-align:center">${isComm?(e.commRate+'%'):'-'}</td>`;
-            if(cols.includes('sales'))sh+=`<td style="${tdStyle}${brd}text-align:center;color:#475569">${savedSales>0?fmtNum(savedSales)+' '+cur:'-'}</td>`;
-            if(cols.includes('tips'))sh+=`<td style="${tdStyle}${brd}text-align:center">-</td>`;
-            if(cols.includes('debts'))sh+=`<td style="${tdStyle}${brd}color:${debtTotal>0?'#dc2626':'#16a34a'};font-weight:700">${debtTotal>0?fmtNum(debtTotal)+' '+cur:'-'}</td>`;
-            if(cols.includes('withdrawals')){
-                sh+=`<td style="${tdStyle}${brd}text-align:center">${wdTotal>0?'<span style="color:#d97706;font-weight:700">'+fmtNum(wdTotal)+' '+cur+'</span>':'-'}</td>`;
-            }
-            if(cols.includes('deduct'))sh+=`<td style="${tdStyle}${brd}text-align:center">-</td>`;
-            if(cols.includes('total'))sh+=`<td style="${tdStyle}${brd}text-align:center"></td>`;
+            sh+=`<tr style="background:${bg};height:${rowHeight}"><td style="${tdStyle}${brd}text-align:center;font-weight:700;width:5%">${i+1}</td>`;
+            if(cols.includes('name'))sh+=`<td style="${tdStyle}${brd}font-weight:800;white-space:nowrap">${values.includes('name')?e.name:''}</td>`;
+            if(cols.includes('salary'))sh+=`<td style="${tdStyle}${brd}color:#2563eb;font-weight:700">${values.includes('salary')?fmtNum(sal):''}</td>`;
+            if(cols.includes('sales'))sh+=`<td style="${tdStyle}${brd}text-align:center;color:#475569">${values.includes('sales')?(savedSales>0?fmtNum(savedSales):'-'):''}</td>`;
+            if(cols.includes('percentage'))sh+=`<td style="${tdStyle}${brd}text-align:center;color:#7c3aed;font-weight:700">${values.includes('percentage')?(isComm?(e.commRate+'%'):'-'):''}</td>`;
+            if(cols.includes('commission'))sh+=`<td style="${tdStyle}${brd}text-align:center;color:#059669;font-weight:700">${values.includes('commission')?(commission>0?fmtNum(commission):'-'):''}</td>`;
+            if(cols.includes('totalSalary'))sh+=`<td style="${tdStyle}${brd}text-align:center;color:#7c3aed;font-weight:700">${values.includes('totalSalary')?fmtNum(totalSal):''}</td>`;
+            if(cols.includes('debts'))sh+=`<td style="${tdStyle}${brd}color:${debtTotal>0?'#dc2626':'#16a34a'};font-weight:700">${values.includes('debts')?(debtTotal>0?fmtNum(debtTotal):'-'):''}</td>`;
+            if(cols.includes('deduct'))sh+=`<td style="${tdStyle}${brd}text-align:center"></td>`;
+            if(cols.includes('net'))sh+=`<td style="${tdStyle}${brd}text-align:center"></td>`;
+            if(cols.includes('tip'))sh+=`<td style="${tdStyle}${brd}text-align:center"></td>`;
             sh+=`</tr>`;
         });
         sh+=`<tr style="font-weight:700;background:linear-gradient(90deg,rgba(147,197,253,0.3),rgba(249,168,212,0.3));height:auto">`;
-        sh+=`<td colspan="${nameIdx}" style="padding:10px;${brd}color:#1e3a8a;font-weight:800">الإجمالي</td>`;
-        if(cols.includes('salary'))sh+=`<td style="padding:10px;${brd}color:#b45309;font-weight:900">${fmtNum(secSalary)} ${cur}</td>`;
-        if(cols.includes('percentage'))sh+=`<td style="padding:10px;${brd}">-</td>`;
-        if(cols.includes('sales'))sh+=`<td style="padding:10px;${brd}">-</td>`;
-        if(cols.includes('tips'))sh+=`<td style="padding:10px;${brd}">-</td>`;
-        if(cols.includes('debts'))sh+=`<td style="padding:10px;${brd}color:#dc2626;font-weight:900">${secDebts>0?fmtNum(secDebts)+' '+cur:'-'}</td>`;
-        if(cols.includes('withdrawals'))sh+=`<td style="padding:10px;${brd}color:#d97706;font-weight:900">${secWd>0?fmtNum(secWd)+' '+cur:'-'}</td>`;
-        if(cols.includes('deduct'))sh+=`<td style="padding:10px;${brd}">-</td>`;
-        if(cols.includes('total'))sh+=`<td style="padding:10px;${brd}"></td>`;
+        sh+=`<td colspan="2" style="padding:10px;${brd}color:#1e3a8a;font-weight:800">الإجمالي</td>`;
+        if(cols.includes('salary'))sh+=`<td style="padding:10px;${brd}color:#b45309;font-weight:900">${values.includes('salary')?fmtNum(secSalary):''}</td>`;
+        if(cols.includes('sales'))sh+=`<td style="padding:10px;${brd}">${values.includes('sales')?'-':''}</td>`;
+        if(cols.includes('percentage'))sh+=`<td style="padding:10px;${brd}">${values.includes('percentage')?'-':''}</td>`;
+        if(cols.includes('commission'))sh+=`<td style="padding:10px;${brd}color:#059669;font-weight:900">${values.includes('commission')?(secCommission>0?fmtNum(secCommission):'-'):''}</td>`;
+        if(cols.includes('totalSalary'))sh+=`<td style="padding:10px;${brd}color:#7c3aed;font-weight:900">${values.includes('totalSalary')?fmtNum(secTotalSalary):''}</td>`;
+        if(cols.includes('debts'))sh+=`<td style="padding:10px;${brd}color:#dc2626;font-weight:900">${values.includes('debts')?(secDebts>0?fmtNum(secDebts):'-'):''}</td>`;
+        if(cols.includes('deduct'))sh+=`<td style="padding:10px;${brd}"></td>`;
+        if(cols.includes('net'))sh+=`<td style="padding:10px;${brd}"></td>`;
+        if(cols.includes('tip'))sh+=`<td style="padding:10px;${brd}"></td>`;
         sh+=`</tr></tbody></table>`;
         return sh;
     }
@@ -4574,7 +4609,8 @@ function _buildPrintPayroll(cols){
 }
 
 function printPayrollHistory(){ showPayrollColumnPicker('history'); }
-function _buildPrintPayrollHistory(cols){
+function _buildPrintPayrollHistory(cols,values){
+    values=values||cols;
     if(!hasAction('print'))return toast('غير مصرح');
     const s=loadSettings();const cur=s.currency||'د.ع';const store=s.storeName||'';
     const ym=$('#payrollHistoryMonth').value||$('#payrollMonth').value||(typeof getPrevMonth==='function'?getPrevMonth():today().slice(0,7));
@@ -4604,49 +4640,58 @@ function _buildPrintPayrollHistory(cols){
         const rowHeight=calculateRowHeight(sPayroll.length);
         let sh='';
         sh+=`<h3 style="margin:6px 0 3px;color:#1e3a8a;font-size:13pt;border-bottom:1.5px solid rgba(147,197,253,0.5);padding-bottom:3px;font-weight:800">${sectionTitle}</h3>`;
-        sh+=`<table style="border-collapse:collapse;width:100%;table-layout:fixed;margin-top:4px"><thead><tr style="background:linear-gradient(90deg,rgba(249,168,212,0.3),rgba(147,197,253,0.35))"><th style="${thSt}${hc}">#</th><th style="${thSt}${hc}">الموظف</th><th style="${thSt}${hc}">الراتب النهائي</th>`;
+        sh+=`<table style="border-collapse:collapse;width:100%;table-layout:fixed;margin-top:4px"><thead><tr style="background:linear-gradient(90deg,rgba(249,168,212,0.3),rgba(147,197,253,0.35))"><th style="${thSt}${hc};padding:8px 3px;width:5%">#</th>`;
+        if(cols.includes('name'))sh+=`<th style="${thSt}${hc}">الاسم</th>`;
+        if(cols.includes('salary'))sh+=`<th style="${thSt}${hc}">الراتب الاسمي</th>`;
+        if(cols.includes('sales'))sh+=`<th style="${thSt}${hc}">المبيعات</th>`;
         if(cols.includes('percentage'))sh+=`<th style="${thSt}${hc}">النسبة %</th>`;
-        if(cols.includes('tips'))sh+=`<th style="${thSt}${hc}">الإكرامية</th>`;
-        if(cols.includes('deductions'))sh+=`<th style="${thSt}${hc}">الاستقطاعات</th>`;
+        if(cols.includes('commission'))sh+=`<th style="${thSt}${hc}">الحوافز</th>`;
+        if(cols.includes('totalSalary'))sh+=`<th style="${thSt}${hc}">مجموع الراتب</th>`;
         if(cols.includes('debts'))sh+=`<th style="${thSt}${hc}">الديون</th>`;
-        if(cols.includes('withdrawals'))sh+=`<th style="${thSt}${hc}">السحوبات</th>`;
-        if(cols.includes('net'))sh+=`<th style="${thSt}${hc}">الصافي</th>`;
-        if(cols.includes('note'))sh+=`<th style="${thSt}${hc}">ملاحظة</th>`;
+        if(cols.includes('deduct'))sh+=`<th style="${thSt}${hc}">الاستقطاع</th>`;
+        if(cols.includes('net'))sh+=`<th style="${thSt}${hc}">الراتب النهائي</th>`;
+        if(cols.includes('tip'))sh+=`<th style="${thSt}${hc}">الإكرامية</th>`;
         sh+=`</tr></thead><tbody>`;
         let secBase=0,secTips=0,secDed=0,secCombined=0,secNet=0;
+        let secCommission=0,secTotalSalary=0,secDebts=0;
         sPayroll.forEach((p,i)=>{
-            const tip=p.tip||0;
-            const ded=p.deductions?((p.deductions.debt||0)+(p.deductions.attendance||0)+(p.deductions.loan||0)):0;
-            const net=p.netPay||p.amount;
-            
             const empObj=emps.find(e=>e.id===p.empId)||{};
             const isCommH=empObj.salaryType==='commission';
-            const commRateH=empObj.commRate||0;
+            const empBaseSalary=empObj.salary||0;
             const savedSalesH=Number(localStorage.getItem('payrollSales_'+p.empId+'_'+ym)||0);
+            const commission=isCommH&&savedSalesH>0?savedSalesH*((empObj.commRate||0)/100):0;
+            const totalSal=empBaseSalary+commission;
             const empDebtsH=debts.filter(d=>d.person===p.empName);
             const {balance:empDebtBal}=_getPersonBalance(empDebtsH);
-            const empWdH=debts.filter(d=>d.person===p.empName&&d.type==='withdraw'&&d.date&&d.date.startsWith(ym)).reduce((a,d)=>a+d.amount,0);
-            secBase+=p.amount;secTips+=tip;secDed+=ded;secNet+=net;
+            const debtDeduct=p.deductions?(p.deductions.debt||0):0;
+            const net=p.netPay||p.amount;
+            secBase+=empBaseSalary;secCommission+=commission;secTotalSalary+=totalSal;secDebts+=empDebtBal;secDed+=debtDeduct;secNet+=net;
             const bg=i%2===0?'rgba(219,234,254,0.3)':'rgba(252,231,243,0.22)';
             const tdStyle='padding:10px 6px;font-size:12px;vertical-align:middle;word-wrap:break-word;overflow-wrap:break-word';
-            sh+=`<tr style="background:${bg};height:${rowHeight}"><td style="${tdStyle}${brd}text-align:center;font-weight:700">${i+1}</td><td style="${tdStyle}${brd}font-weight:800">${p.empName}</td><td style="${tdStyle}${brd}color:#2563eb;font-weight:700">${fmtNum(p.amount)} ${cur}</td>`;
-            if(cols.includes('percentage'))sh+=`<td style="${tdStyle}${brd}color:#7c3aed;font-weight:700;text-align:center">${isCommH?(commRateH+'%'):'-'}</td>`;
-            if(cols.includes('tips'))sh+=`<td style="${tdStyle}${brd}color:#9333ea;font-weight:700">${tip>0?fmtNum(tip)+' '+cur:'-'}</td>`;
-            if(cols.includes('deductions'))sh+=`<td style="${tdStyle}${brd}color:#dc2626;font-weight:700">${ded>0?fmtNum(ded)+' '+cur:'-'}</td>`;
-            if(cols.includes('debts'))sh+=`<td style="${tdStyle}${brd}color:${empDebtBal>0?'#dc2626':'#16a34a'};font-weight:700">${empDebtBal>0?fmtNum(empDebtBal)+' '+cur:'-'}</td>`;
-            if(cols.includes('withdrawals'))sh+=`<td style="${tdStyle}${brd}color:${empWdH>0?'#d97706':'#16a34a'};font-weight:700">${empWdH>0?fmtNum(empWdH)+' '+cur:'-'}</td>`;
-            if(cols.includes('net'))sh+=`<td style="${tdStyle}${brd}color:#16a34a;font-weight:900">${fmtNum(net)} ${cur}</td>`;
-            if(cols.includes('note'))sh+=`<td style="${tdStyle}${brd}font-size:11px">${(p.note||'').substring(0,50)}</td>`;
+            sh+=`<tr style="background:${bg};height:${rowHeight}"><td style="${tdStyle}${brd}text-align:center;font-weight:700;width:5%">${i+1}</td>`;
+            if(cols.includes('name'))sh+=`<td style="${tdStyle}${brd}font-weight:800;white-space:nowrap">${values.includes('name')?p.empName:''}</td>`;
+            if(cols.includes('salary'))sh+=`<td style="${tdStyle}${brd}color:#2563eb;font-weight:700">${values.includes('salary')?fmtNum(empBaseSalary):''}</td>`;
+            if(cols.includes('sales'))sh+=`<td style="${tdStyle}${brd}text-align:center;color:#475569">${values.includes('sales')?(savedSalesH>0?fmtNum(savedSalesH):'-'):''}</td>`;
+            if(cols.includes('percentage'))sh+=`<td style="${tdStyle}${brd}text-align:center;color:#7c3aed;font-weight:700">${values.includes('percentage')?(isCommH?((empObj.commRate||0)+'%'):'-'):''}</td>`;
+            if(cols.includes('commission'))sh+=`<td style="${tdStyle}${brd}text-align:center;color:#059669;font-weight:700">${values.includes('commission')?(commission>0?fmtNum(commission):'-'):''}</td>`;
+            if(cols.includes('totalSalary'))sh+=`<td style="${tdStyle}${brd}text-align:center;color:#7c3aed;font-weight:700">${values.includes('totalSalary')?fmtNum(totalSal):''}</td>`;
+            if(cols.includes('debts'))sh+=`<td style="${tdStyle}${brd}color:${empDebtBal>0?'#dc2626':'#16a34a'};font-weight:700">${values.includes('debts')?(empDebtBal>0?fmtNum(empDebtBal):'-'):''}</td>`;
+            if(cols.includes('deduct'))sh+=`<td style="${tdStyle}${brd}color:#dc2626;font-weight:700;text-align:center">${values.includes('deduct')?(debtDeduct>0?fmtNum(debtDeduct):'-'):''}</td>`;
+            if(cols.includes('net'))sh+=`<td style="${tdStyle}${brd}color:#16a34a;font-weight:900">${values.includes('net')?fmtNum(net):''}</td>`;
+            if(cols.includes('tip'))sh+=`<td style="${tdStyle}${brd}text-align:center"></td>`;
             sh+=`</tr>`;
         });
-        sh+=`<tr style="font-weight:700;background:linear-gradient(90deg,rgba(249,168,212,0.3),rgba(147,197,253,0.3));height:auto"><td colspan="2" style="padding:10px;${brd}${hc};font-weight:800">الإجمالي</td><td style="padding:10px;${brd}color:#2563eb;font-weight:900">${fmtNum(secBase)} ${cur}</td>`;
-        if(cols.includes('percentage'))sh+=`<td style="padding:10px;${brd}">-</td>`;
-        if(cols.includes('tips'))sh+=`<td style="padding:10px;${brd}color:#9333ea;font-weight:900">${secTips>0?fmtNum(secTips)+' '+cur:'-'}</td>`;
-        if(cols.includes('deductions'))sh+=`<td style="padding:10px;${brd}color:#dc2626;font-weight:900">${secDed>0?fmtNum(secDed)+' '+cur:'-'}</td>`;
-        if(cols.includes('debts'))sh+=`<td style="padding:10px;${brd}">-</td>`;
-        if(cols.includes('withdrawals'))sh+=`<td style="padding:10px;${brd}">-</td>`;
-        if(cols.includes('net'))sh+=`<td style="padding:10px;${brd}color:#16a34a;font-weight:900">${fmtNum(secNet)} ${cur}</td>`;
-        if(cols.includes('note'))sh+=`<td style="padding:10px;${brd}"></td>`;
+        sh+=`<tr style="font-weight:700;background:linear-gradient(90deg,rgba(249,168,212,0.3),rgba(147,197,253,0.3));height:auto">`;
+        sh+=`<td colspan="2" style="padding:10px;${brd}${hc};font-weight:800">الإجمالي</td>`;
+        if(cols.includes('salary'))sh+=`<td style="padding:10px;${brd}color:#2563eb;font-weight:900">${values.includes('salary')?fmtNum(secBase):''}</td>`;
+        if(cols.includes('sales'))sh+=`<td style="padding:10px;${brd}">${values.includes('sales')?'-':''}</td>`;
+        if(cols.includes('percentage'))sh+=`<td style="padding:10px;${brd}">${values.includes('percentage')?'-':''}</td>`;
+        if(cols.includes('commission'))sh+=`<td style="padding:10px;${brd}color:#059669;font-weight:900">${values.includes('commission')?(secCommission>0?fmtNum(secCommission):'-'):''}</td>`;
+        if(cols.includes('totalSalary'))sh+=`<td style="padding:10px;${brd}color:#7c3aed;font-weight:900">${values.includes('totalSalary')?fmtNum(secTotalSalary):''}</td>`;
+        if(cols.includes('debts'))sh+=`<td style="padding:10px;${brd}color:#dc2626;font-weight:900">${values.includes('debts')?(secDebts>0?fmtNum(secDebts):'-'):''}</td>`;
+        if(cols.includes('deduct'))sh+=`<td style="padding:10px;${brd}color:#dc2626;font-weight:900">${values.includes('deduct')?(secDed>0?fmtNum(secDed):'-'):''}</td>`;
+        if(cols.includes('net'))sh+=`<td style="padding:10px;${brd}color:#16a34a;font-weight:900">${values.includes('net')?fmtNum(secNet):''}</td>`;
+        if(cols.includes('tip'))sh+=`<td style="padding:10px;${brd}"></td>`;
         sh+=`</tr></tbody></table>`;
         return sh;
     }
